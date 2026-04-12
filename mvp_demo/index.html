@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advisor RAG Chatbot MVP</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .chat-container { width: 100%; max-width: 600px; background: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 80vh; }
+        .header { background: #0056b3; color: white; padding: 15px; border-radius: 10px 10px 0 0; text-align: center; }
+        .chat-box { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .message { max-width: 80%; padding: 12px; border-radius: 8px; line-height: 1.4; }
+        .user-msg { background: #e1f5fe; align-self: flex-end; border: 1px solid #b3e5fc; }
+        .bot-msg { background: #f5f5f5; align-self: flex-start; border: 1px solid #e0e0e0; }
+        .citations { font-size: 0.8em; color: #555; margin-top: 8px; padding-top: 8px; border-top: 1px solid #ddd; }
+        .citations a { color: #0056b3; text-decoration: none; }
+        .input-area { display: flex; padding: 15px; border-top: 1px solid #ddd; background: #fff; border-radius: 0 0 10px 10px; }
+        input[type="text"] { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; margin-right: 10px; outline: none; }
+        button { padding: 10px 20px; background: #0056b3; color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.3s; }
+        button:hover { background: #004494; }
+        .loading { align-self: flex-start; color: #888; font-style: italic; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="header">
+        <h2>Triple A Super Advisor AI</h2>
+    </div>
+    <div class="chat-box" id="chat-box">
+        <div class="message bot-msg">Hello. I am the internal RAG assistant. Ask me a question about our project documents.</div>
+        <div class="loading" id="loading">Searching knowledge base...</div>
+    </div>
+    <div class="input-area">
+        <input type="text" id="query-input" placeholder="e.g., What is the purpose of the RAG chatbot?" onkeypress="handleKeyPress(event)">
+        <button onclick="sendQuery()">Ask</button>
+    </div>
+</div>
+
+<script>
+    const API_URL = 'http://127.0.0.1:8000/api/chat/'; 
+
+    function handleKeyPress(e) {
+        if(e.key === 'Enter') sendQuery();
+    }
+
+    async function sendQuery() {
+        const inputField = document.getElementById('query-input');
+        const query = inputField.value.trim();
+        if(!query) return;
+
+        addMessage(query, 'user-msg');
+        inputField.value = '';
+        
+        const loading = document.getElementById('loading');
+        loading.style.display = 'block';
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: query })
+            });
+
+            const data = await response.json();
+            loading.style.display = 'none';
+
+            if(data.error) {
+                addMessage("Error: " + data.error, 'bot-msg');
+            } else {
+                addBotMessageWithCitations(data.answer, data.citations);
+            }
+        } catch (error) {
+            loading.style.display = 'none';
+            addMessage("Failed to connect to the server.", 'bot-msg');
+        }
+    }
+
+    function addMessage(text, className) {
+        const chatBox = document.getElementById('chat-box');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${className}`;
+        msgDiv.textContent = text;
+        chatBox.insertBefore(msgDiv, document.getElementById('loading'));
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function addBotMessageWithCitations(answer, citations) {
+        const chatBox = document.getElementById('chat-box');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'message bot-msg';
+        
+        let htmlContent = `<div class="answer-text">${answer.replace(/\n/g, '<br>')}</div>`;
+        
+        if (citations && citations.length > 0) {
+            // Deduplicate citations based on source_url
+            const uniqueCitations = Array.from(new Set(citations.map(c => c.source)))
+                                         .map(src => citations.find(c => c.source === src));
+                                         
+            htmlContent += `<div class="citations"><strong>Sources:</strong><ul>`;
+            uniqueCitations.forEach(cit => {
+                htmlContent += `<li><a href="../${cit.source.split('/').pop()}" target="_blank" style="color:#0056b3;">${cit.source.split('/').pop()}</a> (${cit.fund})</li>`;
+            });
+            htmlContent += `</ul></div>`;
+        }
+        
+        msgDiv.innerHTML = htmlContent;
+        chatBox.insertBefore(msgDiv, document.getElementById('loading'));
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+</script>
+
+</body>
+</html>

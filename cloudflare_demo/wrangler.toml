@@ -1,0 +1,8 @@
+name = "triple-a-chatbot"
+main = "src/index.js"
+compatibility_date = "2024-04-03"
+compatibility_flags = ["nodejs_compat"]
+
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "triple_a_index"
