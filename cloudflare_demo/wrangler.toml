@@ -6,3 +6,18 @@ compatibility_flags = ["nodejs_compat"]
 [[vectorize]]
 binding = "VECTORIZE"
 index_name = "triple_a_index"
+
+[[r2_buckets]]
+binding = "DOCUMENT_BUCKET"
+bucket_name = "triple-a-documents"
+
+[[kv_namespaces]]
+binding = "VECTOR_MAP"
+id = "970df96fb94940fb9e306a26304749e3"
+
+[triggers]
+crons = ["0 8 * * *"]
+
+[vars]
+TELEGRAM_BOT_TOKEN = ""
+TELEGRAM_CHAT_ID = ""

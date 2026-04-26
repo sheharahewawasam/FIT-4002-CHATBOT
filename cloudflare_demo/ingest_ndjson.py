@@ -1,10 +1,11 @@
 import os
 import json
 import requests
+import fitz  # PyMuPDF
 from dotenv import load_dotenv
 
-from llama_index.core import SimpleDirectoryReader
-from llama_index.core.node_parser import HierarchicalNodeParser, get_leaf_nodes
+from llama_index.core import Document
+from llama_index.core.node_parser import SentenceSplitter
 
 load_dotenv("../mvp_demo/.env")
 
@@ -26,64 +27,76 @@ def get_embedding(text):
     return response.json()["data"][0]["embedding"]
 
 def main():
-    print("Reading documents using LlamaIndex...")
+    print("Reading documents using PyMuPDF (fitz)...")
     documents = []
     
-    from llama_index.core import Document
-    import pypdf
-    
     for pdf_info in pdfs_to_process:
-        print(f"Parsing {pdf_info['filepath']}...")
-        reader = pypdf.PdfReader(pdf_info['filepath'])
-        full_text = "\\n".join(page.extract_text() for page in reader.pages if page.extract_text())
+        filepath = pdf_info['filepath']
+        print(f"Parsing {filepath}...")
         
-        doc = Document(
-            text=full_text, 
-            metadata={
-                "source_url": pdf_info['filepath'].split('/')[-1],
-                "fund_name": pdf_info['fund_name'],
-                "doc_type": pdf_info['doc_type']
-            }
-        )
-        documents.append(doc)
+        doc_fitz = fitz.open(filepath)
+        for page_num in range(len(doc_fitz)):
+            page = doc_fitz[page_num]
+            blocks = page.get_text("blocks")
+            
+            for block in blocks:
+                text = block[4].strip()
+                if not text or len(text) < 10:
+                    continue
+                bbox = block[:4] # (x0, y0, x1, y1)
+                
+                doc = Document(
+                    text=text,
+                    metadata={
+                        "source_url": filepath.split('/')[-1],
+                        "fund_name": pdf_info['fund_name'],
+                        "doc_type": pdf_info['doc_type'],
+                        "page": page_num + 1, # 1-indexed
+                        "bbox": list(bbox)
+                    }
+                )
+                documents.append(doc)
 
-    print("Executing Hierarchical Node Chunking...")
-    # This creates a structure where parent nodes encompass 256-token child nodes
-    node_parser = HierarchicalNodeParser.from_defaults(chunk_sizes=[1024, 256])
-    nodes = node_parser.get_nodes_from_documents(documents)
+    print("Executing SentenceSplitter Chunking...")
+    # By using SentenceSplitter on each block `Document`, we ensure child nodes stay within their bbox
+    splitter = SentenceSplitter(chunk_size=256, chunk_overlap=20)
+    nodes = splitter.get_nodes_from_documents(documents)
     
-    leaf_nodes = get_leaf_nodes(nodes)
-    print(f"Generated {len(leaf_nodes)} high-precision child nodes for embedding.")
+    print(f"Generated {len(nodes)} high-precision nodes for embedding.")
 
-    node_map = {n.node_id: n for n in nodes}
     print("Generating Vector Embeddings and constructing payload...")
     
+    doc_map = {doc.doc_id: doc for doc in documents}
+    
     with open("vectors.ndjson", "w") as f:
-        for i, leaf in enumerate(leaf_nodes):
-            print(f"Embedding leaf node {i+1}/{len(leaf_nodes)}...")
-            embedding = get_embedding(leaf.text)
+        for i, node in enumerate(nodes):
+            print(f"Embedding node {i+1}/{len(nodes)}...")
+            embedding = get_embedding(node.text)
             
-            parent_id = leaf.parent_node.node_id if leaf.parent_node else None
-            parent_node = node_map.get(parent_id)
+            expanded_context = node.text
+            if node.source_node and node.source_node.node_id in doc_map:
+                expanded_context = doc_map[node.source_node.node_id].text
             
-            expanded_context = parent_node.text if parent_node else leaf.text
-            
-            # Truncate text to forcefully respect Cloudflare Vectorize's 10KB metadata limit
+            # Truncate text to forcefully respect Cloudflare Vectorize's metadata limit
             if len(expanded_context) > 7000:
                 expanded_context = expanded_context[:7000] + "... [Text Truncated]"
                 
             record = {
-                "id": leaf.node_id.replace("-", ""),
+                "id": node.node_id.replace("-", ""),
                 "values": embedding,
                 "metadata": {
                     "text": expanded_context,
-                    "child_match_text": leaf.text,
-                    "source_url": leaf.metadata.get("source_url"),
-                    "fund_name": leaf.metadata.get("fund_name"),
-                    "doc_type": leaf.metadata.get("doc_type")
+                    "child_match_text": node.text,
+                    "source_url": node.metadata.get("source_url"),
+                    "fund_name": node.metadata.get("fund_name"),
+                    "doc_type": node.metadata.get("doc_type"),
+                    "page": node.metadata.get("page"),
+                    "bbox": json.dumps(node.metadata.get("bbox")) # stringify list for metadata
                 }
             }
             f.write(json.dumps(record) + "\n")
+
+    print("Successfully created vectors.ndjson.")
             
 if __name__ == "__main__":
     main()

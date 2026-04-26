@@ -1,0 +1,28 @@
+# Environment files
+**/.env
+**/.env.template
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+ENV/
+
+# Mac
+.DS_Store
+
+# Cloudflare / Wrangler
+.wrangler/
+
+# Databases
+*.sqlite3
+
+# PDF/Documents (Workspace root contains some PDFs)
+# If these should be in git, don't ignore them.
+# Project_26.pdf
+# Proposal Document.pdf
+# Trust_Deed_Sample_Superannuation_Fund.pdf
