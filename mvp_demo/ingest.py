@@ -1,13 +1,14 @@
 import os
 import json
 import requests
+
 from dotenv import load_dotenv
 
 # Import LlamaIndex components
 from llama_index.core import SimpleDirectoryReader
 from llama_index.core.node_parser import HierarchicalNodeParser, get_leaf_nodes
 
-load_dotenv()
+load_dotenv("secrets.env")
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 CF_ACCOUNT_ID = os.getenv("CLOUDFLARE_ACCOUNT_ID")
@@ -19,17 +20,25 @@ pdfs_to_process = [
     {"filepath": "../Proposal Document.pdf", "fund_name": "Triple A Super", "doc_type": "Development Proposal"}
 ]
 
+# def get_embedding(text):
+#     """Fetch vector embedding using OpenAI API."""
+#     url = "https://api.openai.com/v1/embeddings"
+#     headers = {
+#         "Authorization": f"Bearer {OPENAI_API_KEY}",
+#         "Content-Type": "application/json"
+#     }
+#     data = {"input": text, "model": "text-embedding-3-small"}
+#     response = requests.post(url, json=data, headers=headers)
+#     response.raise_for_status()
+#     return response.json()["data"][0]["embedding"]
+
 def get_embedding(text):
-    """Fetch vector embedding using OpenAI API."""
-    url = "https://api.openai.com/v1/embeddings"
-    headers = {
-        "Authorization": f"Bearer {OPENAI_API_KEY}",
-        "Content-Type": "application/json"
-    }
-    data = {"input": text, "model": "text-embedding-3-small"}
-    response = requests.post(url, json=data, headers=headers)
+    """Use locally hosted Ollama to embed type shit """
+    url = "http://localhost:11434/api/embed"
+    data = {"model": "nomic-embed-text","input": text }
+    response = requests.post(url, json=data)
     response.raise_for_status()
-    return response.json()["data"][0]["embedding"]
+    return response.json()["embeddings"][0]
 
 def main():
     print("Reading documents using LlamaIndex...")
