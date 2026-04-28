@@ -7,3 +7,8 @@ How to run it locally
 4. run python manage.py runserver
 5. pull both models in ollama (or whatever models you are testing with)
 6. Boom bang everything should work
+
+Common Issues
+
+1. no env file, keys should be in the shared folder in the api keys folder
+2. Make sure your env file is named secrets.env or you can change the call to the name in ingest.py and views.py, up2u
