@@ -1,6 +1,7 @@
 import os
 import json
 import requests
+import boto3
 
 from dotenv import load_dotenv
 
@@ -11,9 +12,14 @@ from llama_index.core.node_parser import HierarchicalNodeParser, get_leaf_nodes
 load_dotenv("secrets.env")
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-CF_ACCOUNT_ID = os.getenv("CLOUDFLARE_ACCOUNT_ID")
-CF_API_TOKEN = os.getenv("CLOUDFLARE_API_TOKEN") # Needs Vectorize:Edit perms
-CF_INDEX_NAME = os.getenv("CLOUDFLARE_VECTORIZE_INDEX", "triple_a_index")
+# CF_ACCOUNT_ID = os.getenv("CLOUDFLARE_ACCOUNT_ID")
+# CF_API_TOKEN = os.getenv("CLOUDFLARE_API_TOKEN") # Needs Vectorize:Edit perms
+# CF_INDEX_NAME = os.getenv("CLOUDFLARE_VECTORIZE_INDEX", "triple_a_index")
+
+AWS_REGION = os.getenv("AWS_REGION", "ap-southeast-2")
+S3_VECTOR_INDEX_ARN = os.getenv("S3_VECTOR_INDEX_ARN")
+
+s3vectors = boto3.client("s3vectors", region_name=AWS_REGION)
 
 pdfs_to_process = [
     {"filepath": "../Project_26.pdf", "fund_name": "Triple A Super", "doc_type": "Project Brief"},
@@ -78,6 +84,8 @@ def main():
 
     print("Generating Vector Embeddings and constructing payload...")
     documents_to_insert = []
+
+    parent_context_store = {}
     
     for i, leaf in enumerate(leaf_nodes):
         print(f"Embedding leaf node {i+1}/{len(leaf_nodes)}...")
@@ -86,6 +94,9 @@ def main():
         # Look up parent text for expanded generation context
         parent_id = leaf.parent_node.node_id if leaf.parent_node else None
         parent_node = node_map.get(parent_id)
+
+        if parent_node:
+            parent_context_store[parent_id] = parent_node.text  
         
         # The trick: We index the granular child context, but we provide the LLM the broad parent context!
         expanded_context = parent_node.text if parent_node else leaf.text
@@ -93,39 +104,77 @@ def main():
         documents_to_insert.append({
             "id": leaf.node_id.replace("-", ""), # Cloudflare likes clean alphanumeric string IDs
             "values": embedding,
+            # "metadata": {
+            #     "text": expanded_context, # Returning Parent context!
+            #     "child_match_text": leaf.text, # Storing what strictly matched
+            #     "source_url": leaf.metadata.get("source_url"),
+            #     "fund_name": leaf.metadata.get("fund_name"),
+            #     "doc_type": leaf.metadata.get("doc_type")
+            # }
             "metadata": {
-                "text": expanded_context, # Returning Parent context!
-                "child_match_text": leaf.text, # Storing what strictly matched
+                "text": leaf.text,  # use smaller chunk instead of parent
+                "parent_id": parent_id,
                 "source_url": leaf.metadata.get("source_url"),
                 "fund_name": leaf.metadata.get("fund_name"),
                 "doc_type": leaf.metadata.get("doc_type")
             }
         })
         
+        # Cloudflare as vector storage
+    # if documents_to_insert:
+    #     batch_size = 50
+    #     url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/vectorize/v2/indexes/{CF_INDEX_NAME}/insert"
+    #     headers = {
+    #         "Authorization": f"Bearer {CF_API_TOKEN}",
+    #         "Content-Type": "application/json"
+    #     }
+        
+    #     for i in range(0, len(documents_to_insert), batch_size):
+    #         batch = documents_to_insert[i:i+batch_size]
+    #         payload = {"vectors": batch}
+            
+    #         print(f"Inserting batch {i//batch_size + 1} to Cloudflare Vectorize (Hierarchical Vectors)...")
+    #         res = requests.post(url, json=payload, headers=headers)
+            
+    #         if res.status_code == 200:
+    #             data = res.json()
+    #             if data.get("success"):
+    #                 print(f"Successfully inserted {len(batch)} parent-linked nodes.")
+    #             else:
+    #                 print(f"Error inserting: {data}")
+    #         else:
+    #             print(f"HTTP Error: {res.status_code}")
+    #             print(res.text)
+
+
+    with open("parent_contexts.json", "w") as f:
+        json.dump(parent_context_store, f)
+
+    # Amazon S3 Vector Index as vector storage
     if documents_to_insert:
         batch_size = 50
-        url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/vectorize/v2/indexes/{CF_INDEX_NAME}/insert"
-        headers = {
-            "Authorization": f"Bearer {CF_API_TOKEN}",
-            "Content-Type": "application/json"
-        }
-        
+
         for i in range(0, len(documents_to_insert), batch_size):
             batch = documents_to_insert[i:i+batch_size]
-            payload = {"vectors": batch}
+
+            vectors = []
+            for doc in batch:
+                vectors.append({
+                    "key": doc["id"],
+                    "data": {
+                        "float32": doc["values"] # S3 Vector Index expects "float32" format for embeddings
+                    },
+                    "metadata": doc["metadata"]
+                })
             
-            print(f"Inserting batch {i//batch_size + 1} to Cloudflare Vectorize (Hierarchical Vectors)...")
-            res = requests.post(url, json=payload, headers=headers)
-            
-            if res.status_code == 200:
-                data = res.json()
-                if data.get("success"):
-                    print(f"Successfully inserted {len(batch)} parent-linked nodes.")
-                else:
-                    print(f"Error inserting: {data}")
-            else:
-                print(f"HTTP Error: {res.status_code}")
-                print(res.text)
+            print(f"Inserting batch {i//batch_size + 1} to Amazon S3 Vector Index ...")
+
+            response = s3vectors.put_vectors(
+                indexArn=S3_VECTOR_INDEX_ARN,
+                vectors=vectors
+            )
+
+            print(f"Inserted {len(vectors)} vectors")
 
 if __name__ == "__main__":
     main()
