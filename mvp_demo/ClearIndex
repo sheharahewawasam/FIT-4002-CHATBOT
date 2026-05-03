@@ -1,0 +1,97 @@
+import os
+import requests
+from dotenv import load_dotenv
+
+load_dotenv("secrets.env")
+
+CF_ACCOUNT_ID = os.getenv("CLOUDFLARE_ACCOUNT_ID")
+CF_API_TOKEN = os.getenv("CLOUDFLARE_API_TOKEN")
+CF_INDEX_NAME = os.getenv("CLOUDFLARE_VECTORIZE_INDEX")
+
+HEADERS = {
+    "Authorization": f"Bearer {CF_API_TOKEN}",
+    "Content-Type": "application/json"
+}
+
+
+def list_all_vector_ids():
+    """
+    Fetch all vector IDs from the index.
+    """
+    url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/vectorize/v2/indexes/{CF_INDEX_NAME}/list"
+
+    all_ids = []
+    cursor = None
+
+    while True:
+        params = {}
+
+        if cursor:
+            params["cursor"] = cursor
+
+        response = requests.get(url, headers=HEADERS, params=params)
+        response.raise_for_status()
+
+        data = response.json()
+
+        if not data.get("success"):
+            raise Exception(f"Failed listing vectors: {data}")
+
+        result = data["result"]
+
+        vectors = result.get("vectors", [])
+        for vector in vectors:
+            all_ids.append(vector["id"])
+
+        cursor = result.get("nextCursor")
+
+        if not cursor:
+            break
+
+    return all_ids
+
+
+def delete_vectors_by_ids(vector_ids):
+    """
+    Delete vectors in batches.
+    """
+    url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/vectorize/v2/indexes/{CF_INDEX_NAME}/delete_by_ids"
+
+    batch_size = 100
+
+    for i in range(0, len(vector_ids), batch_size):
+        batch = vector_ids[i:i+batch_size]
+
+        payload = {
+            "ids": batch
+        }
+
+        response = requests.post(url, headers=HEADERS, json=payload)
+        response.raise_for_status()
+
+        data = response.json()
+
+        if data.get("success"):
+            print(f"Deleted batch {i//batch_size + 1}")
+        else:
+            print(f"Failed batch {i//batch_size + 1}: {data}")
+
+
+def clear_vectorize_index():
+    print("Fetching vector IDs...")
+    vector_ids = list_all_vector_ids()
+
+    if not vector_ids:
+        print("Index already empty.")
+        return
+
+    print(f"Found {len(vector_ids)} vectors.")
+    print("Deleting...")
+
+    delete_vectors_by_ids(vector_ids)
+
+    print("Done. Index cleared.")
+
+
+if __name__ == "__main__":
+    clear_vectorize_index()
