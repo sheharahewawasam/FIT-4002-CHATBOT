@@ -8,12 +8,18 @@ How to run it locally
 5. pull both models in ollama (or whatever models you are testing with)
 6. Boom bang everything should work
 
-Common Issues
+# Common Issues
 
 1. no env file, keys should be in the shared folder in the api keys folder
 2. Make sure your env file is named secrets.env or you can change the call to the name in ingest.py and views.py, up2u
 
-Ollama guide
+# Ollama guide
 
 1. Install Ollama
 2. Pull granite3-dense and nomic-embed-text in Ollama
+
+
+### Issues from setup
+
+- ingest.py path files not relative to base directory, can cause some issues finding files
+- secrets.env contains CLOUDFLARE API keys and ID

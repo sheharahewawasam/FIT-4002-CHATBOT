@@ -5,7 +5,7 @@ from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from dotenv import load_dotenv
 
-load_dotenv("secrets.env")
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "secrets.env"))
 
 # openai.api_key = os.getenv("OPENAI_API_KEY")
 CF_ACCOUNT_ID = os.getenv("CLOUDFLARE_ACCOUNT_ID")

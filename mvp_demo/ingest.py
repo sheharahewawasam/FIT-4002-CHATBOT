@@ -8,16 +8,18 @@ from dotenv import load_dotenv
 from llama_index.core import SimpleDirectoryReader
 from llama_index.core.node_parser import HierarchicalNodeParser, get_leaf_nodes
 
-load_dotenv("secrets.env")
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "secrets.env"))
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 CF_ACCOUNT_ID = os.getenv("CLOUDFLARE_ACCOUNT_ID")
 CF_API_TOKEN = os.getenv("CLOUDFLARE_API_TOKEN") # Needs Vectorize:Edit perms
 CF_INDEX_NAME = os.getenv("CLOUDFLARE_VECTORIZE_INDEX", "triple_a_index")
 
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 pdfs_to_process = [
-    {"filepath": "../Project_26.pdf", "fund_name": "Triple A Super", "doc_type": "Project Brief"},
-    {"filepath": "../Proposal Document.pdf", "fund_name": "Triple A Super", "doc_type": "Development Proposal"}
+    {"filepath": os.path.join(_BASE_DIR, "..", "Project_26.pdf"), "fund_name": "Triple A Super", "doc_type": "Project Brief"},
+    {"filepath": os.path.join(_BASE_DIR, "..", "Proposal Document.pdf"), "fund_name": "Triple A Super", "doc_type": "Development Proposal"}
 ]
 
 # def get_embedding(text):
