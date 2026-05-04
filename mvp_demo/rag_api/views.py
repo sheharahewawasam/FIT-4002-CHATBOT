@@ -1,7 +1,5 @@
 import os
 import requests
-import boto3
-import json
 # import openai
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
@@ -10,68 +8,36 @@ from dotenv import load_dotenv
 load_dotenv("secrets.env")
 
 # openai.api_key = os.getenv("OPENAI_API_KEY")
-# CF_ACCOUNT_ID = os.getenv("CLOUDFLARE_ACCOUNT_ID")
-# CF_API_TOKEN = os.getenv("CLOUDFLARE_API_TOKEN")
-# CF_INDEX_NAME = os.getenv("CLOUDFLARE_VECTORIZE_INDEX")
+CF_ACCOUNT_ID = os.getenv("CLOUDFLARE_ACCOUNT_ID")
+CF_API_TOKEN = os.getenv("CLOUDFLARE_API_TOKEN")
+CF_INDEX_NAME = os.getenv("CLOUDFLARE_VECTORIZE_INDEX")
 
-AWS_REGION = os.getenv("AWS_REGION", "ap-southeast-2")
-S3_VECTOR_INDEX_ARN = os.getenv("S3_VECTOR_INDEX_ARN")
 
-s3vectors = boto3.client("s3vectors", region_name=AWS_REGION)
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PARENT_CONTEXT_PATH = os.path.join(BASE_DIR, "parent_contexts.json")
-
-try:
-    with open(PARENT_CONTEXT_PATH, "r") as f:
-        parent_context_store = json.load(f)
-except FileNotFoundError:
-    parent_context_store = {}
-
-# Using Clouflare
-# def perform_vector_search(query_embedding):
-#     """Executes a vector search in Cloudflare Vectorize."""
-#     url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/vectorize/v2/indexes/{CF_INDEX_NAME}/query"
-    
-#     headers = {
-#         "Authorization": f"Bearer {CF_API_TOKEN}",
-#         "Content-Type": "application/json"
-#     }
-    
-#     payload = {
-#         "vector": query_embedding,
-#         "topK": 5,
-#         "returnValues": False,
-#         "returnMetadata": "all"
-#     }
-    
-#     response = requests.post(url, json=payload, headers=headers)
-#     if response.status_code != 200:
-#         print("Vectorize Error:", response.text)
-#         return []
-        
-#     data = response.json()
-#     if data.get("success"):
-#         return data["result"]["matches"]
-#     return []
-
-# Using Amazon S3 Vector 
 def perform_vector_search(query_embedding):
-    try:
-        response = s3vectors.query_vectors(
-            indexArn=S3_VECTOR_INDEX_ARN,
-            queryVector={
-                "float32": query_embedding
-            },
-            topK=5,
-            returnMetadata=True
-        )
-
-        return response.get("vectors", [])
+    """Executes a vector search in Cloudflare Vectorize."""
+    url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/vectorize/v2/indexes/{CF_INDEX_NAME}/query"
     
-    except Exception as e:
-        print("AWS Vector Error:", e)
+    headers = {
+        "Authorization": f"Bearer {CF_API_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "vector": query_embedding,
+        "topK": 5,
+        "returnValues": False,
+        "returnMetadata": "all"
+    }
+    
+    response = requests.post(url, json=payload, headers=headers)
+    if response.status_code != 200:
+        print("Vectorize Error:", response.text)
         return []
+        
+    data = response.json()
+    if data.get("success"):
+        return data["result"]["matches"]
+    return []
 
 # @api_view(['POST'])
 # def chat_with_advisor_bot(request):
@@ -191,18 +157,11 @@ def chat_with_advisor_bot(request):
         
         for i, res in enumerate(search_results):
             metadata = res.get("metadata", {})
-
-            parent_id = metadata.get("parent_id")
-            if parent_id and parent_id in parent_context_store:
-                chunk_text = parent_context_store[parent_id]
-            else:
-                chunk_text = metadata.get("text", "")
-
+            chunk_text = metadata.get("text", "")
             context_text += f"--- Document {i+1} ---\n{chunk_text}\n\n"
-
             citations.append({
-                "source": metadata.get("source_url", "Unknown"),
-                "fund": metadata.get("fund_name", "Unknown")
+                "source": metadata.get('source_url', 'Unknown'),
+                "fund": metadata.get('fund_name', 'Unknown')
             })
         
         # 4. Generate Answer via LLM (Augmentation)

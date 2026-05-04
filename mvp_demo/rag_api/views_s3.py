@@ -1,0 +1,135 @@
+import os
+import requests
+import boto3
+import json
+# import openai
+from django.http import JsonResponse
+from rest_framework.decorators import api_view
+from dotenv import load_dotenv
+
+load_dotenv("secrets.env")
+
+AWS_REGION = os.getenv("AWS_REGION", "ap-southeast-2")
+S3_VECTOR_INDEX_ARN = os.getenv("S3_VECTOR_INDEX_ARN")
+
+s3vectors = boto3.client("s3vectors", region_name=AWS_REGION)
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PARENT_CONTEXT_PATH = os.path.join(BASE_DIR, "parent_contexts.json")
+
+try:
+    with open(PARENT_CONTEXT_PATH, "r") as f:
+        parent_context_store = json.load(f)
+except FileNotFoundError:
+    parent_context_store = {}
+
+# Using Amazon S3 Vector 
+def perform_vector_search(query_embedding):
+    try:
+        response = s3vectors.query_vectors(
+            indexArn=S3_VECTOR_INDEX_ARN,
+            queryVector={
+                "float32": query_embedding
+            },
+            topK=5,
+            returnMetadata=True
+        )
+
+        return response.get("vectors", [])
+    
+    except Exception as e:
+        print("AWS Vector Error:", e)
+        return []
+
+def get_embedding(text):
+    #Use locally hosted Ollama to embed type shit 
+    url = "http://localhost:11434/api/embed"
+    data = {"model": "nomic-embed-text","input": text }
+    response = requests.post(url, json=data)
+    response.raise_for_status()
+    return response.json()["embeddings"][0]
+
+def get_chat_response(systemPrompt, userQuery):
+    #Use locally hosted Ollama to generate a response type shit 
+    url = "http://localhost:11434/api/chat"
+    data = {"model": "granite3-dense",
+            "messages": [{"role": "system", "content":systemPrompt}, {"role": "user", "content":userQuery}],
+            "stream": False,
+            "options": {"temperature": 0.0}
+            }
+    response = requests.post(url, json=data)
+    response.raise_for_status()
+    return response.json()["message"]["content"]
+
+
+@api_view(['POST'])
+def chat_with_advisor_bot(request):
+    """API Endpoint to handle advisor queries via RAG."""
+    user_query = request.data.get("query")
+    
+    if not user_query:
+        return JsonResponse({"error": "Query is required"}, status=400)
+
+    try:
+        # 1. Embed the user query
+        query_embedding = get_embedding(user_query)
+
+        # 2. Retrieve relevant documents from Cloudflare Vectorize
+        search_results = perform_vector_search(query_embedding)
+        
+        if not search_results:
+            return JsonResponse({
+                "answer": "I could not find any relevant information in the fund documents to answer your query.",
+                "citations": []
+            })
+
+        # 3. Construct Context and Citations
+        context_text = ""
+        citations = []
+        
+        for i, res in enumerate(search_results):
+            metadata = res.get("metadata", {})
+
+            parent_id = metadata.get("parent_id")
+            if parent_id and parent_id in parent_context_store:
+                chunk_text = parent_context_store[parent_id]
+            else:
+                chunk_text = metadata.get("text", "")
+
+            context_text += f"--- Document {i+1} ---\n{chunk_text}\n\n"
+
+            citations.append({
+                "source": metadata.get("source_url", "Unknown"),
+                "fund": metadata.get("fund_name", "Unknown")
+            })
+        
+        # 4. Generate Answer via LLM (Augmentation)
+        system_prompt = f"""
+        You are an expert AI assistant for financial advisors at Triple A Super.
+        Answer the user's query STRICTLY based on the provided document context below. 
+        If the answer is not in the context, say "I cannot answer this based on the provided documents."
+        Do not provide general financial advice outside of these documents.
+        
+        CONTEXT:
+        {context_text}
+        """
+
+        answer = get_chat_response(system_prompt,user_query)
+        
+        response_data = {
+            "answer": answer,
+            "citations": citations 
+        }
+
+        # 5. Return response to UI
+        return JsonResponse({
+            "answer": answer,
+            "citations": citations 
+        })
+        
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+print("USING S3 VECTOR SEARCH")

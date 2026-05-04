@@ -16,9 +16,18 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from rag_api.views import chat_with_advisor_bot
+
+# from rag_api.views import chat_with_advisor_bot
+# from rag_api.views_s3 import chat_with_advisor_bot as chat_with_advisor_bot_s3
+from rag_api.views_opensearch import chat_with_advisor_bot as chat_with_advisor_bot_opensearch
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/chat/', chat_with_advisor_bot, name='chat_with_advisor_bot'),
+    # Cloudflare
+    # path('api/chat/', chat_with_advisor_bot, name='chat_with_advisor_bot'),
+    # Amazon S3 Vector
+    # path('api/chat/', chat_with_advisor_bot_s3, name='chat_with_advisor_bot_s3'),
+    # Amazon OpenSearch Service
+    path('api/chat/', chat_with_advisor_bot_opensearch, name='chat_with_advisor_bot_opensearch'),
 ]
