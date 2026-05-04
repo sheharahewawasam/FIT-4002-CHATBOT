@@ -16,4 +16,4 @@ Common Issues
 Ollama guide
 
 1. Install Ollama
-2. Pull granite3-dense and nomic-embed-text in Ollama
+2. Pull wjatever the models used in views.py into ollama

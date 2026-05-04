@@ -1,7 +1,7 @@
 import os
 import json
 import requests
-
+import pdfplumber
 from dotenv import load_dotenv
 
 # Import LlamaIndex components
@@ -17,8 +17,14 @@ CF_INDEX_NAME = os.getenv("CLOUDFLARE_VECTORIZE_INDEX", "triple_a_index")
 
 pdfs_to_process = [
     {"filepath": "../Project_26.pdf", "fund_name": "Triple A Super", "doc_type": "Project Brief"},
-    {"filepath": "../Proposal Document.pdf", "fund_name": "Triple A Super", "doc_type": "Development Proposal"}
+    {"filepath": "../Proposal Document.pdf", "fund_name": "Triple A Super", "doc_type": "Development Proposal"},
+    {"filepath": "../deed.pdf", "fund_name": "Summers Family Super Fund", "doc_type": "Deed"},
+    {"filepath": "../sample-smsf-trust-deed.pdf", "fund_name": "Triple A Super", "doc_type": "Deed"},
+    {"filepath": "../SIS Act -1.pdf", "fund_name": "Triple A Super", "doc_type": "Project Brief"},
+    {"filepath": "../SIS Act Part 2-1.pdf", "fund_name": "Triple A Super", "doc_type": "Development Proposal"},
+    {"filepath": "../Super-changes-timeline-1.pdf", "fund_name": "Triple A Super", "doc_type": "Changelog"},
 ]
+
 
 # def get_embedding(text):
 #     """Fetch vector embedding using OpenAI API."""
@@ -35,10 +41,14 @@ pdfs_to_process = [
 def get_embedding(text):
     """Use locally hosted Ollama to embed type shit """
     url = "http://localhost:11434/api/embed"
-    data = {"model": "nomic-embed-text","input": text }
+    data = {"model": "jina/jina-embeddings-v2-base-en","input": text }
     response = requests.post(url, json=data)
     response.raise_for_status()
     return response.json()["embeddings"][0]
+
+def clean_text(text):
+    return " ".join(text.split())
+
 
 def main():
     print("Reading documents using LlamaIndex...")
@@ -47,15 +57,23 @@ def main():
     # We will manually construct Document objects to preserve custom metadata 
     # and map accurately to our specific files.
     from llama_index.core import Document
-    import pypdf
+
     
     for pdf_info in pdfs_to_process:
         print(f"Parsing {pdf_info['filepath']}...")
-        reader = pypdf.PdfReader(pdf_info['filepath'])
-        full_text = "\\n".join(page.extract_text() for page in reader.pages if page.extract_text())
-        
+
+        full_pages = []
+
+        with pdfplumber.open(pdf_info['filepath']) as pdf:
+            for page in pdf.pages:
+                text = page.extract_text()
+                if text:
+                    full_pages.append(clean_text(text))
+
+        full_text = "\n".join(full_pages)
+
         doc = Document(
-            text=full_text, 
+            text=full_text,
             metadata={
                 "source_url": pdf_info['filepath'].split('/')[-1],
                 "fund_name": pdf_info['fund_name'],
@@ -65,8 +83,8 @@ def main():
         documents.append(doc)
 
     print("Executing Hierarchical Node Chunking...")
-    # This creates a structure where parent nodes encompass 256-token child nodes
-    node_parser = HierarchicalNodeParser.from_defaults(chunk_sizes=[1024, 256])
+    # This creates a structure where parent nodes encompass 512-token child nodes
+    node_parser = HierarchicalNodeParser.from_defaults(chunk_sizes=[2048, 256])
     nodes = node_parser.get_nodes_from_documents(documents)
     
     # We only embed the smallest, most precise sub-chunks (leaf nodes)
@@ -94,8 +112,9 @@ def main():
             "id": leaf.node_id.replace("-", ""), # Cloudflare likes clean alphanumeric string IDs
             "values": embedding,
             "metadata": {
-                "text": expanded_context, # Returning Parent context!
-                "child_match_text": leaf.text, # Storing what strictly matched
+                "text": expanded_context[:1500], # Returning Parent context!
+                "child_id": leaf.node_id.replace("-", ""),
+                "child_match_text": leaf.text[:800], # Storing what strictly matched
                 "source_url": leaf.metadata.get("source_url"),
                 "fund_name": leaf.metadata.get("fund_name"),
                 "doc_type": leaf.metadata.get("doc_type")
