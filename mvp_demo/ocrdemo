@@ -4,13 +4,19 @@ from paddleocr import PPStructureV3, PaddleOCRVL
 directory = Path("./pdfs")
 output_path = Path("./ocr_output")
 
-pipelineV3 = PPStructureV3()
-
+pipelineV3 = PPStructureV3(
+            text_recognition_model_name="en_PP-OCRv4_mobile_rec",
+            use_doc_unwarping=True, 
+            use_doc_orientation_classify=True, 
+            use_textline_orientation=True, 
+            use_seal_recognition=True
+        )
 
 for pdf in directory.iterdir():
-    if pdf.is_file():
-        input_file = pdf
+    if not pdf.is_file():
+        continue
 
+    input_file = pdf    
     outputV3 = pipelineV3.predict(input=str(input_file))
 
     markdown_list = []
