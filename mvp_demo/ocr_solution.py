@@ -4,11 +4,7 @@ from paddleocr import PPStructureV3
 class OCR():
     def __init__(self, output: Path):
         self.pipelineV3 = PPStructureV3(
-            text_recognition_model_name="PP-OCRv5_server_rec",
-            use_doc_unwarping=True, 
-            use_doc_orientation_classify=True, 
-            use_textline_orientation=True, 
-            use_seal_recognition=True,
+            text_recognition_model_name="PP-OCRv5_server_rec"
         )
 
         self.output = output
@@ -47,8 +43,12 @@ class OCR():
 
 if __name__ == "__main__":
     ocr = OCR(Path("./ocr_output"))
-    input_file = Path("./pdfs/Project_26.pdf")
-    input_file2 = Path("./pdfs/Test_Scan.pdf")
 
-    ocr.predictV3(input_file)
-    ocr.predictV3(input_file2)
+    # input_file = Path("./pdfs/Project_26.pdf")
+    # ocr.predictV3(input_file)
+
+    # input_file2 = Path("./pdfs/Test_Scan.pdf")
+    # ocr.predictV3(input_file2)
+
+    input_file3 = Path("./pdfs/deed.pdf")
+    ocr.predictV3(input_file3)

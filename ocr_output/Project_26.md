@@ -8,7 +8,7 @@ Client Name: Champ Mendis
 
 Client: Triple A Super Pty Ltd 
 
-Title: RAG-Based Chatbot for Advisors 
+Title: RAG-Based Chatbot for Advisors.
 
 ## Description:
 
@@ -28,7 +28,7 @@ Provide advisors with instant access to policies, procedures, guidelines Provide
 
 Architecture Overview (initial reference)Include RAG pipeline:
 
-1. Document ingestion from S32.Chunking + embeddings 3.Vector store 4. LLM retrieves relevant context 5.Response generated + citations 6. Logs &amp; analytics 
+1. Document ingestion from S32. Chunking + embeddings 3. Vector store 4. LLM retrieves relevant context 5. Response generated + citations 6. Logs &amp; analytics 
 
 <div style="text-align: center;"><img src="imgs/img_in_image_box_114_1220_201_1341.jpg" alt="Image" width="7%" /></div>
 
@@ -44,7 +44,7 @@ Architecture Overview (initial reference)Include RAG pipeline:
 
 Functional Steps:
 
-1. Advisor asks a question 
+1. Advisor asks a question.
 
 2. Query embedded and matched with vector store 
 
@@ -52,9 +52,9 @@ Functional Steps:
 
 4. LLM generates response 
 
-5. Output returned with references 
+5. Output returned with references.
 
 
 
 
-<div style="text-align: center;"><html><body><table border="1"><tr><td>Project owner:</td></tr><tr><td>Champ Mendis (Champake.Mendis@tripleasuper.com.au)</td></tr><tr><td>Additional Info (if any)</td></tr><tr><td>None</td></tr></table></body></html></div>
+<div style="text-align: center;"><html><body><table border="1"><tr><td>Project owner:</td></tr><tr><td>Champ Mendis (Champake.Mendis@tripleasuper.com.au)</td></tr><tr><td>Additional Info (if any).</td></tr><tr><td>None</td></tr></table></body></html></div>

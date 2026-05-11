@@ -1,0 +1,84 @@
+from pathlib import Path
+from paddleocr import PPStructureV3
+
+directory = Path("./pdfs")
+output_path = Path("./ocr_output")
+
+pipelineV3 = PPStructureV3(
+            text_recognition_model_name="en_PP-OCRv4_mobile_rec",
+            # use_region_detection=True,
+            # use_doc_unwarping=True, 
+            # use_doc_orientation_classify=True, 
+            # use_textline_orientation=True, 
+            # use_seal_recognition=True,
+            # use_formula_recognition=True,
+            # use_table_recognition=True,
+            # layout_threshold=1,
+            # layout_nms=True,
+
+        )
+
+for pdf in directory.iterdir():
+    if not pdf.is_file():
+        continue
+
+    input_file = pdf    
+    outputV3 = pipelineV3.predict(input=str(input_file))
+
+    markdown_list = []
+    markdown_images = []
+
+    for res in outputV3:
+        md_info = res.markdown
+        markdown_list.append(md_info)
+        markdown_images.append(md_info.get("markdown_images", {}))
+
+    markdown_texts = pipelineV3.concatenate_markdown_pages(markdown_list)
+
+    mkd_file_path = output_path / f"{Path(input_file).stem}.md"
+    mkd_file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(mkd_file_path, "w", encoding="utf-8") as f:
+        f.write(markdown_texts.get("markdown_texts"))
+
+    for item in markdown_images:
+        if item:
+            for path, image in item.items():
+                file_path = output_path / path
+                file_path.parent.mkdir(parents=True, exist_ok=True)
+                image.save(file_path)
+
+# optional_payload = {
+#     "markdownIgnoreLabels": [],
+#     "useChartRecognition": False,
+#     "useRegionDetection": True,
+#     "useDocOrientationClassify": True,
+#     "useDocUnwarping": False,
+#     "useTextlineOrientation": True,
+#     "useSealRecognition": True,
+#     "useFormulaRecognition": True,
+#     "useTableRecognition": True,
+#     "layoutThreshold": 0.4,
+#     "layoutNms": True,
+#     "layoutUnclipRatio": 1,
+#     "textDetLimitType": "min",
+#     "textDetLimitSideLen": 64,
+#     "textDetThresh": 0.3,
+#     "textDetBoxThresh": 0.6,
+#     "textDetUnclipRatio": 1.5,
+#     "textRecScoreThresh": 0,
+#     "sealDetLimitType": "min",
+#     "sealDetLimitSideLen": 736,
+#     "sealDetThresh": 0.2,
+#     "sealDetBoxThresh": 0.6,
+#     "sealDetUnclipRatio": 0.5,
+#     "sealRecScoreThresh": 0,
+#     "useTableOrientationClassify": True,
+#     "useOcrResultsWithTableCells": True,
+#     "useE2eWiredTableRecModel": False,
+#     "useE2eWirelessTableRecModel": False,
+#     "useWiredTableCellsTransToHtml": False,
+#     "useWirelessTableCellsTransToHtml": False,
+#     "parseLanguage": "default"
+# }
+
