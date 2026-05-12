@@ -16,9 +16,17 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from django.http import FileResponse
+import os
+
 from rag_api.views import chat_with_advisor_bot
 
+def serve_index(request):
+    html_path = os.path.join(os.path.dirname(__file__), '..', 'index.html')
+    return FileResponse(open(os.path.abspath(html_path), 'rb'), content_type='text/html')
+
 urlpatterns = [
+    path('', serve_index, name='index'),
     path('admin/', admin.site.urls),
     path('api/chat/', chat_with_advisor_bot, name='chat_with_advisor_bot'),
 ]
