@@ -2,11 +2,12 @@ import os
 import json
 import requests
 import boto3
+import pypdf
 
 from dotenv import load_dotenv
 
 # Import LlamaIndex components
-from llama_index.core import SimpleDirectoryReader
+from llama_index.core import Document
 from llama_index.core.node_parser import HierarchicalNodeParser, get_leaf_nodes
 
 load_dotenv("secrets.env")
@@ -23,13 +24,13 @@ s3vectors = boto3.client("s3vectors", region_name=AWS_REGION)
 
 pdfs_to_process = [
     {"filepath": "../Project_26.pdf", "fund_name": "Triple A Super", "doc_type": "Project Brief"},
-    {"filepath": "../Proposal Document.pdf", "fund_name": "Triple A Super", "doc_type": "Development Proposal"}
+    {"filepath": "../Proposal Document.pdf", "fund_name": "Triple A Super", "doc_type": "Development Proposal"},
 ]
 
 def get_embedding(text):
     """Use locally hosted Ollama to embed type shit """
     url = "http://localhost:11434/api/embed"
-    data = {"model": "nomic-embed-text","input": text }
+    data = {"model": "jina/jina-embeddings-v2-base-en","input": text }
     response = requests.post(url, json=data)
     response.raise_for_status()
     return response.json()["embeddings"][0]
@@ -37,11 +38,6 @@ def get_embedding(text):
 def main():
     print("Reading documents using LlamaIndex...")
     documents = []
-    
-    # We will manually construct Document objects to preserve custom metadata 
-    # and map accurately to our specific files.
-    from llama_index.core import Document
-    import pypdf
     
     for pdf_info in pdfs_to_process:
         print(f"Parsing {pdf_info['filepath']}...")
@@ -86,7 +82,6 @@ def main():
         if parent_node:
             parent_context_store[parent_id] = parent_node.text  
         
-        # The trick: We index the granular child context, but we provide the LLM the broad parent context!
         expanded_context = parent_node.text if parent_node else leaf.text
         
         documents_to_insert.append({

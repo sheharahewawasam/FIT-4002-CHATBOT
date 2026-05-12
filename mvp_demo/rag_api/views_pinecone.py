@@ -1,50 +1,32 @@
 import os
-import re
-import hashlib
 import requests
-import boto3
-
+# import openai
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from dotenv import load_dotenv
-from opensearchpy import OpenSearch, RequestsHttpConnection, AWSV4SignerAuth
+from pinecone import Pinecone
+import json
+import re
+import hashlib
 
 load_dotenv("secrets.env")
 
-AWS_REGION = os.getenv("AWS_REGION", "ap-southeast-2")
-OPENSEARCH_HOST = os.getenv("OPENSEARCH_HOST")
-OPENSEARCH_INDEX = os.getenv("OPENSEARCH_INDEX", "fit4002-opensearch-index")
+# openai.api_key = os.getenv("OPENAI_API_KEY")
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")
 
-credentials = boto3.Session().get_credentials()
-auth = AWSV4SignerAuth(credentials, AWS_REGION, "es")
+pc = Pinecone(api_key=PINECONE_API_KEY)
+index = pc.Index(PINECONE_INDEX_NAME)
 
-client = OpenSearch(
-    hosts=[{"host": OPENSEARCH_HOST, "port": 443}],
-    http_auth=auth,
-    use_ssl=True,
-    verify_certs=True,
-    connection_class=RequestsHttpConnection
-)
 
-def get_embedding(text):
-    #Use locally hosted Ollama to embed type shit 
-    url = "http://localhost:11434/api/embed"
-    data = {"model": "jina/jina-embeddings-v2-base-en","input": text }
-    response = requests.post(url, json=data)
-    response.raise_for_status()
-    return response.json()["embeddings"][0]
+def perform_vector_search(query_embedding):
+    results = index.query(
+        vector=query_embedding,
+        top_k=10,
+        include_metadata=True
+    )
+    return results["matches"]
 
-def get_chat_response(systemPrompt, userQuery):
-    #Use locally hosted Ollama to generate a response type shit 
-    url = "http://localhost:11434/api/chat"
-    data = {"model": "qwen3",
-            "messages": [{"role": "system", "content":systemPrompt}, {"role": "user", "content":userQuery}],
-            "stream": False,
-            "options": {"temperature": 0.0}
-            }
-    response = requests.post(url, json=data)
-    response.raise_for_status()
-    return response.json()["message"]["content"]
 
 def query_rewriter_hyde(query):
     systemPrompt = (
@@ -90,42 +72,6 @@ def extract_keyphrase(query):
     response.raise_for_status()
     return response.json()["response"].strip()
 
-def perform_vector_search(query_embedding, user_query):
-    # Build search request
-    search_body = {
-        "size": 10,
-        "query": {
-            "hybrid": { # combine both keyword search and semantic search
-                "queries": [
-                    # Semantic search
-                    {
-                        "knn": {
-                            "embedding": {
-                                "vector": query_embedding, # user query embedding 
-                                "k": 10
-                            }
-                        }
-                    },
-                    # Keyword search
-                    {
-                        "multi_match": {
-                            "query": user_query, # raw user input
-                            "fields": ["text", "child_match_text"]
-                        }
-                    }
-                ]
-            }
-        }
-    }
-    
-    # Send query to OpenSearch
-    response = client.search(
-        index=OPENSEARCH_INDEX,
-        body=search_body
-    )
-
-    return response["hits"]["hits"]
-
 def rerank_results(user_query, search_results, top_k=10):
     """
     Rerank search results by computing relevance scores.
@@ -134,11 +80,8 @@ def rerank_results(user_query, search_results, top_k=10):
     scored_results = []
     
     for res in search_results:
-        metadata = res.get("_source", {})
-        chunk_text = metadata.get("child_match_text", "")
-
-        if not chunk_text:
-            chunk_text = metadata.get("text", "")
+        metadata = res.get("metadata", {})
+        chunk_text = metadata.get("child_match_text", "") or metadata.get("text", "")
         
         # Truncate chunk if too long (Llama context limit)
         max_chunk_length = 1500
@@ -185,12 +128,12 @@ def rerank_results(user_query, search_results, top_k=10):
             
         except Exception as e:
             print(f"Reranking error: {e}")
-            rerank_score = res.get("_score", 0.5)  # Fallback to vector score
+            rerank_score = res.get("score", 0.5)  # Fallback to vector score
         
         scored_results.append({
             "result": res,
             "rerank_score": rerank_score,
-            "original_score": res.get("_score", 0)
+            "original_score": res.get("score", 0)
         })
     
     # Sort by rerank score (descending) and return top_k
@@ -201,9 +144,31 @@ def rerank_results(user_query, search_results, top_k=10):
         print(f"\nRank {i+1}")
         print(f"Rerank Score: {item['rerank_score']}/10")
         print(f"Original Vector Score: {item['original_score']:.4f}")
-        print(item["result"].get("_source", {}).get("child_match_text", "")[:200])
+        print(item['result'].get('metadata', {}).get('text', '')[:200])
     
     return scored_results[:top_k]
+
+
+def get_embedding(text):
+    #Use locally hosted Ollama to embed type shit 
+    url = "http://localhost:11434/api/embed"
+    data = {"model": "jina/jina-embeddings-v2-base-en","input": text }
+    response = requests.post(url, json=data)
+    response.raise_for_status()
+    return response.json()["embeddings"][0]
+
+def get_chat_response(systemPrompt, userQuery):
+    #Use locally hosted Ollama to generate a response type shit 
+    url = "http://localhost:11434/api/chat"
+    data = {"model": "qwen3",
+            "messages": [{"role": "system", "content":systemPrompt}, {"role": "user", "content":userQuery}],
+            "stream": False,
+            "options": {"temperature": 0.0}
+            }
+    response = requests.post(url, json=data)
+    response.raise_for_status()
+    return response.json()["message"]["content"]
+
 
 @api_view(['POST'])
 def chat_with_advisor_bot(request):
@@ -214,43 +179,41 @@ def chat_with_advisor_bot(request):
         return JsonResponse({"error": "Query is required"}, status=400)
 
     try:
+        #1. Rewrite and embed queries
         rewritten_queries = query_rewriter_hyde(user_query)
         keyphrase = extract_keyphrase(user_query)
         rewritten_queries.append(keyphrase)
 
+        # Always include the original phrasing – it may contain the exact technical terms needed
         if user_query not in rewritten_queries:
             rewritten_queries.append(user_query)
-
+            
         print(rewritten_queries)
-
+        
         all_results = []
         for q in rewritten_queries:
             query_embedding = get_embedding(q)
-            results = perform_vector_search(query_embedding, q)
+            results = perform_vector_search(query_embedding)
             all_results.extend(results)
-
+        
+        # 2. Deduplicate chunks (keep highest score
         seen_texts = set()
         deduped_results = []
 
         for res in all_results:
-            metadata = res.get("_source", {})
+            metadata = res.get("metadata", {})
             content = metadata.get("child_match_text", "") or metadata.get("text", "")
-
+            # FILTER: Ignore Table of Contents chunks (usually lots of dots)
             if ".........." in content or "Table of Contents" in content:
                 continue
-
             text_hash = hashlib.md5(content.encode()).hexdigest()
 
             if text_hash not in seen_texts:
                 deduped_results.append(res)
                 seen_texts.add(text_hash)
-
-        search_results = rerank_results(
-            user_query,
-            deduped_results[:10],
-            top_k=3
-        )
-
+                
+        search_results = rerank_results(user_query, deduped_results[:10], top_k=3)
+        
         quality_results = [
             item for item in search_results
             if item["rerank_score"] >= 4
@@ -261,40 +224,72 @@ def chat_with_advisor_bot(request):
                 "answer": "I could not find any relevant information in the fund documents to answer your query.",
                 "citations": []
             })
+                
+        search_results = quality_results
+            
 
+        # 4. Construct Context and Citations
         context_text = ""
         citations = []
-
-        for i, item in enumerate(quality_results):
+        
+        for i, item in enumerate(search_results):
             res = item["result"]
-            metadata = res.get("_source", {})
-
+            metadata = res.get("metadata", {})
             chunk_text = metadata.get("child_match_text", "") or metadata.get("text", "")
-
             context_text += f"--- Document {i+1} ---\n{chunk_text}\n\n"
-
             citations.append({
-                "source": metadata.get("source_url", "Unknown"),
-                "fund": metadata.get("fund_name", "Unknown")
+                "source": metadata.get('source_url', 'Unknown'),
+                "fund": metadata.get('fund_name', 'Unknown')
             })
+            
+        print("\n=== RETRIEVED CHUNKS ===")
 
+        for i, item in enumerate(search_results):
+            res = item["result"]
+            score = res.get("score")
+            text = res.get("metadata", {}).get("text", "")
+
+            print(f"\nChunk {i+1}")
+            print(f"Score: {score}")
+            print(text[:500])
+            print("=" * 50)
+            
+        # 5. Generate Answer via LLM (Augmentation)
         system_prompt = f"""
         You are an expert AI assistant for financial advisors at Triple A Super.
-        Answer the user's query STRICTLY based on the provided document context below.
+        Answer the user's query STRICTLY based on the provided document context below. 
         If the answer is not in the context, say "I cannot answer this based on the provided documents."
+        Answer only with what the document gives you, do not infer or try to answer questiont aht were not asked.
+        
+        If the query asks about methods, techniques, strategies, or types:
+        - enumerate ALL methods found in the context
+        - do not omit any
+        - use bullet points
 
+        If the answer is absent from context, say so.
+        
+        Do not provide general financial advice outside of these documents.
+        DO NOT PROVIDE ANY INFORMATION IN GENERAL IF ITS NOT IN THE DOCUMENTS, DONT MAKE STUFF UP
+        
         CONTEXT:
         {context_text}
         """
 
-        answer = get_chat_response(system_prompt, user_query)
+        answer = get_chat_response(system_prompt,user_query)
+        
+        # response_data = {
+        #     "answer": answer,
+        #     "citations": citations 
+        # }
 
+        # 5. Return response to UI
         return JsonResponse({
             "answer": answer,
-            "citations": citations
+            "citations": citations 
         })
+        
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
     
-print("USING OPENSEARCH VECTOR SEARCH")
+print("USING PINECONE VECTOR STORE")

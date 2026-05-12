@@ -1,8 +1,7 @@
 import os
-import json
+import pdfplumber
 import requests
 import boto3
-import pypdf
 
 from dotenv import load_dotenv
 from opensearchpy import OpenSearch, RequestsHttpConnection, AWSV4SignerAuth
@@ -31,16 +30,24 @@ client = OpenSearch(
 
 pdfs_to_process = [
     {"filepath": "../Project_26.pdf", "fund_name": "Triple A Super", "doc_type": "Project Brief"},
-    {"filepath": "../Proposal Document.pdf", "fund_name": "Triple A Super", "doc_type": "Development Proposal"}
+    {"filepath": "../Proposal Document.pdf", "fund_name": "Triple A Super", "doc_type": "Development Proposal"},
+    {"filepath": "../deed.pdf", "fund_name": "Summers Family Super Fund", "doc_type": "Deed"},
+    {"filepath": "../sample-smsf-trust-deed.pdf", "fund_name": "Triple A Super", "doc_type": "Deed"},
+    {"filepath": "../SIS Act -1.pdf", "fund_name": "Triple A Super", "doc_type": "Project Brief"},
+    {"filepath": "../SIS Act Part 2-1.pdf", "fund_name": "Triple A Super", "doc_type": "Development Proposal"},
+    {"filepath": "../Super-changes-timeline-1.pdf", "fund_name": "Triple A Super", "doc_type": "Changelog"},
 ]
 
 def get_embedding(text):
     """Use locally hosted Ollama to embed type shit """
     url = "http://localhost:11434/api/embed"
-    data = {"model": "nomic-embed-text","input": text }
+    data = {"model": "jina/jina-embeddings-v2-base-en","input": text }
     response = requests.post(url, json=data)
     response.raise_for_status()
     return response.json()["embeddings"][0]
+
+def clean_text(text):
+    return " ".join(text.split())
 
 def create_index_if_needed():
     # Check if index already exists
@@ -67,6 +74,7 @@ def create_index_if_needed():
                     }
                 },
                 "text": {"type": "text"}, # used for keyword search 
+                "child_match_text": {"type": "text"},
                 "source_url": {"type": "keyword"}, # exact match field
                 "fund_name": {"type": "keyword"}, # filtering
                 "doc_type": {"type": "keyword"} # filtering
@@ -86,9 +94,17 @@ def main():
     
     for pdf_info in pdfs_to_process:
         print(f"Parsing {pdf_info['filepath']}...")
-        reader = pypdf.PdfReader(pdf_info['filepath'])
-        full_text = "\\n".join(page.extract_text() for page in reader.pages if page.extract_text())
         
+        full_pages = []
+        
+        with pdfplumber.open(pdf_info['filepath']) as pdf:
+            for page in pdf.pages:
+                text = page.extract_text()
+                if text:
+                    full_pages.append(clean_text(text))
+
+        full_text = "\\n".join(full_pages)
+
         doc = Document(
             text=full_text, 
             metadata={
@@ -100,8 +116,8 @@ def main():
         documents.append(doc)
 
     print("Executing Hierarchical Node Chunking...")
-    # This creates a structure where parent nodes encompass 256-token child nodes
-    node_parser = HierarchicalNodeParser.from_defaults(chunk_sizes=[1024, 256])
+    # Parent nodes = 2048 tokens, leaf nodes = 256 tokens
+    node_parser = HierarchicalNodeParser.from_defaults(chunk_sizes=[2048, 256])
     nodes = node_parser.get_nodes_from_documents(documents)
     
     # We only embed the smallest, most precise sub-chunks (leaf nodes)
@@ -131,8 +147,9 @@ def main():
         # Create document to store in OpenSearch
         doc_body = {
             "embedding": embedding, # semantic search vector
-            "text": expanded_context, # full context for answering 
-            "child_match_text": leaf.text, # smaller chunk 
+            "text": expanded_context[:1500], # full context for answering 
+            "child_match_text": leaf.text[:800], # smaller chunk 
+            "child_id": leaf.node_id.replace("-", ""),
             "source_url": leaf.metadata.get("source_url"),
             "fund_name": leaf.metadata.get("fund_name"),
             "doc_type": leaf.metadata.get("doc_type")
@@ -145,8 +162,7 @@ def main():
             body=doc_body
         )
 
-        client.indices.refresh(index=OPENSEARCH_INDEX)
-        print("OpenSearch ingestion completed.")
+    client.indices.refresh(index=OPENSEARCH_INDEX)
         
 if __name__ == "__main__":
     main()
