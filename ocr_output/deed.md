@@ -400,19 +400,11 @@ Full name John Summers
 
 Address 9 Summers Road, Sydney NSw 2000
 
-
-
-Signature 
-
-
-
 Trustee 2
 
 Full name Sandra Summers 
 
 Address 9 Summers Road, Sydney Nsw 2000
-
-Signature 
 
 
 
@@ -420,8 +412,6 @@ Signature
 
 <div style="text-align: center;"><img src="imgs/img_in_image_box_286_1025_667_1185.jpg" alt="Image" width="31%" /></div>
 
-
-Witness 1
 
 Witness 2
 
