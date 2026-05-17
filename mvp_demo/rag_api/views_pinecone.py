@@ -1,295 +1,201 @@
 import os
+import re
+import hashlib
 import requests
-# import openai
+
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from dotenv import load_dotenv
 from pinecone import Pinecone
-import json
-import re
-import hashlib
+from pinecone_text.sparse import BM25Encoder
+from sentence_transformers import SentenceTransformer, CrossEncoder
 
 load_dotenv("secrets.env")
 
-# openai.api_key = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")
+
+BM25_ENCODER_PATH = os.getenv("BM25_ENCODER_PATH", "bm25_encoder.json")
 
 pc = Pinecone(api_key=PINECONE_API_KEY)
 index = pc.Index(PINECONE_INDEX_NAME)
 
+_bm25 = BM25Encoder().load(BM25_ENCODER_PATH)
 
-def perform_vector_search(query_embedding):
+# Both models loaded once at startup — reused across all requests
+_embedder = SentenceTransformer("BAAI/bge-base-en-v1.5")
+_embedder.max_seq_length = 512
+_reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L6-v2", max_length=512)
+
+# Simple in-memory cache — repeated identical queries return instantly
+_query_cache: dict = {}
+
+# Strip Qwen3 <think>...</think> tokens that sometimes leak into output
+_THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
+
+
+def strip_think_tags(text: str) -> str:
+    return _THINK_RE.sub("", text).strip()
+
+
+def perform_vector_search(query_embedding, user_query, top_k=40):
+    """
+    Pure vector search against Pinecone.
+    Returns Pinecone match dicts: {"id", "score", "metadata": {...}}
+    """
+    sparse_vector = _bm25.encode_queries(user_query)
+
     results = index.query(
         vector=query_embedding,
-        top_k=10,
-        include_metadata=True
+        sparse_vector=sparse_vector,
+        top_k=top_k,
+        include_metadata=True,
     )
-    return results["matches"]
+    return results.get("matches", [])
 
 
-def query_rewriter_hyde(query):
-    systemPrompt = (
-    "You are a retrieval query expansion assistant for a superannuation chatbot knowledge base. "
-    "Given a user question, correct any spelling or grammar. Then rewrite the question so it "
-    "mentions specific technical terms, section headings, or strategies that would appear in "
-    "the relevant documents Trust Deed', 'Establishment and Purpose', 'SIS Act'). "
-    "But try not to randomly add those technical terms if you aren't sure that they are relevant"
-    "Output ONLY the single paragraph WHICH IS THE EXPANDED the query, and NOTHING else, WHEN I SAY NOTHING I MEAN NOTHING,"
-    "NO need to state what you have done to the query or what problems there were with the query please."
-    )
-    
-    url = "http://localhost:11434/api/chat"
-    data = {"model": "qwen3",
-            "messages": [{"role": "system", "content": systemPrompt}, {"role": "user", "content": query}],
-            "stream": False,
-            "options": {"temperature": 0.0}
-            }
-    response = requests.post(url, json=data)
-    response.raise_for_status()
-    
-    rewritten = response.json()["message"]["content"].strip()
-    # Remove any potential quotes or extraneous formatting
-    return [rewritten]
-
-def extract_keyphrase(query):
-    prompt = (
-        "Given a user question about a superannuation trust deed or SIS Act, "
-        "output a short descriptive phrase or heading (2-6 words) that would very likely "
-        "appear in the document's table of contents or as a section title. "
-        "Examples: 'Auto-Pension Commencement', 'Establishment and Purpose', "
-        "'Trustee meetings', 'Preservation Age'. "
-        "Do NOT output a bare section number like 'Section 56(1)' unless that number "
-        "is part of a full heading. Output ONLY the phrase, nothing else NO NEED FOR ANY NOTES OR ANYTHING EXTRA PLEASE.\n"
-        f"Question: {query}\nPhrase:"
-    )
-    response = requests.post("http://localhost:11434/api/generate", json={
-        "model": "qwen3",
-        "prompt": prompt,
-        "stream": False,
-        "options": {"temperature": 0.0}
-    })
-    response.raise_for_status()
-    return response.json()["response"].strip()
-
-def rerank_results(user_query, search_results, top_k=10):
+def rerank(query, chunks, top_k=5):
     """
-    Rerank search results by computing relevance scores.
-    Uses Ollama to score each chunk's relevance to the query.
+    Batch-score all chunks in ONE CrossEncoder forward pass.
+    Replaces the old approach of one Ollama LLM call per chunk.
     """
-    scored_results = []
-    
-    for res in search_results:
-        metadata = res.get("metadata", {})
-        chunk_text = metadata.get("child_match_text", "") or metadata.get("text", "")
-        
-        # Truncate chunk if too long (Llama context limit)
-        max_chunk_length = 1500
-        if len(chunk_text) > max_chunk_length:
-            chunk_text = chunk_text[:max_chunk_length] + "..."
-        
-        # Prompt Llama to score relevance
-        scoring_prompt = f"""You are evaluating if a document chunk ANSWERS the user's question.
+    if not chunks:
+        return []
 
-            Score from 0-10 where:
-            - 10 = Directly answers the specific question with relevant details
-            - 5-7 = Contains related information but doesn't directly answer
-            - 0-2 = Mentions keywords but provides no answer
+    texts  = [
+        (c.get("metadata", {}).get("child_match_text", "")
+         or c.get("metadata", {}).get("text", ""))[:2000]
+        for c in chunks
+    ]
+    pairs = [(query, t) for t in texts]
+    scores = _reranker.predict(pairs, show_progress_bar=False)
 
-            CRITICAL: Just mentioning the same words as the query does NOT mean it answers the question.
-            A title page that says "Summers Trust Fund" but provides no details about its purpose scores LOW.
+    ranked = sorted(zip(scores, chunks), key=lambda x: x[0], reverse=True)
 
-            Question: {user_query}
-
-            Document chunk:
-            {chunk_text}
-
-            Think: Does this chunk actually ANSWER the question, or just mention the same words?
-
-            Score (0-10):"""
-        
-        url = "http://localhost:11434/api/generate"
-        data = {
-            "model": "qwen3",
-            "prompt": scoring_prompt,
-            "stream": False,
-            "options": {"temperature": 0.0}
-        }
-        
-        try:
-            response = requests.post(url, json=data)
-            response.raise_for_status()
-            score_text = response.json()["response"].strip()
-            
-            # Extract numeric score (handle cases like "8/10" or "8.")
-            import re
-            match = re.search(r'(?:Score|SCORE)\s*[:\-]?\s*(10|[0-9])', score_text)
-            rerank_score = float(match.group(1)) if match else 0.0
-            
-        except Exception as e:
-            print(f"Reranking error: {e}")
-            rerank_score = res.get("score", 0.5)  # Fallback to vector score
-        
-        scored_results.append({
-            "result": res,
-            "rerank_score": rerank_score,
-            "original_score": res.get("score", 0)
-        })
-    
-    # Sort by rerank score (descending) and return top_k
-    scored_results.sort(key=lambda x: x["rerank_score"], reverse=True)
-    
     print("\n=== RERANKING RESULTS ===")
-    for i, item in enumerate(scored_results[:top_k]):
-        print(f"\nRank {i+1}")
-        print(f"Rerank Score: {item['rerank_score']}/10")
-        print(f"Original Vector Score: {item['original_score']:.4f}")
-        print(item['result'].get('metadata', {}).get('text', '')[:200])
-    
-    return scored_results[:top_k]
+    for i, (score, chunk) in enumerate(ranked[:top_k]):
+        meta = chunk.get("metadata", {})
+        print(f"\nRank {i+1}  CrossEncoder score: {score:.4f}")
+        print((meta.get("child_match_text") or meta.get("text", ""))[:200])
+
+    return [{"result": c, "rerank_score": float(s)} for s, c in ranked[:top_k]]
 
 
-def get_embedding(text):
-    #Use locally hosted Ollama to embed type shit 
-    url = "http://localhost:11434/api/embed"
-    data = {"model": "jina/jina-embeddings-v2-base-en","input": text }
-    response = requests.post(url, json=data)
-    response.raise_for_status()
-    return response.json()["embeddings"][0]
-
-def get_chat_response(systemPrompt, userQuery):
-    #Use locally hosted Ollama to generate a response type shit 
+def get_chat_response(system_prompt, user_query):
     url = "http://localhost:11434/api/chat"
-    data = {"model": "qwen3",
-            "messages": [{"role": "system", "content":systemPrompt}, {"role": "user", "content":userQuery}],
-            "stream": False,
-            "options": {"temperature": 0.0}
-            }
-    response = requests.post(url, json=data)
+    data = {
+        "model": "qwen3",
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_query},
+        ],
+        "stream": False,
+        "options": {
+            "temperature": 0.0,
+            "num_ctx": 8192,  # 5 parent chunks × ~500 tokens + system prompt overhead
+        },
+    }
+    response = requests.post(url, json=data, timeout=120)
     response.raise_for_status()
-    return response.json()["message"]["content"]
+    return strip_think_tags(response.json()["message"]["content"])
 
-
-@api_view(['POST'])
+@api_view(["POST"])
 def chat_with_advisor_bot(request):
-    """API Endpoint to handle advisor queries via RAG."""
+    """API endpoint to handle advisor queries via RAG."""
     user_query = request.data.get("query")
-    
+
     if not user_query:
         return JsonResponse({"error": "Query is required"}, status=400)
 
+    # Return cached result for repeated identical queries
+    cache_key = user_query.strip().lower()
+    if cache_key in _query_cache:
+        print(f"Cache hit for: {cache_key}")
+        return JsonResponse(_query_cache[cache_key])
+
     try:
-        #1. Rewrite and embed queries
-        rewritten_queries = query_rewriter_hyde(user_query)
-        keyphrase = extract_keyphrase(user_query)
-        rewritten_queries.append(keyphrase)
+        # 1. Embed query with BGE prefix (required for BGE retrieval quality)
+        query_embedding = _embedder.encode(
+            "Represent this sentence for searching relevant passages: " + user_query
+        ).tolist()
 
-        # Always include the original phrasing – it may contain the exact technical terms needed
-        if user_query not in rewritten_queries:
-            rewritten_queries.append(user_query)
-            
-        print(rewritten_queries)
-        
-        all_results = []
-        for q in rewritten_queries:
-            query_embedding = get_embedding(q)
-            results = perform_vector_search(query_embedding)
-            all_results.extend(results)
-        
-        # 2. Deduplicate chunks (keep highest score
-        seen_texts = set()
-        deduped_results = []
+        # 2. Vector search
+        raw_results = perform_vector_search(query_embedding, user_query, top_k=40)
 
-        for res in all_results:
+        # 3. Deduplicate — keep highest-scoring copy of each unique chunk
+        best_by_hash = {}
+        for res in raw_results:
             metadata = res.get("metadata", {})
             content = metadata.get("child_match_text", "") or metadata.get("text", "")
-            # FILTER: Ignore Table of Contents chunks (usually lots of dots)
+
             if ".........." in content or "Table of Contents" in content:
                 continue
+
             text_hash = hashlib.md5(content.encode()).hexdigest()
+            score = res.get("score", 0)
 
-            if text_hash not in seen_texts:
-                deduped_results.append(res)
-                seen_texts.add(text_hash)
-                
-        search_results = rerank_results(user_query, deduped_results[:10], top_k=3)
-        
-        quality_results = [
-            item for item in search_results
-            if item["rerank_score"] >= 4
-        ]
+            if text_hash not in best_by_hash or score > best_by_hash[text_hash][0]:
+                best_by_hash[text_hash] = (score, res)
 
-        if not quality_results:
+        deduped = [res for _, res in best_by_hash.values()]
+
+        # 4. Batch-rerank all deduped chunks, keep top 5
+        reranked = rerank(user_query, deduped, top_k=5)
+
+        if not reranked:
             return JsonResponse({
-                "answer": "I could not find any relevant information in the fund documents to answer your query.",
-                "citations": []
+                "answer":    "I could not find any relevant information in the fund documents to answer your query.",
+                "citations": [],
             })
-                
-        search_results = quality_results
-            
 
-        # 4. Construct Context and Citations
+        # 5. Build context — cap each chunk at 1500 chars to stay within num_ctx=8192
         context_text = ""
         citations = []
-        
-        for i, item in enumerate(search_results):
-            res = item["result"]
-            metadata = res.get("metadata", {})
-            chunk_text = metadata.get("child_match_text", "") or metadata.get("text", "")
+
+        for i, item in enumerate(reranked):
+            metadata = item["result"].get("metadata", {})
+            chunk_text = (metadata.get("child_match_text", "") or metadata.get("text", ""))[:1500]
             context_text += f"--- Document {i+1} ---\n{chunk_text}\n\n"
             citations.append({
-                "source": metadata.get('source_url', 'Unknown'),
-                "fund": metadata.get('fund_name', 'Unknown')
+                "source": metadata.get("source_url", "Unknown"),
+                "fund":   metadata.get("fund_name",  "Unknown"),
             })
-            
+
         print("\n=== RETRIEVED CHUNKS ===")
-
-        for i, item in enumerate(search_results):
-            res = item["result"]
-            score = res.get("score")
-            text = res.get("metadata", {}).get("text", "")
-
-            print(f"\nChunk {i+1}")
-            print(f"Score: {score}")
-            print(text[:500])
+        for i, item in enumerate(reranked):
+            metadata = item["result"].get("metadata", {})
+            print(f"\nChunk {i+1}  score={item['rerank_score']:.4f}")
+            print(metadata.get("text", "")[:500])
             print("=" * 50)
-            
-        # 5. Generate Answer via LLM (Augmentation)
+
+        # 6. Generate answer
         system_prompt = f"""
         You are an expert AI assistant for financial advisors at Triple A Super.
-        Answer the user's query STRICTLY based on the provided document context below. 
-        If the answer is not in the context, say "I cannot answer this based on the provided documents."
-        Answer only with what the document gives you, do not infer or try to answer questiont aht were not asked.
-        
+        Answer the user's query using ONLY the provided document context below.
+        Do not use any outside knowledge — only what appears in the context.
+
+        If the context contains relevant information, share ALL of it even if it is brief or partial.
+        Do not refuse to answer just because the information is incomplete — report what is there.
+        Only say "I cannot find information about this in the provided documents" if the context contains
+        absolutely nothing related to the query.
+
         If the query asks about methods, techniques, strategies, or types:
         - enumerate ALL methods found in the context
         - do not omit any
         - use bullet points
 
-        If the answer is absent from context, say so.
-        
-        Do not provide general financial advice outside of these documents.
-        DO NOT PROVIDE ANY INFORMATION IN GENERAL IF ITS NOT IN THE DOCUMENTS, DONT MAKE STUFF UP
-        
         CONTEXT:
         {context_text}
         """
 
-        answer = get_chat_response(system_prompt,user_query)
-        
-        # response_data = {
-        #     "answer": answer,
-        #     "citations": citations 
-        # }
+        answer = get_chat_response(system_prompt, user_query)
 
-        # 5. Return response to UI
-        return JsonResponse({
-            "answer": answer,
-            "citations": citations 
-        })
-        
+        result = {"answer": answer, "citations": citations}
+        _query_cache[cache_key] = result
+        return JsonResponse(result)
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
-    
-print("USING PINECONE VECTOR STORE")
+
+
+print("USING PINECONE VECTOR STORE (BGE + CrossEncoder)")

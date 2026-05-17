@@ -1,146 +1,173 @@
 import os
-import json
-import requests
 import pdfplumber
 from dotenv import load_dotenv
 from pinecone import Pinecone, ServerlessSpec
+from pinecone_text.sparse import BM25Encoder
+from sentence_transformers import SentenceTransformer
 
-# Import LlamaIndex components
-from llama_index.core import SimpleDirectoryReader
+from llama_index.core import Document
 from llama_index.core.node_parser import HierarchicalNodeParser, get_leaf_nodes
 
 load_dotenv("secrets.env")
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "fit4002-pinecone-index")
+EMBEDDING_DIM = 768
+# Fitted BM25 encoder is saved here during ingest and loaded by views_pinecone.py at query time
+BM25_ENCODER_PATH = os.getenv("BM25_ENCODER_PATH", "bm25_encoder.json")
 
 pc = Pinecone(api_key=PINECONE_API_KEY)
 
 pdfs_to_process = [
-    {"filepath": "../Project_26.pdf", "fund_name": "Triple A Super", "doc_type": "Project Brief"},
-    {"filepath": "../Proposal Document.pdf", "fund_name": "Triple A Super", "doc_type": "Development Proposal"},
-    {"filepath": "../deed.pdf", "fund_name": "Summers Family Super Fund", "doc_type": "Deed"},
-    {"filepath": "../sample-smsf-trust-deed.pdf", "fund_name": "Triple A Super", "doc_type": "Deed"},
-    {"filepath": "../SIS Act -1.pdf", "fund_name": "Triple A Super", "doc_type": "Project Brief"},
-    {"filepath": "../SIS Act Part 2-1.pdf", "fund_name": "Triple A Super", "doc_type": "Development Proposal"},
-    {"filepath": "../Super-changes-timeline-1.pdf", "fund_name": "Triple A Super", "doc_type": "Changelog"},
+    {"filepath": "../Trust_Deed_Sample_Superannuation_Fund.pdf", "fund_name": "Triple A Super",            "doc_type": "Trust Deed"},
+    {"filepath": "../deed.pdf",                                   "fund_name": "Summers Family Super Fund", "doc_type": "Deed"},
+    {"filepath": "../sample-smsf-trust-deed.pdf",                 "fund_name": "Triple A Super",            "doc_type": "Deed"},
+    {"filepath": "../Project_26.pdf",                             "fund_name": "Triple A Super",            "doc_type": "Project Brief"},
+    {"filepath": "../Proposal Document.pdf",                      "fund_name": "Triple A Super",            "doc_type": "Development Proposal"},
+    {"filepath": "../SIS Act -1.pdf",                             "fund_name": "Triple A Super",            "doc_type": "SIS Act"},
+    {"filepath": "../SIS Act Part 2-1.pdf",                       "fund_name": "Triple A Super",            "doc_type": "SIS Act"},
+    {"filepath": "../Super-changes-timeline-1.pdf",               "fund_name": "Triple A Super",            "doc_type": "Changelog"},
 ]
-
-
-# def get_embedding(text):
-#     """Fetch vector embedding using OpenAI API."""
-#     url = "https://api.openai.com/v1/embeddings"
-#     headers = {
-#         "Authorization": f"Bearer {OPENAI_API_KEY}",
-#         "Content-Type": "application/json"
-#     }
-#     data = {"input": text, "model": "text-embedding-3-small"}
-#     response = requests.post(url, json=data, headers=headers)
-#     response.raise_for_status()
-#     return response.json()["data"][0]["embedding"]
-
-def get_embedding(text):
-    """Use locally hosted Ollama to embed type shit """
-    url = "http://localhost:11434/api/embed"
-    data = {"model": "jina/jina-embeddings-v2-base-en","input": text }
-    response = requests.post(url, json=data)
-    response.raise_for_status()
-    return response.json()["embeddings"][0]
 
 def clean_text(text):
     return " ".join(text.split())
 
+def extract_text_with_tables(pdf_path):
+    """
+    Extract text and tables from each page.
+    Tables are rendered as pipe-separated rows and appended to the page text
+    so tabular data (e.g. SIS Act contribution caps) is not lost.
+    """
+    all_pages = []
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            page_text = page.extract_text() or ""
+            table_parts = []
+            for table in (page.extract_tables() or []):
+                rows = []
+                for row in (table or []):
+                    if row:
+                        cells = [str(c).strip() if c is not None else "" for c in row]
+                        if any(cells):
+                            rows.append(" | ".join(cells))
+                if rows:
+                    table_parts.append("\n".join(rows))
+            if table_parts:
+                page_text += "\n" + "\n\n".join(table_parts)
+            if page_text.strip():
+                all_pages.append(clean_text(page_text))
+    return "\n".join(all_pages)
 
 def main():
-    # Create Pinecone Index
+    # Create index if it doesn't exist
+    # NOTE: metric must be "dotproduct" (not "cosine") for hybrid sparse-dense search.
+    # Pinecone's hybrid query normalises scores internally so ranking is still correct.
     if not pc.has_index(PINECONE_INDEX_NAME):
+        print(f"Creating Pinecone index '{PINECONE_INDEX_NAME}'...")
         pc.create_index(
             name=PINECONE_INDEX_NAME,
-            dimension=768,  
-            metric="cosine",
-            spec=ServerlessSpec(
-                cloud="aws",
-                region="us-east-1"
-            )
+            dimension=EMBEDDING_DIM,
+            metric="dotproduct",
+            spec=ServerlessSpec(cloud="aws", region="us-east-1"),
         )
-
+    else:
+        print(f"Index '{PINECONE_INDEX_NAME}' already exists, skipping creation.")
+ 
     index = pc.Index(PINECONE_INDEX_NAME)
-    
-    print("Reading documents using LlamaIndex...")
+ 
+    # Load BGE model once — used for all embeddings
+    print("Loading embedding model (BAAI/bge-base-en-v1.5)...")
+    embedder = SentenceTransformer("BAAI/bge-base-en-v1.5")
+    embedder.max_seq_length = 512
+ 
+    print("\nParsing PDFs...")
     documents = []
-    
-    # We will manually construct Document objects to preserve custom metadata 
-    # and map accurately to our specific files.
-    from llama_index.core import Document
-
-    
     for pdf_info in pdfs_to_process:
-        print(f"Parsing {pdf_info['filepath']}...")
-
-        full_pages = []
-
-        with pdfplumber.open(pdf_info['filepath']) as pdf:
-            for page in pdf.pages:
-                text = page.extract_text()
-                if text:
-                    full_pages.append(clean_text(text))
-
-        full_text = "\n".join(full_pages)
-
-        doc = Document(
+        print(f" {pdf_info['filepath']}...", end=" ", flush=True)
+        try:
+            full_text = extract_text_with_tables(pdf_info["filepath"])
+        except Exception as e:
+            print(f"ERROR: {e}")
+            continue
+        if not full_text.strip():
+            print("WARNING: no text extracted, skipped.")
+            continue
+        print(f"{len(full_text):,} chars")
+        documents.append(Document(
             text=full_text,
             metadata={
-                "source_url": pdf_info['filepath'].split('/')[-1],
-                "fund_name": pdf_info['fund_name'],
-                "doc_type": pdf_info['doc_type']
-            }
-        )
-        documents.append(doc)
-
-    print("Executing Hierarchical Node Chunking...")
-    # This creates a structure where parent nodes encompass 512-token child nodes
-    node_parser = HierarchicalNodeParser.from_defaults(chunk_sizes=[2048, 256])
+                "source_url": pdf_info["filepath"].split("/")[-1],
+                "fund_name": pdf_info["fund_name"],
+                "doc_type": pdf_info["doc_type"],
+            },
+        ))
+ 
+    print(f"\nChunking {len(documents)} documents...")
+    node_parser = HierarchicalNodeParser.from_defaults(chunk_sizes=[2048, 512])
     nodes = node_parser.get_nodes_from_documents(documents)
-    
-    # We only embed the smallest, most precise sub-chunks (leaf nodes)
     leaf_nodes = get_leaf_nodes(nodes)
-    print(f"Generated {len(leaf_nodes)} high-precision child nodes for embedding.")
-
-    # We need a map of all nodes to look up parent texts quickly
     node_map = {n.node_id: n for n in nodes}
-
-    print("Generating Vector Embeddings and constructing payload...")
-    # documents_to_insert = []
-            
-    vectors = []
-
-    for i, leaf in enumerate(leaf_nodes):
-        print(f"Embedding leaf node {i+1}/{len(leaf_nodes)}...")
-        embedding = get_embedding(leaf.text)
-
+    print(f"{len(leaf_nodes)} leaf nodes generated.")
+ 
+    # Collect all leaf texts and metadata before embedding
+    print("\nPreparing metadata...")
+    ids = []
+    leaf_texts = []
+    metadatas = []
+ 
+    for leaf in leaf_nodes:
         parent_id = leaf.parent_node.node_id if leaf.parent_node else None
         parent_node = node_map.get(parent_id)
-        expanded_context = parent_node.text if parent_node else leaf.text
-
-        vectors.append({
-            "id": leaf.node_id.replace("-", ""),
-            "values": embedding,
-            "metadata": {
-                "text": expanded_context[:1500],
-                "child_match_text": leaf.text[:800],
-                "child_id": leaf.node_id.replace("-", ""),
-                "source_url": leaf.metadata.get("source_url"),
-                "fund_name": leaf.metadata.get("fund_name"),
-                "doc_type": leaf.metadata.get("doc_type")
-            }
+        parent_text = parent_node.text if parent_node else leaf.text
+ 
+        ids.append(leaf.node_id.replace("-", ""))
+        leaf_texts.append(leaf.text)
+        metadatas.append({
+            "text": parent_text[:1500], # broad parent context for the LLM
+            "child_match_text": leaf.text[:800], # precise leaf chunk for reranking
+            "source_url": leaf.metadata.get("source_url", ""),
+            "fund_name": leaf.metadata.get("fund_name", ""),
+            "doc_type": leaf.metadata.get("doc_type", ""),
         })
+ 
+    # Batch-embed all leaf nodes in one call — much faster than one-by-one Ollama HTTP calls
+    # BGE documents do NOT use the query prefix — only queries get the prefix at search time
+    print(f"\nBatch-embedding {len(leaf_texts)} leaf nodes...")
+    embeddings = embedder.encode(
+        leaf_texts,
+        batch_size=32,
+        show_progress_bar=True,
+    ).tolist()
 
+    # Fit BM25 encoder on the same leaf texts used for dense embeddings.
+    # This must happen AFTER all leaf_texts are collected so the vocabulary is complete.
+    # The fitted encoder is saved to disk so views_pinecone.py can load it at query time
+    # without re-fitting on every request.
+    print(f"\nFitting BM25 encoder on {len(leaf_texts)} documents...")
+    bm25 = BM25Encoder()
+    bm25.fit(leaf_texts)
+    bm25.dump(BM25_ENCODER_PATH)
+    print(f"BM25 encoder saved to '{BM25_ENCODER_PATH}'.")
+
+    # Encode sparse vectors for all leaf texts in one pass
+    print("Encoding sparse vectors...")
+    sparse_embeddings = bm25.encode_documents(leaf_texts)
+ 
+    # Upsert into Pinecone in batches of 100
+    # Each vector carries both dense (semantic) and sparse (BM25 keyword) representations.
+    print("\nUploading to Pinecone...")
     batch_size = 100
-    for i in range(0, len(vectors), batch_size):
-        batch = vectors[i:i+batch_size]
+    vectors = [
+        {"id": doc_id, "values": emb, "sparse_values": sparse, "metadata": meta}
+        for doc_id, emb, sparse, meta in zip(ids, embeddings, sparse_embeddings, metadatas)
+    ]
+ 
+    for start in range(0, len(vectors), batch_size):
+        batch = vectors[start : start + batch_size]
         index.upsert(vectors=batch)
-        print(f"Inserted batch {i//batch_size + 1}")
+        print(f"Upserted {min(start + batch_size, len(vectors))}/{len(vectors)}")
+ 
+    print(f"\nIngestion complete — {len(vectors)} vectors in '{PINECONE_INDEX_NAME}'.")
 
 if __name__ == "__main__":
     main()
