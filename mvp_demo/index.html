@@ -19,6 +19,37 @@
         button { padding: 10px 20px; background: #0056b3; color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.3s; }
         button:hover { background: #004494; }
         .loading { align-self: flex-start; color: #888; font-style: italic; display: none; }
+        .selector-group select {
+            width: 180px;
+            padding: 8px;
+            border-radius: 6px;
+            border: none;
+            outline: none;
+            background: white;
+            font-size: 0.9em;
+        }
+
+        .checkbox-group {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 0.9em;
+            color: #333;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -26,6 +57,39 @@
 <div class="chat-container">
     <div class="header">
         <h2>Triple A Super Advisor AI</h2>
+        <div class="toolbar">
+            <div class="selector-group">
+                <label for="user">User</label>
+                <select id="user">
+                    <option value="">Select user...</option>
+                    <option value="John">John</option>
+                    <option value="Emily">Emily</option>
+                    <option value="Jake">Jake</option>
+                    <option value="Shrek">Shrek</option>
+                </select>
+            </div>
+
+            <div class="selector-group">
+                <label>Knowledge Sources</label>
+                <div class="checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="doc-type" value="Trust Deed"> Trust Deed
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="doc-type" value="Project Brief"> Project Brief
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="doc-type" value="Development Proposal"> Development Proposal
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="doc-type" value="legal"> Legal Docs
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="doc-type" value="Changelog"> Changelog
+                    </label>
+                </div>
+            </div>
+        </div>
     </div>
     <div class="chat-box" id="chat-box">
         <div class="message bot-msg">Hello. I am the internal RAG assistant. Ask me a question about our project documents.</div>
