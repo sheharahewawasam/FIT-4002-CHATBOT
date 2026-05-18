@@ -3,15 +3,21 @@
 from langchain.text_splitter import MarkdownTextSplitter
 
 with open('./ocr_output/Test_Scan_0.5.md', 'r', encoding='utf-8') as file:
-    content = file.read()\
+    content1 = file.read()
+with open('./ocr_output/Test_Scan_0.3.md', 'r', encoding='utf-8') as file:
+    content2 = file.read()
+with open('./ocr_output/Test_Scan_0.7.md', 'r', encoding='utf-8') as file:
+    content3 = file.read()
 
 # print(content)
 
-splitter = MarkdownTextSplitter(chunk_size = 1000, chunk_overlap = 0)
+splitter = MarkdownTextSplitter(chunk_size = 248, chunk_overlap = 0)
 
-doc = splitter.create_documents([content])
+doc = splitter.create_documents([content1])
+doc1 = splitter.create_documents([content2])
+doc2 = splitter.create_documents([content3])
 
-print(doc)
+print(len(doc),len(doc1),len(doc2))
 
 # directory = Path("./pdfs")
 # output_path = Path("./ocr_output")

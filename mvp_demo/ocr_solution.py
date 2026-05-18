@@ -3,6 +3,7 @@ from paddleocr import PPStructureV3
 import pymupdf as pymu
 from chonkie import SemanticChunker
 from ollama import generate
+from langchain_text_splitters import MarkdownTextSplitter
 
 class OCR():
     TEXT_MIN = 50
@@ -20,7 +21,7 @@ class OCR():
         "The chunks are split by '||'. The chunks to analyse are: "
     )   
 
-    def __init__(self, output: Path, gpu: bool):
+    def __init__(self, output: Path = Path("./ocr_output"), gpu: bool = False):
         """
         Constructor for OCR pipeline
         
@@ -55,9 +56,9 @@ class OCR():
 
         self.initiate_model_v3()
 
-        thresh_low = self.predictV3(pdf_path, 0.30)
+        # thresh_low = self.predictV3(pdf_path, 0.30)
         thresh_med = self.predictV3(pdf_path, 0.50)
-        thresh_hi = self.predictV3(pdf_path, 0.70)
+        # thresh_hi = self.predictV3(pdf_path, 0.70)
 
         chunker = SemanticChunker(
             threshold=0.8,
@@ -65,25 +66,27 @@ class OCR():
             similarity_window=5
         )
 
-        low_chunks = chunker.chunk(thresh_low)
+        # low_chunks = chunker.chunk(thresh_low)
         med_chunks = chunker.chunk(thresh_med)
-        hi_chunks = chunker.chunk(thresh_hi)
+        # hi_chunks = chunker.chunk(thresh_hi)
         
-        chunk1 = self.safe_pop(low_chunks)
+        # chunk1 = self.safe_pop(low_chunks)
         chunk2 = self.safe_pop(med_chunks)
-        chunk3 = self.safe_pop(hi_chunks)
+        # chunk3 = self.safe_pop(hi_chunks)
 
-        while chunk1 or chunk2 or chunk3:
-            prompt = chunk1+" || "+chunk2+" || "+chunk3
+        # while chunk1 or chunk2 or chunk3:
+        #     prompt = chunk1+" || "+chunk2+" || "+chunk3
 
-            response = self.align_text(prompt)
+        #     response = self.align_text(prompt)
 
-            res += response
+        #     res += response
 
-            chunk1 = self.safe_pop(low_chunks)
-            chunk2 = self.safe_pop(med_chunks)
-            chunk3 = self.safe_pop(hi_chunks)
+        #     # chunk1 = self.safe_pop(low_chunks)
+        #     chunk2 = self.safe_pop(med_chunks)
+        #     # chunk3 = self.safe_pop(hi_chunks)
         
+        res = thresh_med
+
         mkd_file_path = self.output / f"{pdf_path.stem}.md"
         mkd_file_path.parent.mkdir(parents=True, exist_ok=True)
 

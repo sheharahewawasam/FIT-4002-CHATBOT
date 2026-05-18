@@ -5,6 +5,9 @@ from sentence_transformers import SentenceTransformer
 from llama_index.core import Document
 from llama_index.core.node_parser import HierarchicalNodeParser, get_leaf_nodes
 
+from ocr_solution import OCR
+from pathlib import Path
+
 CHROMA_PATH = "./chroma_db"
 COLLECTION_NAME = "triple_a_docs"
 
@@ -47,6 +50,9 @@ def extract_text_with_tables(pdf_path):
 
 
 def main():
+    print("Loading OCR model...")
+    ocr = OCR()
+
     print("Loading embedding model...")
     embedder = SentenceTransformer("BAAI/bge-base-en-v1.5")
     embedder.max_seq_length = 512
@@ -68,7 +74,9 @@ def main():
     for pdf_info in pdfs_to_process:
         print(f"  {pdf_info['filepath']}...", end=" ", flush=True)
         try:
-            full_text = extract_text_with_tables(pdf_info["filepath"])
+            full_text = ocr.output_document(Path(pdf_info["filepath"]))
+            if not full_text:
+                full_text = extract_text_with_tables(pdf_info["filepath"])
         except Exception as e:
             print(f"ERROR: {e}")
             continue
