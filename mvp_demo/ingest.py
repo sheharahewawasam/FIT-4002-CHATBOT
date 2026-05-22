@@ -6,6 +6,7 @@ from pinecone_text.sparse import BM25Encoder
 from sentence_transformers import SentenceTransformer
 
 from llama_index.core import Document
+from llama_index.core import Document
 from llama_index.core.node_parser import HierarchicalNodeParser, get_leaf_nodes
 
 load_dotenv("secrets.env")
@@ -32,12 +33,8 @@ pdfs_to_process = [
 def clean_text(text):
     return " ".join(text.split())
 
+
 def extract_text_with_tables(pdf_path):
-    """
-    Extract text and tables from each page.
-    Tables are rendered as pipe-separated rows and appended to the page text
-    so tabular data (e.g. SIS Act contribution caps) is not lost.
-    """
     all_pages = []
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
@@ -58,10 +55,9 @@ def extract_text_with_tables(pdf_path):
                 all_pages.append(clean_text(page_text))
     return "\n".join(all_pages)
 
+
 def main():
     # Create index if it doesn't exist
-    # NOTE: metric must be "dotproduct" (not "cosine") for hybrid sparse-dense search.
-    # Pinecone's hybrid query normalises scores internally so ranking is still correct.
     if not pc.has_index(PINECONE_INDEX_NAME):
         print(f"Creating Pinecone index '{PINECONE_INDEX_NAME}'...")
         pc.create_index(
@@ -83,7 +79,7 @@ def main():
     print("\nParsing PDFs...")
     documents = []
     for pdf_info in pdfs_to_process:
-        print(f" {pdf_info['filepath']}...", end=" ", flush=True)
+        print(f"  {pdf_info['filepath']}...", end=" ", flush=True)
         try:
             full_text = extract_text_with_tables(pdf_info["filepath"])
         except Exception as e:
@@ -97,26 +93,26 @@ def main():
             text=full_text,
             metadata={
                 "source_url": pdf_info["filepath"].split("/")[-1],
-                "fund_name": pdf_info["fund_name"],
-                "doc_type": pdf_info["doc_type"],
+                "fund_name":  pdf_info["fund_name"],
+                "doc_type":   pdf_info["doc_type"],
             },
         ))
- 
+
     print(f"\nChunking {len(documents)} documents...")
     node_parser = HierarchicalNodeParser.from_defaults(chunk_sizes=[2048, 512])
-    nodes = node_parser.get_nodes_from_documents(documents)
+    nodes      = node_parser.get_nodes_from_documents(documents)
     leaf_nodes = get_leaf_nodes(nodes)
-    node_map = {n.node_id: n for n in nodes}
-    print(f"{len(leaf_nodes)} leaf nodes generated.")
- 
-    # Collect all leaf texts and metadata before embedding
+    node_map   = {n.node_id: n for n in nodes}
+    print(f"  {len(leaf_nodes)} leaf nodes generated.")
+
+    # Build metadata list and collect leaf texts for batch embedding
     print("\nPreparing metadata...")
-    ids = []
-    leaf_texts = []
-    metadatas = []
- 
+    leaf_texts  = []
+    ids         = []
+    metadatas   = []
+
     for leaf in leaf_nodes:
-        parent_id = leaf.parent_node.node_id if leaf.parent_node else None
+        parent_id   = leaf.parent_node.node_id if leaf.parent_node else None
         parent_node = node_map.get(parent_id)
         parent_text = parent_node.text if parent_node else leaf.text
  
@@ -130,8 +126,7 @@ def main():
             "doc_type": leaf.metadata.get("doc_type", ""),
         })
  
-    # Batch-embed all leaf nodes in one call — much faster than one-by-one Ollama HTTP calls
-    # BGE documents do NOT use the query prefix — only queries get the prefix at search time
+    # Batch-embed all leaf nodes in one call — much faster than one-by-one 
     print(f"\nBatch-embedding {len(leaf_texts)} leaf nodes...")
     embeddings = embedder.encode(
         leaf_texts,
@@ -140,9 +135,6 @@ def main():
     ).tolist()
 
     # Fit BM25 encoder on the same leaf texts used for dense embeddings.
-    # This must happen AFTER all leaf_texts are collected so the vocabulary is complete.
-    # The fitted encoder is saved to disk so views_pinecone.py can load it at query time
-    # without re-fitting on every request.
     print(f"\nFitting BM25 encoder on {len(leaf_texts)} documents...")
     bm25 = BM25Encoder()
     bm25.fit(leaf_texts)

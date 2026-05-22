@@ -85,29 +85,41 @@ const htmlContent = `<!DOCTYPE html>
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
+    function escapeHtml(str) {
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
     function addBotMessageWithCitations(answer, citations, stepBackQuery) {
         const chatBox = document.getElementById('chat-box');
         const msgDiv = document.createElement('div');
         msgDiv.className = 'message bot-msg';
-        
-        let htmlContent = \`<div class="answer-text">\${answer.replace(/\\n/g, '<br>')}</div>\`;
-        
+
+        let htmlContent = \`<div class="answer-text">\${escapeHtml(answer).replace(/\\n/g, '<br>')}</div>\`;
+
         // Add step back debug text to prove the optimization strategy works
         if (stepBackQuery) {
-             htmlContent += \`<div style="font-size:0.75em; color: green; margin-top: 10px;">[Optimized Search included Step-Back concept: "\${stepBackQuery}"]</div>\`;
+             htmlContent += \`<div style="font-size:0.75em; color: green; margin-top: 10px;">[Optimized Search included Step-Back concept: "\${escapeHtml(stepBackQuery)}"]</div>\`;
         }
-        
+
         if (citations && citations.length > 0) {
             const uniqueCitations = Array.from(new Set(citations.map(c => c.source)))
                                          .map(src => citations.find(c => c.source === src));
-                                         
+
             htmlContent += \`<div class="citations"><strong>Sources:</strong><ul>\`;
             uniqueCitations.forEach(cit => {
-                htmlContent += \`<li><a href="../\${cit.source.split('/').pop()}" target="_blank" style="color:#0056b3;">\${cit.source.split('/').pop()}</a> (\${cit.fund} - \${cit.type})</li>\`;
+                const filename = escapeHtml(cit.source.split('/').pop());
+                const fund     = escapeHtml(cit.fund);
+                const type     = escapeHtml(cit.type);
+                htmlContent += \`<li><a href="../\${filename}" target="_blank" style="color:#0056b3;">\${filename}</a> (\${fund} - \${type})</li>\`;
             });
             htmlContent += \`</ul></div>\`;
         }
-        
+
         msgDiv.innerHTML = htmlContent;
         chatBox.insertBefore(msgDiv, document.getElementById('loading'));
         chatBox.scrollTop = chatBox.scrollHeight;
@@ -199,17 +211,21 @@ async function handleChat(request, env) {
         const stepBackVector = embedReqPayloads.length > 1 ? embedRes.data[1].embedding : null;
 
         // Phase 3: Query Cloudflare Vectorize (Multi-Query Execution)
-        const vResults1 = env.VECTORIZE.query(primaryVector, { topK: 3, returnMetadata: "all" });
-        const vResults2 = stepBackVector ? env.VECTORIZE.query(stepBackVector, { topK: 2, returnMetadata: "all" }) : Promise.resolve({ matches: [] });
+        const vResults1 = env.VECTORIZE.query(primaryVector, { topK: 5, returnMetadata: "all" });
+        const vResults2 = stepBackVector ? env.VECTORIZE.query(stepBackVector, { topK: 3, returnMetadata: "all" }) : Promise.resolve({ matches: [] });
         
         const [results1, results2] = await Promise.all([vResults1, vResults2]);
         
-        // Merge and Deduplicate matches based on Cloudflare string IDs
+        // Merge: keep the higher-scoring entry when the same vector ID appears in both queries,
+        // then sort descending by score so the LLM receives the most relevant context first.
         const combinedMatchesMap = new Map();
-        (results1.matches || []).forEach(m => combinedMatchesMap.set(m.id, m));
-        (results2.matches || []).forEach(m => combinedMatchesMap.set(m.id, m));
-        
-        const uniqueMatches = Array.from(combinedMatchesMap.values());
+        for (const m of (results1.matches || [])) combinedMatchesMap.set(m.id, m);
+        for (const m of (results2.matches || [])) {
+            const existing = combinedMatchesMap.get(m.id);
+            if (!existing || (m.score || 0) > (existing.score || 0)) combinedMatchesMap.set(m.id, m);
+        }
+        const uniqueMatches = Array.from(combinedMatchesMap.values())
+            .sort((a, b) => (b.score || 0) - (a.score || 0));
 
         if (uniqueMatches.length === 0) {
             return Response.json({ answer: "I could not find any relevant information in the fund documents to answer your query.", citations: [], stepBackQuery });
@@ -270,7 +286,7 @@ async function handleChat(request, env) {
         const answer = chatRes.choices[0].message.content;
 
         // Return JSON payload
-        return Response.json({ answer, citations, stepBackQuery, debugContextLength: contextText.length, debugContext: contextText }, {
+        return Response.json({ answer, citations, stepBackQuery }, {
             headers: { "Access-Control-Allow-Origin": "*" }
         });
 

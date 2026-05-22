@@ -1,6 +1,8 @@
 import os
 import re
 import hashlib
+import re
+import hashlib
 import requests
 
 from django.http import JsonResponse
@@ -80,20 +82,20 @@ def rerank(query, chunks, top_k=5):
 
     return [{"result": c, "rerank_score": float(s)} for s, c in ranked[:top_k]]
 
-
 def get_chat_response(system_prompt, user_query):
     url = "http://localhost:11434/api/chat"
     data = {
         "model": "qwen3",
         "messages": [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_query},
+            {"role": "user", "content": user_query}
         ],
         "stream": False,
         "options": {
             "temperature": 0.0,
-            "num_ctx": 8192,  # 5 parent chunks × ~500 tokens + system prompt overhead
-        },
+            # 5 parent chunks × ~500 tokens each + system prompt overhead — 8192 avoids silent truncation
+            "num_ctx": 8192
+        }
     }
     response = requests.post(url, json=data, timeout=120)
     response.raise_for_status()
@@ -101,7 +103,6 @@ def get_chat_response(system_prompt, user_query):
 
 @api_view(["POST"])
 def chat_with_advisor_bot(request):
-    """API endpoint to handle advisor queries via RAG."""
     user_query = request.data.get("query")
 
     if not user_query:
@@ -133,7 +134,6 @@ def chat_with_advisor_bot(request):
 
             text_hash = hashlib.md5(content.encode()).hexdigest()
             score = res.get("score", 0)
-
             if text_hash not in best_by_hash or score > best_by_hash[text_hash][0]:
                 best_by_hash[text_hash] = (score, res)
 
@@ -158,7 +158,7 @@ def chat_with_advisor_bot(request):
             context_text += f"--- Document {i+1} ---\n{chunk_text}\n\n"
             citations.append({
                 "source": metadata.get("source_url", "Unknown"),
-                "fund":   metadata.get("fund_name",  "Unknown"),
+                "fund": metadata.get("fund_name", "Unknown")
             })
 
         print("\n=== RETRIEVED CHUNKS ===")
@@ -169,6 +169,8 @@ def chat_with_advisor_bot(request):
             print("=" * 50)
 
         # 6. Generate answer
+
+        # 5. Generate answer with Qwen3
         system_prompt = f"""
         You are an expert AI assistant for financial advisors at Triple A Super.
         Answer the user's query using ONLY the provided document context below.
@@ -188,6 +190,11 @@ def chat_with_advisor_bot(request):
         {context_text}
         """
 
+        answer = get_chat_response(system_prompt, user_query)
+
+        result = {"answer": answer, "citations": citations}
+        _query_cache[cache_key] = result
+        return JsonResponse(result)
         answer = get_chat_response(system_prompt, user_query)
 
         result = {"answer": answer, "citations": citations}
