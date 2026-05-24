@@ -65,7 +65,6 @@
                     <option value="John">John</option>
                     <option value="Emily">Emily</option>
                     <option value="Jake">Jake</option>
-                    <option value="Shrek">Shrek</option>
                 </select>
             </div>
 
@@ -73,19 +72,7 @@
                 <label>Knowledge Sources</label>
                 <div class="checkbox-group">
                     <label class="checkbox-label">
-                        <input type="checkbox" name="doc-type" value="Trust Deed"> Trust Deed
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" name="doc-type" value="Project Brief"> Project Brief
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" name="doc-type" value="Development Proposal"> Development Proposal
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" name="doc-type" value="legal"> Legal Docs
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" name="doc-type" value="Changelog"> Changelog
+                        <label> Select a user to view avaliable funds
                     </label>
                 </div>
             </div>
@@ -172,6 +159,91 @@
         chatBox.insertBefore(msgDiv, document.getElementById('loading'));
         chatBox.scrollTop = chatBox.scrollHeight;
     }
+
+    const API_BASE = 'http://127.0.0.1:8000/users';
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const userSelect = document.getElementById('user');
+        const checkboxGroup = document.querySelector('.checkbox-group');
+
+        // 1. Fetch and populate users on page load
+        fetch(API_BASE + '/')
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to fetch users');
+                return response.json();
+            })
+            .then(data => {
+                // Keep the default "Select user..." option, clear any hardcoded ones if necessary
+                userSelect.innerHTML = '<option value="">Select user...</option>';
+                
+                data.users.forEach(username => {
+                    const option = document.createElement('option');
+                    option.value = username;
+                    option.textContent = username;
+                    userSelect.appendChild(option);
+                });
+            })
+            .catch(error => console.error('Error loading users:', error));
+
+    // 2. Listen for user selection changes to load their funds
+    userSelect.addEventListener('change', (event) => {
+        const selectedUser = event.target.value;
+
+        // If they selected the blank placeholder, clear the checkboxes
+        if (!selectedUser) {
+            checkboxGroup.innerHTML = '<p style="color: #666; font-size: 0.9em;">Select a user to view avaliable funds</p>';
+            return;
+        }
+
+        // Show a brief loading indicator inside the checkbox group
+        checkboxGroup.innerHTML = '<span>Loading funds...</span>';
+
+        // Force absolute path routing and ensure the trailing slash is strictly present
+        const cleanUrl = `${API_BASE}/${encodeURIComponent(selectedUser)}/`;
+
+        console.log("Fetching funds from:", cleanUrl); // 👈 Check your browser console to see this path!
+
+        fetch(cleanUrl)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Server responded with status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(res => {
+                // Your API returns {"data": [...]}, let's fallback safely if data is missing
+                const funds = res.data || [];
+                
+                // Clear the container
+                checkboxGroup.innerHTML = '';
+
+                if (funds.length === 0) {
+                    checkboxGroup.innerHTML = '<span>No funds found for this user.</span>';
+                    return;
+                }
+
+                // Generate a checkbox for every fund returned by Django
+                funds.forEach(fund => {
+                    const label = document.createElement('label');
+                    label.className = 'checkbox-label';
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.name = 'doc-type';
+                    checkbox.value = fund;
+
+                    label.appendChild(checkbox);
+                    label.appendChild(document.createTextNode(` ${fund}`));
+                    
+                    checkboxGroup.appendChild(label);
+                });
+            })
+            .catch(error => {
+                console.error('Error loading funds:', error);
+                checkboxGroup.innerHTML = '<span style="color: red;">Error loading knowledge sources</span>';
+            });
+    });
+    });
 </script>
 
 </body>
