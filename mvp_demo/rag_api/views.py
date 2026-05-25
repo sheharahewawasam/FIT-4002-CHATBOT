@@ -40,7 +40,7 @@ def strip_think_tags(text: str) -> str:
     return _THINK_RE.sub("", text).strip()
 
 
-def perform_vector_search(query_embedding, user_query, top_k=40):
+def perform_vector_search(query_embedding, user_query, filters, top_k=40):
     """
     Pure vector search against Pinecone.
     Returns Pinecone match dicts: {"id", "score", "metadata": {...}}
@@ -52,6 +52,9 @@ def perform_vector_search(query_embedding, user_query, top_k=40):
         sparse_vector=sparse_vector,
         top_k=top_k,
         include_metadata=True,
+        # filter={
+        #     "fund_name": {"$in": filters}
+        # }
     )
     return results.get("matches", [])
 
@@ -104,7 +107,7 @@ def get_chat_response(system_prompt, user_query):
 @api_view(["POST"])
 def chat_with_advisor_bot(request):
     user_query = request.data.get("query")
-
+    funds = request.data.get("funds", [])
     if not user_query:
         return JsonResponse({"error": "Query is required"}, status=400)
 
@@ -121,7 +124,7 @@ def chat_with_advisor_bot(request):
         ).tolist()
 
         # 2. Vector search
-        raw_results = perform_vector_search(query_embedding, user_query, top_k=40)
+        raw_results = perform_vector_search(query_embedding, user_query, funds, top_k=40)
 
         # 3. Deduplicate — keep highest-scoring copy of each unique chunk
         best_by_hash = {}
@@ -138,6 +141,7 @@ def chat_with_advisor_bot(request):
                 best_by_hash[text_hash] = (score, res)
 
         deduped = [res for _, res in best_by_hash.values()]
+        
 
         # 4. Batch-rerank all deduped chunks, keep top 5
         reranked = rerank(user_query, deduped, top_k=5)
@@ -180,6 +184,9 @@ def chat_with_advisor_bot(request):
         Do not refuse to answer just because the information is incomplete — report what is there.
         Only say "I cannot find information about this in the provided documents" if the context contains
         absolutely nothing related to the query.
+        
+        Do not give any arbitary document numbers or names when giving answer since their names are wrong and different.
+        No need to say accodring to x or y.
 
         If the query asks about methods, techniques, strategies, or types:
         - enumerate ALL methods found in the context

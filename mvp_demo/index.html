@@ -99,6 +99,10 @@
         const inputField = document.getElementById('query-input');
         const query = inputField.value.trim();
         if(!query) return;
+        // Get all selected funds
+        const selectedFunds = Array.from(
+            document.querySelectorAll('input[name="doc-type"]:checked')
+        ).map(cb => cb.value);
 
         addMessage(query, 'user-msg');
         inputField.value = '';
@@ -110,7 +114,10 @@
             const response = await fetch(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query: query })
+                body: JSON.stringify({ 
+                    query: query,
+                    funds: selectedFunds
+                 })
             });
 
             const data = await response.json();
