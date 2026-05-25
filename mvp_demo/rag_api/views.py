@@ -1,8 +1,6 @@
 import os
 import re
 import hashlib
-import re
-import hashlib
 import requests
 
 from django.http import JsonResponse
@@ -27,7 +25,7 @@ _bm25 = BM25Encoder().load(BM25_ENCODER_PATH)
 # Both models loaded once at startup — reused across all requests
 _embedder = SentenceTransformer("BAAI/bge-base-en-v1.5")
 _embedder.max_seq_length = 512
-_reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L6-v2", max_length=512)
+_reranker = CrossEncoder("BAAI/bge-reranker-base", max_length=512)
 
 # Simple in-memory cache — repeated identical queries return instantly
 _query_cache: dict = {}
@@ -40,7 +38,7 @@ def strip_think_tags(text: str) -> str:
     return _THINK_RE.sub("", text).strip()
 
 
-def perform_vector_search(query_embedding, user_query, top_k=40):
+def perform_vector_search(query_embedding, user_query, top_k=60):
     """
     Pure vector search against Pinecone.
     Returns Pinecone match dicts: {"id", "score", "metadata": {...}}
@@ -56,7 +54,7 @@ def perform_vector_search(query_embedding, user_query, top_k=40):
     return results.get("matches", [])
 
 
-def rerank(query, chunks, top_k=5):
+def rerank(query, chunks, top_k=5, score_threshold=0.0):
     """
     Batch-score all chunks in ONE CrossEncoder forward pass.
     Replaces the old approach of one Ollama LLM call per chunk.
@@ -66,7 +64,7 @@ def rerank(query, chunks, top_k=5):
 
     texts  = [
         (c.get("metadata", {}).get("child_match_text", "")
-         or c.get("metadata", {}).get("text", ""))[:2000]
+         or c.get("metadata", {}).get("text", ""))[:1000]
         for c in chunks
     ]
     pairs = [(query, t) for t in texts]
@@ -80,7 +78,14 @@ def rerank(query, chunks, top_k=5):
         print(f"\nRank {i+1}  CrossEncoder score: {score:.4f}")
         print((meta.get("child_match_text") or meta.get("text", ""))[:200])
 
-    return [{"result": c, "rerank_score": float(s)} for s, c in ranked[:top_k]]
+    filtered = [(s, c) for s, c in ranked[:top_k] if s >= score_threshold]
+
+    if not filtered:
+        print(f"WARNING: all top-{top_k} chunks scored below threshold {score_threshold:.1f} — returning top-1 anyway")
+        filtered = ranked[:1]
+    
+
+    return [{"result": c, "rerank_score": float(s)} for s, c in filtered]
 
 def get_chat_response(system_prompt, user_query):
     url = "http://localhost:11434/api/chat"
@@ -121,13 +126,13 @@ def chat_with_advisor_bot(request):
         ).tolist()
 
         # 2. Vector search
-        raw_results = perform_vector_search(query_embedding, user_query, top_k=40)
+        raw_results = perform_vector_search(query_embedding, user_query, top_k=60)
 
         # 3. Deduplicate — keep highest-scoring copy of each unique chunk
         best_by_hash = {}
         for res in raw_results:
             metadata = res.get("metadata", {})
-            content = metadata.get("child_match_text", "") or metadata.get("text", "")
+            content = metadata.get("text", "") or metadata.get("child_match_text", "")
 
             if ".........." in content or "Table of Contents" in content:
                 continue
@@ -154,7 +159,7 @@ def chat_with_advisor_bot(request):
 
         for i, item in enumerate(reranked):
             metadata = item["result"].get("metadata", {})
-            chunk_text = (metadata.get("child_match_text", "") or metadata.get("text", ""))[:1500]
+            chunk_text = (metadata.get("text", "") or metadata.get("child_match_text", ""))[:1500]
             context_text += f"--- Document {i+1} ---\n{chunk_text}\n\n"
             citations.append({
                 "source": metadata.get("source_url", "Unknown"),
@@ -169,8 +174,6 @@ def chat_with_advisor_bot(request):
             print("=" * 50)
 
         # 6. Generate answer
-
-        # 5. Generate answer with Qwen3
         system_prompt = f"""
         You are an expert AI assistant for financial advisors at Triple A Super.
         Answer the user's query using ONLY the provided document context below.
@@ -190,11 +193,6 @@ def chat_with_advisor_bot(request):
         {context_text}
         """
 
-        answer = get_chat_response(system_prompt, user_query)
-
-        result = {"answer": answer, "citations": citations}
-        _query_cache[cache_key] = result
-        return JsonResponse(result)
         answer = get_chat_response(system_prompt, user_query)
 
         result = {"answer": answer, "citations": citations}

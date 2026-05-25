@@ -6,7 +6,6 @@ from pinecone_text.sparse import BM25Encoder
 from sentence_transformers import SentenceTransformer
 
 from llama_index.core import Document
-from llama_index.core import Document
 from llama_index.core.node_parser import HierarchicalNodeParser, get_leaf_nodes
 
 load_dotenv("secrets.env")
