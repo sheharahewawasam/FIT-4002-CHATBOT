@@ -206,9 +206,11 @@ class OCR():
 if __name__ == "__main__":
     ocr = OCR(Path("./ocr_output"), False)
 
-    input_file = Path("./pdfs/Project_26.pdf")
+    input_file = Path("./pdfs/Proposal Document.pdf")
 
     input_file2 = Path("./pdfs/scansmpl.pdf")
+
+    input_file3 = Path("./pdfs/image-based-pdf-sample_rotated.pdf")
 
     # input_file3 = Path("./pdfs/deed.pdf")
     # ocr.predictV3(input_file3)
@@ -225,3 +227,4 @@ if __name__ == "__main__":
 
     ocr.output_document(input_file)
     ocr.output_document(input_file2)
+    ocr.output_document(input_file3)
