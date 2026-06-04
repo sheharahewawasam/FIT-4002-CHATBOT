@@ -1,53 +1,74 @@
 import os
 import re
 import hashlib
+import re
+import hashlib
 import requests
-import chromadb
-from sentence_transformers import SentenceTransformer, CrossEncoder
+
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
+from dotenv import load_dotenv
+from pinecone import Pinecone
+from pinecone_text.sparse import BM25Encoder
+from sentence_transformers import SentenceTransformer, CrossEncoder
 
-CHROMA_PATH = os.path.join(os.path.dirname(__file__), "..", "chroma_db")
-COLLECTION_NAME = "triple_a_docs"
+load_dotenv("secrets.env")
 
-_chroma_client = chromadb.PersistentClient(path=CHROMA_PATH)
-_collection = _chroma_client.get_or_create_collection(
-    name=COLLECTION_NAME,
-    metadata={"hnsw:space": "cosine"}
-)
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")
 
-# Both models loaded once at startup — no Ollama HTTP calls for embedding or reranking
+BM25_ENCODER_PATH = os.getenv("BM25_ENCODER_PATH", "bm25_encoder.json")
+
+pc = Pinecone(api_key=PINECONE_API_KEY)
+index = pc.Index(PINECONE_INDEX_NAME)
+
+_bm25 = BM25Encoder().load(BM25_ENCODER_PATH)
+
+# Both models loaded once at startup — reused across all requests
 _embedder = SentenceTransformer("BAAI/bge-base-en-v1.5")
 _embedder.max_seq_length = 512
 _reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L6-v2", max_length=512)
 
-# Simple in-memory cache keyed on normalised query string
+# Simple in-memory cache — repeated identical queries return instantly
 _query_cache: dict = {}
 
-_THINK_RE = re.compile(r'<think>.*?</think>', re.DOTALL)
-
-def strip_think_tags(text):
-    return _THINK_RE.sub('', text).strip()
+# Strip Qwen3 <think>...</think> tokens that sometimes leak into output
+_THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
 
 
-def perform_vector_search(query_embedding, top_k=40):
-    results = _collection.query(
-        query_embeddings=[query_embedding],
-        n_results=top_k,
-        include=["metadatas", "distances"]
+def strip_think_tags(text: str) -> str:
+    return _THINK_RE.sub("", text).strip()
+
+
+def perform_vector_search(query_embedding, user_query, top_k=40):
+    """
+    Pure vector search against Pinecone.
+    Returns Pinecone match dicts: {"id", "score", "metadata": {...}}
+    """
+    sparse_vector = _bm25.encode_queries(user_query)
+
+    results = index.query(
+        vector=query_embedding,
+        sparse_vector=sparse_vector,
+        top_k=top_k,
+        include_metadata=True,
     )
-    matches = []
-    for vec_id, meta, dist in zip(results["ids"][0], results["metadatas"][0], results["distances"][0]):
-        score = 1.0 - (dist / 2.0)
-        matches.append({"id": vec_id, "score": score, "metadata": meta})
-    return matches
+    return results.get("matches", [])
 
 
 def rerank(query, chunks, top_k=5):
-    """Batch-score all chunks in one cross-encoder forward pass."""
+    """
+    Batch-score all chunks in ONE CrossEncoder forward pass.
+    Replaces the old approach of one Ollama LLM call per chunk.
+    """
     if not chunks:
         return []
-    texts = [c.get("metadata", {}).get("text", "")[:2000] for c in chunks]
+
+    texts  = [
+        (c.get("metadata", {}).get("child_match_text", "")
+         or c.get("metadata", {}).get("text", ""))[:2000]
+        for c in chunks
+    ]
     pairs = [(query, t) for t in texts]
     scores = _reranker.predict(pairs, show_progress_bar=False)
 
@@ -55,11 +76,11 @@ def rerank(query, chunks, top_k=5):
 
     print("\n=== RERANKING RESULTS ===")
     for i, (score, chunk) in enumerate(ranked[:top_k]):
+        meta = chunk.get("metadata", {})
         print(f"\nRank {i+1}  CrossEncoder score: {score:.4f}")
-        print(chunk.get("metadata", {}).get("text", "")[:200])
+        print((meta.get("child_match_text") or meta.get("text", ""))[:200])
 
     return [{"result": c, "rerank_score": float(s)} for s, c in ranked[:top_k]]
-
 
 def get_chat_response(system_prompt, user_query):
     url = "http://localhost:11434/api/chat"
@@ -80,32 +101,37 @@ def get_chat_response(system_prompt, user_query):
     response.raise_for_status()
     return strip_think_tags(response.json()["message"]["content"])
 
-
-@api_view(['POST'])
+@api_view(["POST"])
 def chat_with_advisor_bot(request):
     user_query = request.data.get("query")
 
     if not user_query:
         return JsonResponse({"error": "Query is required"}, status=400)
 
+    # Return cached result for repeated identical queries
     cache_key = user_query.strip().lower()
     if cache_key in _query_cache:
         print(f"Cache hit for: {cache_key}")
         return JsonResponse(_query_cache[cache_key])
 
     try:
-        # BGE models require this prefix on queries (not on indexed documents)
+        # 1. Embed query with BGE prefix (required for BGE retrieval quality)
         query_embedding = _embedder.encode(
             "Represent this sentence for searching relevant passages: " + user_query
         ).tolist()
-        raw_results = perform_vector_search(query_embedding, top_k=40)
 
-        # 2. Deduplicate — keep highest-scoring copy of each unique chunk
+        # 2. Vector search
+        raw_results = perform_vector_search(query_embedding, user_query, top_k=40)
+
+        # 3. Deduplicate — keep highest-scoring copy of each unique chunk
         best_by_hash = {}
         for res in raw_results:
-            content = res.get("metadata", {}).get("text", "")
+            metadata = res.get("metadata", {})
+            content = metadata.get("child_match_text", "") or metadata.get("text", "")
+
             if ".........." in content or "Table of Contents" in content:
                 continue
+
             text_hash = hashlib.md5(content.encode()).hexdigest()
             score = res.get("score", 0)
             if text_hash not in best_by_hash or score > best_by_hash[text_hash][0]:
@@ -113,23 +139,22 @@ def chat_with_advisor_bot(request):
 
         deduped = [res for _, res in best_by_hash.values()]
 
-        # 3. Batch-rerank all deduped chunks, keep top 5
+        # 4. Batch-rerank all deduped chunks, keep top 5
         reranked = rerank(user_query, deduped, top_k=5)
 
         if not reranked:
             return JsonResponse({
-                "answer": "I could not find any relevant information in the fund documents to answer your query.",
-                "citations": []
+                "answer":    "I could not find any relevant information in the fund documents to answer your query.",
+                "citations": [],
             })
 
-        # 4. Build context — cap each chunk at 1500 chars to stay within num_ctx=8192
+        # 5. Build context — cap each chunk at 1500 chars to stay within num_ctx=8192
         context_text = ""
         citations = []
 
         for i, item in enumerate(reranked):
-            res = item["result"]
-            metadata = res.get("metadata", {})
-            chunk_text = metadata.get("text", "")[:1500]
+            metadata = item["result"].get("metadata", {})
+            chunk_text = (metadata.get("child_match_text", "") or metadata.get("text", ""))[:1500]
             context_text += f"--- Document {i+1} ---\n{chunk_text}\n\n"
             citations.append({
                 "source": metadata.get("source_url", "Unknown"),
@@ -138,9 +163,12 @@ def chat_with_advisor_bot(request):
 
         print("\n=== RETRIEVED CHUNKS ===")
         for i, item in enumerate(reranked):
+            metadata = item["result"].get("metadata", {})
             print(f"\nChunk {i+1}  score={item['rerank_score']:.4f}")
-            print(item["result"].get("metadata", {}).get("text", "")[:500])
+            print(metadata.get("text", "")[:500])
             print("=" * 50)
+
+        # 6. Generate answer
 
         # 5. Generate answer with Qwen3
         system_prompt = f"""
@@ -167,6 +195,14 @@ def chat_with_advisor_bot(request):
         result = {"answer": answer, "citations": citations}
         _query_cache[cache_key] = result
         return JsonResponse(result)
+        answer = get_chat_response(system_prompt, user_query)
+
+        result = {"answer": answer, "citations": citations}
+        _query_cache[cache_key] = result
+        return JsonResponse(result)
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
+
+print("USING PINECONE VECTOR STORE (BGE + CrossEncoder)")
