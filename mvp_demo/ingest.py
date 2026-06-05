@@ -22,6 +22,7 @@ EMBEDDING_DIM = 768
 BM25_ENCODER_PATH = os.getenv("BM25_ENCODER_PATH", "bm25_encoder.json")
 
 pc = Pinecone(api_key=PINECONE_API_KEY)
+>>>>>>> bb667f16acf888e3d2e28c8eabffb2b6be432275
 
 pdfs_to_process = [
     {"filepath": "../Trust_Deed_Sample_Superannuation_Fund.pdf", "fund_name": "Triple A Super",            "doc_type": "Trust Deed"},
@@ -61,6 +62,9 @@ def extract_text_with_tables(pdf_path):
 
 
 def main():
+    print("Loading OCR model...")
+    ocr = OCR()
+
     # Create index if it doesn't exist
     if not pc.has_index(PINECONE_INDEX_NAME):
         print(f"Creating Pinecone index '{PINECONE_INDEX_NAME}'...")
@@ -85,7 +89,9 @@ def main():
     for pdf_info in pdfs_to_process:
         print(f"  {pdf_info['filepath']}...", end=" ", flush=True)
         try:
-            full_text = extract_text_with_tables(pdf_info["filepath"])
+            full_text = ocr.output_document(Path(pdf_info["filepath"]))
+            if not full_text:
+                full_text = extract_text_with_tables(pdf_info["filepath"])
         except Exception as e:
             print(f"ERROR: {e}")
             continue
