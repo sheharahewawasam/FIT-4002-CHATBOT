@@ -1,4 +1,5 @@
 # FIT-4002-CHATBOT
+
 ## How to run it locally
 
 1. Make sure you have all the requirements installed
@@ -19,11 +20,29 @@
 2. Pull wjatever the models used in views.py into ollama
 
 ## PaddleOCR Guide
+
 1. Install PaddlePaddle framework
+
 ```
 python -m pip install paddlepaddle==3.3.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
 ```
+
 2. Install PaddleOCR
+
 ```
 python -m pip install paddleocr[all]
+```
+
+## Pinecone Guide
+
+1. Install Pinecone
+
+```
+pip install pinecone
+```
+
+2. Install BM25
+
+```
+pip install pinecone-text
 ```
