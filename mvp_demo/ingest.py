@@ -8,6 +8,11 @@ from sentence_transformers import SentenceTransformer
 from llama_index.core import Document
 from llama_index.core.node_parser import HierarchicalNodeParser, get_leaf_nodes
 
+from ocr_solution import OCR
+from pathlib import Path
+
+CHROMA_PATH = "./chroma_db"
+COLLECTION_NAME = "triple_a_docs"
 load_dotenv("secrets.env")
 
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
