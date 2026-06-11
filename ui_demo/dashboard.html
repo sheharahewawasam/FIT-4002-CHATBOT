@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TripleASuper | Dashboard</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ── Navbar ─────────────────────────────────────────────────────── */
+        .navbar {
+            height: 52px;
+            background: #1a2b3c;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            gap: 14px;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+        .nav-hamburger {
+            color: #ccc; background: none; border: none;
+            cursor: pointer; font-size: 19px; line-height: 1;
+        }
+        .nav-logo { color: #fff; font-size: 19px; font-weight: 800; letter-spacing: -0.5px; }
+        .nav-logo .logo-accent { color: #4fc3f7; }
+        .nav-logo .logo-triangle { color: #4fc3f7; margin-right: 2px; }
+        .nav-spacer { flex: 1; }
+        .nav-right { display: flex; align-items: center; gap: 14px; }
+        .nav-icon-btn {
+            background: none; border: none; color: #aaa;
+            cursor: pointer; font-size: 17px; line-height: 1;
+            position: relative;
+        }
+        .nav-avatar {
+            width: 32px; height: 32px; border-radius: 50%;
+            background: #2979c7;
+            color: #fff; font-size: 12px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+        }
+
+        /* ── Layout ─────────────────────────────────────────────────────── */
+        .layout { display: flex; flex: 1; overflow: hidden; }
+
+        /* ── Sidebar ─────────────────────────────────────────────────────── */
+        .sidebar {
+            width: 168px;
+            background: #fff;
+            border-right: 1px solid #e4e8ee;
+            overflow-y: auto;
+            flex-shrink: 0;
+            padding-bottom: 16px;
+        }
+        .sidebar::-webkit-scrollbar { width: 3px; }
+        .sidebar::-webkit-scrollbar-thumb { background: #ddd; }
+
+        .sidebar-user {
+            padding: 12px 13px 10px;
+            border-bottom: 1px solid #f0f0f0;
+            margin-bottom: 6px;
+        }
+        .sidebar-user-name { font-size: 12.5px; font-weight: 600; color: #1a2b3c; }
+        .sidebar-user-role { font-size: 10.5px; color: #999; margin-top: 1px; }
+
+        .sidebar-link {
+            display: flex; align-items: center; gap: 7px;
+            padding: 7px 13px;
+            font-size: 11.5px; color: #0056b3;
+            cursor: pointer; text-decoration: none;
+            transition: background 0.12s;
+        }
+        .sidebar-link:hover { background: #f5f8ff; }
+
+        .sidebar-divider { height: 1px; background: #f0f0f0; margin: 5px 0; }
+
+        .sidebar-item {
+            display: flex; align-items: center; gap: 7px;
+            padding: 8px 13px;
+            font-size: 12px; color: #444;
+            cursor: pointer;
+            border-left: 3px solid transparent;
+            transition: background 0.12s, color 0.12s;
+            user-select: none;
+        }
+        .sidebar-item:hover { background: #f5f8ff; }
+        .sidebar-item.active {
+            color: #0056b3;
+            border-left-color: #0056b3;
+            background: #eef4ff;
+            font-weight: 600;
+        }
+        .sidebar-item.section-head { font-weight: 600; color: #2c3e50; font-size: 11.5px; }
+        .sidebar-item .chevron {
+            margin-left: auto; font-size: 9px; color: #aaa;
+            transition: transform 0.2s;
+        }
+        .sidebar-item .chevron.open { transform: rotate(180deg); }
+        .sidebar-sub { padding-left: 30px; font-size: 11.5px; }
+
+        .sidebar-children { display: none; }
+        .sidebar-children.open { display: block; }
+
+        /* ── Main content ────────────────────────────────────────────────── */
+        .content { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+        .content::-webkit-scrollbar { width: 5px; }
+        .content::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+
+        /* ── Fund header ─────────────────────────────────────────────────── */
+        .fund-header {
+            background: #fff;
+            border-bottom: 1px solid #e4e8ee;
+            padding: 14px 22px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-shrink: 0;
+        }
+        .fund-name {
+            font-size: 21px; font-weight: 700;
+            color: #1a2b3c; letter-spacing: 0.2px;
+        }
+        .fund-meta { display: flex; gap: 22px; margin: 5px 0 6px; }
+        .fund-meta-item label {
+            font-size: 9.5px; color: #aaa; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.5px; display: block;
+        }
+        .fund-meta-item span { font-size: 12px; color: #333; font-weight: 500; }
+        .fund-note { font-size: 11.5px; color: #666; }
+        .fund-note a { color: #0056b3; text-decoration: none; }
+        .fund-note a:hover { text-decoration: underline; }
+
+        .fund-header-right { display: flex; gap: 28px; align-items: flex-start; }
+        .doc-section-title { font-size: 12px; font-weight: 600; color: #333; margin-bottom: 3px; }
+        .doc-section-sub { font-size: 10.5px; color: #777; margin-bottom: 6px; line-height: 1.4; }
+        .doc-link {
+            display: flex; align-items: center; gap: 4px;
+            font-size: 11.5px; color: #0056b3; text-decoration: none;
+            margin-bottom: 1px; cursor: pointer;
+        }
+        .doc-link:hover { text-decoration: underline; }
+        .doc-sub-label { font-size: 10.5px; color: #999; }
+
+        /* ── Dashboard grid ──────────────────────────────────────────────── */
+        .dashboard { padding: 16px; display: flex; flex-direction: column; gap: 14px; flex: 1; }
+        .row { display: flex; gap: 14px; }
+
+        /* ── Cards ───────────────────────────────────────────────────────── */
+        .card {
+            background: #fff;
+            border-radius: 7px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.07);
+            padding: 15px 16px;
+            flex: 1;
+        }
+        .card-title {
+            font-size: 12.5px; font-weight: 600;
+            color: #444; margin-bottom: 10px;
+        }
+        .card-subtitle { font-size: 10.5px; font-weight: 400; color: #aaa; margin-left: 4px; }
+
+        /* ── Investment chart card ───────────────────────────────────────── */
+        .invest-card { flex: 1.6 !important; }
+        .invest-total {
+            font-size: 25px; font-weight: 700; color: #1a2b3c;
+            display: flex; align-items: center; gap: 9px;
+        }
+        .badge-red {
+            background: #ffebee; color: #c62828;
+            font-size: 10.5px; font-weight: 700;
+            padding: 2px 7px; border-radius: 10px;
+        }
+        .tab-bar {
+            display: flex; border: 1px solid #e0e0e0;
+            border-radius: 4px; width: fit-content; margin: 9px 0 10px;
+            overflow: hidden;
+        }
+        .tab-btn {
+            padding: 4px 13px; font-size: 11.5px;
+            background: none; border: none; cursor: pointer;
+            color: #666; transition: background 0.15s, color 0.15s;
+            font-family: inherit;
+        }
+        .tab-btn + .tab-btn { border-left: 1px solid #e0e0e0; }
+        .tab-btn.active { background: #0056b3; color: #fff; }
+
+        /* ── Fund status card ────────────────────────────────────────────── */
+        .status-card-head {
+            display: flex; justify-content: space-between;
+            align-items: flex-start; margin-bottom: 6px;
+        }
+        .status-badge {
+            font-size: 10.5px; color: #0056b3; font-weight: 600;
+            background: #e8f0fe; border: 1px solid #c5d8f8;
+            padding: 3px 9px; border-radius: 4px; white-space: nowrap;
+        }
+        .gauge-wrap { display: flex; flex-direction: column; align-items: center; }
+        .gauge-note { font-size: 11px; color: #aaa; margin-top: 2px; }
+
+        /* ── Investments breakdown ───────────────────────────────────────── */
+        .breakdown-card { flex: 1.6 !important; }
+        .invest-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px; margin-top: 4px; }
+        .invest-item {}
+        .invest-item-label {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 10.5px; font-weight: 700; color: #666;
+            text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 3px;
+        }
+        .color-dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+        .invest-amount { font-size: 18px; font-weight: 700; color: #1a2b3c; }
+        .invest-pct { font-size: 11px; color: #888; margin-top: 1px; }
+
+        /* ── Cash at bank ────────────────────────────────────────────────── */
+        .cash-head {
+            display: flex; justify-content: space-between;
+            align-items: flex-start; margin-bottom: 10px;
+        }
+        .cash-settings-btn {
+            background: none; border: none; color: #bbb;
+            cursor: pointer; font-size: 16px; line-height: 1;
+        }
+        .cash-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+        .cash-table th {
+            text-align: left; color: #aaa; font-size: 10px;
+            font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+            padding-bottom: 7px; border-bottom: 1px solid #eee;
+        }
+        .cash-table th:last-child, .cash-table td:last-child { text-align: right; }
+        .cash-table td { padding: 7px 0; border-bottom: 1px solid #f5f5f5; color: #333; }
+        .cash-table tr.subtotal td { font-weight: 600; border-top: 1px solid #e8e8e8; border-bottom: 2px solid #e0e0e0; }
+        .cash-table tr.pct-row td { color: #999; font-size: 11.5px; }
+    </style>
+</head>
+<body>
+
+<!-- ── Navbar ────────────────────────────────────────────────────────────── -->
+<nav class="navbar">
+    <button class="nav-hamburger" title="Toggle menu">☰</button>
+    <div class="nav-logo">
+        <span class="logo-triangle">▲</span>Triple<span class="logo-accent">A</span>Super
+    </div>
+    <div class="nav-spacer"></div>
+    <div class="nav-right">
+        <button class="nav-icon-btn" title="Notifications">🔔</button>
+        <div class="nav-avatar" title="Champake Mendis">CM</div>
+    </div>
+</nav>
+
+<!-- ── Layout ────────────────────────────────────────────────────────────── -->
+<div class="layout">
+
+    <!-- ── Sidebar ───────────────────────────────────────────────────────── -->
+    <aside class="sidebar">
+        <div class="sidebar-user">
+            <div class="sidebar-user-name">Champake Mendis</div>
+            <div class="sidebar-user-role">Triple A Super</div>
+        </div>
+
+        <a class="sidebar-link" href="#">＋ Create an SMSF</a>
+        <a class="sidebar-link" href="#">⇄ Transfer an SMSF</a>
+
+        <div class="sidebar-divider"></div>
+
+        <div class="sidebar-item" onclick="setActive(this)">
+            <span>📊</span> Consolidated Business Overview
+        </div>
+
+        <!-- Adviser Dashboard -->
+        <div class="sidebar-item section-head" onclick="toggleSection('adviser', this)">
+            <span>📁</span> Adviser Dashboard
+            <span class="chevron open" id="chevron-adviser">▾</span>
+        </div>
+        <div class="sidebar-children open" id="children-adviser">
+            <div class="sidebar-item sidebar-sub" onclick="setActive(this)">Fund Status</div>
+            <div class="sidebar-item sidebar-sub" onclick="setActive(this)">Cash at Bank</div>
+            <div class="sidebar-item sidebar-sub" onclick="setActive(this)">Contributions</div>
+            <div class="sidebar-item sidebar-sub" onclick="setActive(this)">Minimum Pension Status</div>
+            <div class="sidebar-item sidebar-sub" onclick="setActive(this)">Tax Lodgements</div>
+            <div class="sidebar-item sidebar-sub" onclick="setActive(this)">Insurance</div>
+        </div>
+
+        <!-- Fund Dashboard -->
+        <div class="sidebar-item section-head" onclick="toggleSection('fund', this)">
+            <span>📈</span> Fund Dashboard
+            <span class="chevron open" id="chevron-fund">▾</span>
+        </div>
+        <div class="sidebar-children open" id="children-fund">
+            <div class="sidebar-item sidebar-sub active" onclick="setActive(this)">Investments</div>
+            <div class="sidebar-item sidebar-sub" onclick="setActive(this)">Member Basic Details</div>
+            <div class="sidebar-item sidebar-sub" onclick="setActive(this)">Contributions</div>
+            <div class="sidebar-item sidebar-sub" onclick="setActive(this)">Pensions</div>
+            <div class="sidebar-item sidebar-sub" onclick="setActive(this)">Reports</div>
+            <div class="sidebar-item sidebar-sub" onclick="setActive(this)">Documents</div>
+        </div>
+    </aside>
+
+    <!-- ── Main content ───────────────────────────────────────────────────── -->
+    <main class="content">
+
+        <!-- Fund header -->
+        <div class="fund-header">
+            <div>
+                <div class="fund-name">SANDBOX FAMILY FUND6</div>
+                <div class="fund-meta">
+                    <div class="fund-meta-item">
+                        <label>ABN</label>
+                        <span>11-111-111-006</span>
+                    </div>
+                    <div class="fund-meta-item">
+                        <label>Start Date</label>
+                        <span>29-09-2014</span>
+                    </div>
+                </div>
+                <div class="fund-note">
+                    Here's the fund dashboard. Click to <a href="#">go back</a> to Business Adviser Dashboard.
+                </div>
+            </div>
+            <div class="fund-header-right">
+                <div>
+                    <div class="doc-section-title">Secure Document Transfer</div>
+                    <div class="doc-section-sub">
+                        Send us your files easily and safely through<br>
+                        Outbox. (24 hours a day / 7 days a week)
+                    </div>
+                    <a class="doc-link" href="#">📁 Files from TAS</a>
+                    <div class="doc-sub-label">Files to Client</div>
+                </div>
+                <div>
+                    <div style="height: 38px;"></div>
+                    <a class="doc-link" href="#">📁 Files to TAS</a>
+                    <div class="doc-sub-label">Files from Client</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard cards -->
+        <div class="dashboard">
+
+            <!-- Row 1 -->
+            <div class="row">
+
+                <!-- Investments chart card -->
+                <div class="card invest-card">
+                    <div class="card-title">Estimated Fund Investments</div>
+                    <div class="invest-total">
+                        $769,604.49
+                        <span class="badge-red">▼ 3.07%</span>
+                    </div>
+                    <div class="tab-bar">
+                        <button class="tab-btn active" onclick="switchTab(this)">Day</button>
+                        <button class="tab-btn" onclick="switchTab(this)">Month</button>
+                        <button class="tab-btn" onclick="switchTab(this)">Quarter</button>
+                    </div>
+                    <canvas id="invest-chart" style="width:100%; display:block;"></canvas>
+                </div>
+
+                <!-- Fund status card -->
+                <div class="card">
+                    <div class="status-card-head">
+                        <div class="card-title" style="margin-bottom:0;">Fund Status</div>
+                        <span class="status-badge">📅 30 June 2025 Tax Lodgement</span>
+                    </div>
+                    <div class="gauge-wrap">
+                        <!-- Gauge SVG
+                             Centre (130, 115), radius 90
+                             Arc: 180° → 360° clockwise (through top at 270°)
+                             Segment angles (SVG convention, 0° = right, clockwise):
+                               180° → (40, 115)   left
+                               216° → (57, 62)    upper-left
+                               252° → (102, 29)   upper centre-left
+                               288° → (158, 29)   upper centre-right
+                               324° → (203, 62)   upper-right
+                               360° → (220, 115)  right
+                        -->
+                        <svg viewBox="0 0 260 145" style="width:100%; max-width:270px;" aria-hidden="true">
+                            <!-- Track -->
+                            <path d="M 40 115 A 90 90 0 0 1 220 115"
+                                  fill="none" stroke="#eeeeee" stroke-width="17" stroke-linecap="butt"/>
+                            <!-- Red -->
+                            <path d="M 40 115 A 90 90 0 0 1 57 62"
+                                  fill="none" stroke="#ef5350" stroke-width="17" stroke-linecap="butt"/>
+                            <!-- Orange -->
+                            <path d="M 57 62 A 90 90 0 0 1 102 29"
+                                  fill="none" stroke="#ffa726" stroke-width="17" stroke-linecap="butt"/>
+                            <!-- Yellow -->
+                            <path d="M 102 29 A 90 90 0 0 1 158 29"
+                                  fill="none" stroke="#ffee58" stroke-width="17" stroke-linecap="butt"/>
+                            <!-- Light green -->
+                            <path d="M 158 29 A 90 90 0 0 1 203 62"
+                                  fill="none" stroke="#9ccc65" stroke-width="17" stroke-linecap="butt"/>
+                            <!-- Green -->
+                            <path d="M 203 62 A 90 90 0 0 1 220 115"
+                                  fill="none" stroke="#43a047" stroke-width="17" stroke-linecap="butt"/>
+
+                            <!-- Arc segment labels -->
+                            <text x="30"  y="132" text-anchor="middle" font-size="7.5" fill="#999">EARLY</text>
+                            <text x="55"  y="50"  text-anchor="middle" font-size="7.5" fill="#999">PREPARE</text>
+                            <text x="130" y="14"  text-anchor="middle" font-size="7.5" fill="#999">REVIEW</text>
+                            <text x="205" y="50"  text-anchor="middle" font-size="7.5" fill="#999">FINAL</text>
+                            <text x="228" y="132" text-anchor="middle" font-size="7.5" fill="#999">DONE</text>
+
+                            <!-- Needle (0% = pointing left, angle 180°) -->
+                            <line x1="130" y1="115" x2="47" y2="115"
+                                  stroke="#333" stroke-width="3" stroke-linecap="round"/>
+                            <!-- Needle base -->
+                            <circle cx="130" cy="115" r="6" fill="#333"/>
+
+                            <!-- Percentage text -->
+                            <text x="130" y="104" text-anchor="middle"
+                                  font-size="20" font-weight="700" fill="#2c3e50">0%</text>
+                        </svg>
+                        <div class="gauge-note">Fund Status is Not Available</div>
+                    </div>
+                </div>
+
+            </div><!-- /row 1 -->
+
+            <!-- Row 2 -->
+            <div class="row">
+
+                <!-- Investments breakdown -->
+                <div class="card breakdown-card">
+                    <div class="card-title">
+                        Estimated Fund Investments
+                        <span class="card-subtitle">(as at 4 May 2026)</span>
+                    </div>
+                    <div class="invest-grid">
+                        <div class="invest-item">
+                            <div class="invest-item-label">
+                                <span class="color-dot" style="background:#1565c0;"></span>
+                                Australian Equities
+                            </div>
+                            <div class="invest-amount">$38,390.60</div>
+                            <div class="invest-pct">6.29% of Total</div>
+                        </div>
+                        <div class="invest-item">
+                            <div class="invest-item-label">
+                                <span class="color-dot" style="background:#6a1b9a;"></span>
+                                Australian Fixed Interest
+                            </div>
+                            <div class="invest-amount">$24,842.11</div>
+                            <div class="invest-pct">4.07% of Total</div>
+                        </div>
+                        <div class="invest-item">
+                            <div class="invest-item-label">
+                                <span class="color-dot" style="background:#00695c;"></span>
+                                Cash
+                            </div>
+                            <div class="invest-amount">$19,957.70</div>
+                            <div class="invest-pct">3.27% of Total</div>
+                        </div>
+                        <div class="invest-item">
+                            <div class="invest-item-label">
+                                <span class="color-dot" style="background:#e65100;"></span>
+                                Direct Property
+                            </div>
+                            <div class="invest-amount">$399,349.00</div>
+                            <div class="invest-pct">65.43% of Total</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cash at bank -->
+                <div class="card">
+                    <div class="cash-head">
+                        <div class="card-title" style="margin-bottom:0;">
+                            Current Cash at Bank
+                            <span class="card-subtitle">(as at 4 May 2026)</span>
+                        </div>
+                        <button class="cash-settings-btn" title="Settings">⚙</button>
+                    </div>
+                    <table class="cash-table">
+                        <thead>
+                            <tr>
+                                <th>Account</th>
+                                <th>Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Macquarie CMA</td>
+                                <td>$2,938.78</td>
+                            </tr>
+                            <tr>
+                                <td>HUB24 Cash Account</td>
+                                <td>$10,288.72</td>
+                            </tr>
+                            <tr class="subtotal">
+                                <td>Total</td>
+                                <td>$13,227.50</td>
+                            </tr>
+                            <tr class="pct-row">
+                                <td>Percentage</td>
+                                <td>2.17%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div><!-- /row 2 -->
+
+        </div><!-- /dashboard -->
+    </main>
+</div><!-- /layout -->
+
+
+<!-- ── Scripts ───────────────────────────────────────────────────────────── -->
+<script>
+    /* ── Sidebar interactions ────────────────────────────────────────────── */
+    function toggleSection(id, headerEl) {
+        const children = document.getElementById('children-' + id);
+        const chevron  = document.getElementById('chevron-'  + id);
+        const isOpen   = children.classList.toggle('open');
+        chevron.classList.toggle('open', isOpen);
+    }
+
+    function setActive(el) {
+        document.querySelectorAll('.sidebar-item.active')
+            .forEach(i => i.classList.remove('active'));
+        el.classList.add('active');
+    }
+
+    /* ── Tab switching ───────────────────────────────────────────────────── */
+    function switchTab(btn) {
+        btn.closest('.tab-bar')
+            .querySelectorAll('.tab-btn')
+            .forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        drawInvestmentChart(); // Redraw with "new" data for the demo
+    }
+
+    /* ── Investment bar chart (canvas) ──────────────────────────────────── */
+    function drawInvestmentChart() {
+        const canvas = document.getElementById('invest-chart');
+        if (!canvas) return;
+
+        const cssWidth = canvas.offsetWidth || 500;
+        const cssHeight = 155;
+        canvas.width  = cssWidth;
+        canvas.height = cssHeight;
+
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, cssWidth, cssHeight);
+
+        const pad = { top: 8, right: 8, bottom: 26, left: 8 };
+        const W = cssWidth  - pad.left - pad.right;
+        const H = cssHeight - pad.top  - pad.bottom;
+
+        /* Dummy data: semi-random walk */
+        const NUM = 52;
+        const data = [];
+        let v = 710000;
+        for (let i = 0; i < NUM; i++) {
+            v += (Math.random() - 0.46) * 22000;
+            v = Math.max(560000, Math.min(880000, v));
+            data.push(v);
+        }
+
+        const maxV = Math.max(...data);
+        const minV = Math.min(...data);
+        const range = maxV - minV || 1;
+
+        const barW = W / NUM;
+        const gap  = barW * 0.18;
+
+        /* Grid lines */
+        ctx.strokeStyle = '#f2f4f7';
+        ctx.lineWidth = 1;
+        for (let i = 0; i <= 3; i++) {
+            const y = pad.top + (H / 3) * i;
+            ctx.beginPath();
+            ctx.moveTo(pad.left, y);
+            ctx.lineTo(pad.left + W, y);
+            ctx.stroke();
+        }
+
+        /* Bars */
+        data.forEach((val, i) => {
+            const barH = Math.max(2, ((val - minV) / range) * H * 0.88 + H * 0.06);
+            const x = pad.left + i * barW + gap / 2;
+            const y = pad.top + H - barH;
+            /* Slightly lighter bars when value dips vs previous */
+            const dip = i > 0 && val < data[i - 1];
+            ctx.fillStyle = dip ? '#7cb8f0' : '#1a6fc4';
+            ctx.fillRect(x, y, barW - gap, barH);
+        });
+
+        /* Line overlay */
+        ctx.beginPath();
+        ctx.strokeStyle = '#64b5f6';
+        ctx.lineWidth = 1.8;
+        ctx.lineJoin = 'round';
+        data.forEach((val, i) => {
+            const barH = ((val - minV) / range) * H * 0.88 + H * 0.06;
+            const x = pad.left + i * barW + barW / 2;
+            const y = pad.top + H - barH;
+            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+
+        /* X-axis date labels */
+        ctx.fillStyle = '#aaa';
+        ctx.font = '10px Segoe UI, sans-serif';
+        ctx.textAlign = 'center';
+        const labels = ['May 20', 'Nov 20', 'May 21', 'Nov 21', 'May 22', 'Nov 22', 'May 23', 'Nov 23', 'May 24', 'Nov 24', 'May 25', 'Apr 26'];
+        const labelStep = Math.floor(NUM / (labels.length - 1));
+        labels.forEach((lbl, i) => {
+            const idx = Math.min(i * labelStep, NUM - 1);
+            const x = pad.left + idx * barW + barW / 2;
+            ctx.fillText(lbl, x, cssHeight - 6);
+        });
+    }
+
+    /* Redraw on resize */
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(drawInvestmentChart, 80);
+    });
+
+    window.addEventListener('load', drawInvestmentChart);
+</script>
+
+<!--
+    ═══════════════════════════════════════════════════════════════
+    CHATBOT WIDGET INTEGRATION
+    ───────────────────────────────────────────────────────────────
+    To add the floating AI assistant to ANY page, simply add:
+
+        <script src="chatbot-widget.js"></script>
+
+    before the closing </body> tag. Optionally configure it first:
+
+        <script>
+          window.TASChatbotConfig = {
+            apiUrl:   'http://127.0.0.1:8000/api/chat/',
+            title:    'Triple A Super AI',
+            greeting: 'Hello! Ask me about your fund documents.'
+          };
+        </script>
+    ═══════════════════════════════════════════════════════════════
+-->
+<script src="chatbot-widget.js"></script>
+
+</body>
+</html>
