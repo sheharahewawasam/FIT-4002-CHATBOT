@@ -1,2 +1,19 @@
 secrets.env
 mvp_demo/secrets.env
+
+# Python
+*.pyc
+__pycache__/
+.venv/
+*.sqlite3
+
+# OS
+.DS_Store
+
+# Terraform
+oci-infra/terraform.tfvars
+oci-infra/.terraform/
+oci-infra/*.tfstate
+oci-infra/*.tfstate.backup
+oci-infra/.terraform.lock.hcl
+*.pem

@@ -1,0 +1,21 @@
+[Unit]
+Description=Triple A Super Chatbot (Gunicorn/Django)
+After=network.target ollama.service
+Wants=ollama.service
+
+[Service]
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/chatbot/mvp_demo
+EnvironmentFile=/opt/chatbot/mvp_demo/secrets.env
+ExecStart=/opt/chatbot/.venv/bin/gunicorn config.wsgi:application \
+    --bind 0.0.0.0:8000 \
+    --workers 1 \
+    --timeout 300 \
+    --access-logfile /var/log/chatbot-access.log \
+    --error-logfile /var/log/chatbot-error.log
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

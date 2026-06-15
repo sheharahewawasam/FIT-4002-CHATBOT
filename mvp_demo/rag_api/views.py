@@ -10,12 +10,15 @@ from pinecone import Pinecone
 from pinecone_text.sparse import BM25Encoder
 from sentence_transformers import SentenceTransformer, CrossEncoder
 
-load_dotenv("secrets.env")
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "secrets.env"))
 
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")
+PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "fit4002-pinecone-index")
 
-BM25_ENCODER_PATH = os.getenv("BM25_ENCODER_PATH", "bm25_encoder.json")
+BM25_ENCODER_PATH = os.getenv(
+    "BM25_ENCODER_PATH",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bm25_encoder.json")
+)
 
 pc = Pinecone(api_key=PINECONE_API_KEY)
 index = pc.Index(PINECONE_INDEX_NAME)
@@ -38,7 +41,7 @@ def strip_think_tags(text: str) -> str:
     return _THINK_RE.sub("", text).strip()
 
 
-def perform_vector_search(query_embedding, user_query, top_k=60):
+def perform_vector_search(query_embedding, user_query, top_k=25):
     """
     Pure vector search against Pinecone.
     Returns Pinecone match dicts: {"id", "score", "metadata": {...}}
@@ -90,7 +93,7 @@ def rerank(query, chunks, top_k=5, score_threshold=0.0):
 def get_chat_response(system_prompt, user_query):
     url = "http://localhost:11434/api/chat"
     data = {
-        "model": "qwen3",
+        "model": "qwen3:1.7b",
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_query}
@@ -98,11 +101,11 @@ def get_chat_response(system_prompt, user_query):
         "stream": False,
         "options": {
             "temperature": 0.0,
-            # 5 parent chunks × ~500 tokens each + system prompt overhead — 8192 avoids silent truncation
-            "num_ctx": 8192
+            # 3 chunks × 600 chars + system prompt — 2048 is sufficient and faster
+            "num_ctx": 2048
         }
     }
-    response = requests.post(url, json=data, timeout=120)
+    response = requests.post(url, json=data, timeout=300)
     response.raise_for_status()
     return strip_think_tags(response.json()["message"]["content"])
 
@@ -126,7 +129,7 @@ def chat_with_advisor_bot(request):
         ).tolist()
 
         # 2. Vector search
-        raw_results = perform_vector_search(query_embedding, user_query, top_k=60)
+        raw_results = perform_vector_search(query_embedding, user_query, top_k=25)
 
         # 3. Deduplicate — keep highest-scoring copy of each unique chunk
         best_by_hash = {}
@@ -144,8 +147,8 @@ def chat_with_advisor_bot(request):
 
         deduped = [res for _, res in best_by_hash.values()]
 
-        # 4. Batch-rerank all deduped chunks, keep top 5
-        reranked = rerank(user_query, deduped, top_k=5)
+        # 4. Batch-rerank all deduped chunks, keep top 3
+        reranked = rerank(user_query, deduped, top_k=3)
 
         if not reranked:
             return JsonResponse({
@@ -159,7 +162,7 @@ def chat_with_advisor_bot(request):
 
         for i, item in enumerate(reranked):
             metadata = item["result"].get("metadata", {})
-            chunk_text = (metadata.get("text", "") or metadata.get("child_match_text", ""))[:1500]
+            chunk_text = (metadata.get("text", "") or metadata.get("child_match_text", ""))[:600]
             context_text += f"--- Document {i+1} ---\n{chunk_text}\n\n"
             citations.append({
                 "source": metadata.get("source_url", "Unknown"),
