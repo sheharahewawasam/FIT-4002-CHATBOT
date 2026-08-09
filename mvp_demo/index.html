@@ -19,37 +19,6 @@
         button { padding: 10px 20px; background: #0056b3; color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.3s; }
         button:hover { background: #004494; }   
         .loading { align-self: flex-start; color: #888; font-style: italic; display: none; }
-        .selector-group select {
-            width: 180px;
-            padding: 8px;
-            border-radius: 6px;
-            border: none;
-            outline: none;
-            background: white;
-            font-size: 0.9em;
-        }
-
-        .checkbox-group {
-            background: white;
-            padding: 10px;
-            border-radius: 6px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .checkbox-label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            font-size: 0.9em;
-            color: #333;
-        }
-
-        .checkbox-label input[type="checkbox"] {
-            cursor: pointer;
-        }
     </style>
 </head>
 <body>
@@ -57,26 +26,6 @@
 <div class="chat-container">
     <div class="header">
         <h2>Triple A Super Advisor AI</h2>
-        <div class="toolbar">
-            <div class="selector-group">
-                <label for="user">User</label>
-                <select id="user">
-                    <option value="">Select user...</option>
-                    <option value="John">John</option>
-                    <option value="Emily">Emily</option>
-                    <option value="Jake">Jake</option>
-                </select>
-            </div>
-
-            <div class="selector-group">
-                <label>Knowledge Sources</label>
-                <div class="checkbox-group">
-                    <label class="checkbox-label">
-                        <label> Select a user to view avaliable funds
-                    </label>
-                </div>
-            </div>
-        </div>
     </div>
     <div class="chat-box" id="chat-box">
         <div class="message bot-msg">Hello. I am the internal RAG assistant. Ask me a question about our project documents.</div>
@@ -99,10 +48,6 @@
         const inputField = document.getElementById('query-input');
         const query = inputField.value.trim();
         if(!query) return;
-        // Get all selected funds
-        const selectedFunds = Array.from(
-            document.querySelectorAll('input[name="doc-type"]:checked')
-        ).map(cb => cb.value);
 
         addMessage(query, 'user-msg');
         inputField.value = '';
@@ -114,10 +59,7 @@
             const response = await fetch(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    query: query,
-                    funds: selectedFunds
-                 })
+                body: JSON.stringify({ query: query })
             });
 
             const data = await response.json();
@@ -166,91 +108,6 @@
         chatBox.insertBefore(msgDiv, document.getElementById('loading'));
         chatBox.scrollTop = chatBox.scrollHeight;
     }
-
-    const API_BASE = 'http://127.0.0.1:8000/users';
-
-    document.addEventListener('DOMContentLoaded', () => {
-        const userSelect = document.getElementById('user');
-        const checkboxGroup = document.querySelector('.checkbox-group');
-
-        // 1. Fetch and populate users on page load
-        fetch(API_BASE + '/')
-            .then(response => {
-                if (!response.ok) throw new Error('Failed to fetch users');
-                return response.json();
-            })
-            .then(data => {
-                // Keep the default "Select user..." option, clear any hardcoded ones if necessary
-                userSelect.innerHTML = '<option value="">Select user...</option>';
-                
-                data.users.forEach(username => {
-                    const option = document.createElement('option');
-                    option.value = username;
-                    option.textContent = username;
-                    userSelect.appendChild(option);
-                });
-            })
-            .catch(error => console.error('Error loading users:', error));
-
-    // 2. Listen for user selection changes to load their funds
-    userSelect.addEventListener('change', (event) => {
-        const selectedUser = event.target.value;
-
-        // If they selected the blank placeholder, clear the checkboxes
-        if (!selectedUser) {
-            checkboxGroup.innerHTML = '<p style="color: #666; font-size: 0.9em;">Select a user to view avaliable funds</p>';
-            return;
-        }
-
-        // Show a brief loading indicator inside the checkbox group
-        checkboxGroup.innerHTML = '<span>Loading funds...</span>';
-
-        // Force absolute path routing and ensure the trailing slash is strictly present
-        const cleanUrl = `${API_BASE}/${encodeURIComponent(selectedUser)}/`;
-
-        console.log("Fetching funds from:", cleanUrl); // 👈 Check your browser console to see this path!
-
-        fetch(cleanUrl)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Server responded with status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(res => {
-                // Your API returns {"data": [...]}, let's fallback safely if data is missing
-                const funds = res.data || [];
-                
-                // Clear the container
-                checkboxGroup.innerHTML = '';
-
-                if (funds.length === 0) {
-                    checkboxGroup.innerHTML = '<span>No funds found for this user.</span>';
-                    return;
-                }
-
-                // Generate a checkbox for every fund returned by Django
-                funds.forEach(fund => {
-                    const label = document.createElement('label');
-                    label.className = 'checkbox-label';
-
-                    const checkbox = document.createElement('input');
-                    checkbox.type = 'checkbox';
-                    checkbox.name = 'doc-type';
-                    checkbox.value = fund;
-
-                    label.appendChild(checkbox);
-                    label.appendChild(document.createTextNode(` ${fund}`));
-                    
-                    checkboxGroup.appendChild(label);
-                });
-            })
-            .catch(error => {
-                console.error('Error loading funds:', error);
-                checkboxGroup.innerHTML = '<span style="color: red;">Error loading knowledge sources</span>';
-            });
-    });
-    });
 </script>
 
 </body>
