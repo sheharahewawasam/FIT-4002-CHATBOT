@@ -208,7 +208,10 @@ def chat_with_advisor_bot(request):
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
-    
+
+
+#a copy of the rag logic just for testing purposes, kindly change this also when you are making any changes to the chat with advisor bot funciton, or we should seperate logic better
+#but I cba do that 
 def rag_logic(test_questions:str):
     user_query = test_questions
 
@@ -218,7 +221,7 @@ def rag_logic(test_questions:str):
     ).tolist()
 
     # 2. Vector search
-    raw_results = perform_vector_search(query_embedding, user_query, top_k=60)
+    raw_results = perform_vector_search(query_embedding, user_query, ["Summers Family Super Fund"], top_k=60)
 
     # 3. Deduplicate — keep highest-scoring copy of each unique chunk
     best_by_hash = {}
