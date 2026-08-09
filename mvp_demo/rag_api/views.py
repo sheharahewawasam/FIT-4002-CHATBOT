@@ -39,7 +39,6 @@ def strip_think_tags(text: str) -> str:
 
 
 def perform_vector_search(query_embedding, user_query, filters, top_k=40):
-def perform_vector_search(query_embedding, user_query, filters, top_k=40):
     """
     Pure vector search against Pinecone.
     Returns Pinecone match dicts: {"id", "score", "metadata": {...}}
@@ -51,9 +50,9 @@ def perform_vector_search(query_embedding, user_query, filters, top_k=40):
         sparse_vector=sparse_vector,
         top_k=top_k,
         include_metadata=True,
-        # filter={
-        #     "fund_name": {"$in": filters}
-        # }
+        filter={
+             "fund_name": {"$in": filters}
+        }
     )
     return results.get("matches", [])
 
