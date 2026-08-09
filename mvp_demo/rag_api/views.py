@@ -201,6 +201,90 @@ def chat_with_advisor_bot(request):
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+    
+def rag_logic(test_questions:str):
+    user_query = test_questions
+
+    # 1. Embed query with BGE prefix (required for BGE retrieval quality)
+    query_embedding = _embedder.encode(
+        "Represent this sentence for searching relevant passages: " + user_query
+    ).tolist()
+
+    # 2. Vector search
+    raw_results = perform_vector_search(query_embedding, user_query, top_k=60)
+
+    # 3. Deduplicate — keep highest-scoring copy of each unique chunk
+    best_by_hash = {}
+    for res in raw_results:
+        metadata = res.get("metadata", {})
+        content = metadata.get("text", "") or metadata.get("child_match_text", "")
+
+        if ".........." in content or "Table of Contents" in content:
+            continue
+
+        text_hash = hashlib.md5(content.encode()).hexdigest()
+        score = res.get("score", 0)
+        if text_hash not in best_by_hash or score > best_by_hash[text_hash][0]:
+            best_by_hash[text_hash] = (score, res)
+
+    deduped = [res for _, res in best_by_hash.values()]
+
+    # 4. Batch-rerank all deduped chunks, keep top 5
+    reranked = rerank(user_query, deduped, top_k=5)
+
+    if not reranked:
+        return JsonResponse({
+            "answer":    "I could not find any relevant information in the fund documents to answer your query.",
+            "citations": [],
+        })
+
+    # 5. Build context — cap each chunk at 1500 chars to stay within num_ctx=8192
+    context_text = ""
+    citations = []
+
+    for i, item in enumerate(reranked):
+        metadata = item["result"].get("metadata", {})
+        chunk_text = (metadata.get("text", "") or metadata.get("child_match_text", ""))[:1500]
+        context_text += f"--- Document {i+1} ---\n{chunk_text}\n\n"
+        citations.append({
+            "source": metadata.get("source_url", "Unknown"),
+            "fund": metadata.get("fund_name", "Unknown")
+        })
+
+    print("\n=== RETRIEVED CHUNKS ===")
+    for i, item in enumerate(reranked):
+        metadata = item["result"].get("metadata", {})
+        print(f"\nChunk {i+1}  score={item['rerank_score']:.4f}")
+        print(metadata.get("text", "")[:500])
+        print("=" * 50)
+
+    # 6. Generate answer
+    system_prompt = f"""
+    You are an expert AI assistant for financial advisors at Triple A Super.
+    Answer the user's query using ONLY the provided document context below.
+    Do not use any outside knowledge — only what appears in the context.
+
+    If the context contains relevant information, share ALL of it even if it is brief or partial.
+    Do not refuse to answer just because the information is incomplete — report what is there.
+    Only say "I cannot find information about this in the provided documents" if the context contains
+    absolutely nothing related to the query.
+
+    If the query asks about methods, techniques, strategies, or types:
+    - enumerate ALL methods found in the context
+    - do not omit any
+    - use bullet points
+
+    CONTEXT:
+    {context_text}
+    """
+
+    answer = get_chat_response(system_prompt, user_query)
+
+    result = {"answer": answer, "citations": citations}
+    return JsonResponse(result)
+
+    
+
 
 
 print("USING PINECONE VECTOR STORE (BGE + CrossEncoder)")
