@@ -20,6 +20,8 @@ from django.http import FileResponse
 import os
 
 from rag_api.views import chat_with_advisor_bot
+from rag_api.users import get_users, get_funds
+
 
 def serve_index(request):
     html_path = os.path.join(os.path.dirname(__file__), '..', 'index.html')
@@ -29,4 +31,6 @@ urlpatterns = [
     path('', serve_index, name='index'),
     path('admin/', admin.site.urls),
     path('api/chat/', chat_with_advisor_bot, name='chat_with_advisor_bot'),
+    path('users/', get_users),
+    path('users/<str:name>/', get_funds)
 ]
