@@ -24,14 +24,14 @@ BM25_ENCODER_PATH = os.getenv("BM25_ENCODER_PATH", "bm25_encoder.json")
 pc = Pinecone(api_key=PINECONE_API_KEY)
 
 pdfs_to_process = [
-    {"filepath": "../Trust_Deed_Sample_Superannuation_Fund.pdf", "fund_name": "Triple A Super",            "doc_type": "Trust Deed"},
-    {"filepath": "../deed.pdf",                                   "fund_name": "Summers Family Super Fund", "doc_type": "Deed"},
-    {"filepath": "../sample-smsf-trust-deed.pdf",                 "fund_name": "Triple A Super",            "doc_type": "Deed"},
+    {"filepath": "../Trust_Deed_Sample_Superannuation_Fund.pdf", "fund_name": "Sample Superannuation Fund",            "doc_type": "Trust Deed"},
+    {"filepath": "../deed.pdf",                                   "fund_name": "Summers Family Super Fund", "doc_type": "Trust Deed"},
+    {"filepath": "../sample-smsf-trust-deed.pdf",                 "fund_name": "Ausis Super Fund",            "doc_type": "Trust Deed"},
     {"filepath": "../Project_26.pdf",                             "fund_name": "Triple A Super",            "doc_type": "Project Brief"},
     {"filepath": "../Proposal Document.pdf",                      "fund_name": "Triple A Super",            "doc_type": "Development Proposal"},
-    {"filepath": "../SIS Act -1.pdf",                             "fund_name": "Triple A Super",            "doc_type": "SIS Act"},
-    {"filepath": "../SIS Act Part 2-1.pdf",                       "fund_name": "Triple A Super",            "doc_type": "SIS Act"},
-    {"filepath": "../Super-changes-timeline-1.pdf",               "fund_name": "Triple A Super",            "doc_type": "Changelog"},
+    {"filepath": "../SIS Act -1.pdf",                             "fund_name": "General",            "doc_type": "legal"},
+    {"filepath": "../SIS Act Part 2-1.pdf",                       "fund_name": "General",            "doc_type": "legal"},
+    {"filepath": "../Super-changes-timeline-1.pdf",               "fund_name": "General",            "doc_type": "Changelog"},
 ]
 
 def clean_text(text):
