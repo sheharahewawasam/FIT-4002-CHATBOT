@@ -75,11 +75,11 @@ def rerank(query, chunks, top_k=5, score_threshold=0.0):
 
     ranked = sorted(zip(scores, chunks), key=lambda x: x[0], reverse=True)
 
-    print("\n=== RERANKING RESULTS ===")
-    for i, (score, chunk) in enumerate(ranked[:top_k]):
-        meta = chunk.get("metadata", {})
-        print(f"\nRank {i+1}  CrossEncoder score: {score:.4f}")
-        print((meta.get("child_match_text") or meta.get("text", ""))[:200])
+    # print("\n=== RERANKING RESULTS ===")
+    # for i, (score, chunk) in enumerate(ranked[:top_k]):
+    #     meta = chunk.get("metadata", {})
+    #     print(f"\nRank {i+1}  CrossEncoder score: {score:.4f}")
+    #     print((meta.get("child_match_text") or meta.get("text", ""))[:200])
 
     filtered = [(s, c) for s, c in ranked[:top_k] if s >= score_threshold]
 
@@ -170,12 +170,12 @@ def chat_with_advisor_bot(request):
                 "fund": metadata.get("fund_name", "Unknown")
             })
 
-        print("\n=== RETRIEVED CHUNKS ===")
-        for i, item in enumerate(reranked):
-            metadata = item["result"].get("metadata", {})
-            print(f"\nChunk {i+1}  score={item['rerank_score']:.4f}")
-            print(metadata.get("text", "")[:500])
-            print("=" * 50)
+        # print("\n=== RETRIEVED CHUNKS ===")
+        # for i, item in enumerate(reranked):
+        #     metadata = item["result"].get("metadata", {})
+        #     print(f"\nChunk {i+1}  score={item['rerank_score']:.4f}")
+        #     print(metadata.get("text", "")[:500])
+        #     print("=" * 50)
 
         # 6. Generate answer
         system_prompt = f"""
@@ -261,12 +261,12 @@ def rag_logic(test_questions:str):
             "fund": metadata.get("fund_name", "Unknown")
         })
 
-    print("\n=== RETRIEVED CHUNKS ===")
-    for i, item in enumerate(reranked):
-        metadata = item["result"].get("metadata", {})
-        print(f"\nChunk {i+1}  score={item['rerank_score']:.4f}")
-        print(metadata.get("text", "")[:500])
-        print("=" * 50)
+    # print("\n=== RETRIEVED CHUNKS ===")
+    # for i, item in enumerate(reranked):
+    #     metadata = item["result"].get("metadata", {})
+    #     print(f"\nChunk {i+1}  score={item['rerank_score']:.4f}")
+    #     print(metadata.get("text", "")[:500])
+    #     print("=" * 50)
 
     # 6. Generate answer
     system_prompt = f"""
@@ -297,4 +297,4 @@ def rag_logic(test_questions:str):
 
 
 
-print("USING PINECONE VECTOR STORE (BGE + CrossEncoder)")
+# print("USING PINECONE VECTOR STORE (BGE + CrossEncoder)")

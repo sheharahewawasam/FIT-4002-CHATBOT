@@ -1,3 +1,12 @@
+import os
+import django
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+django.setup()
+
+
+
+
+
 from rag_api import views
 import json
 import ollama
@@ -43,7 +52,7 @@ def correctness(question:str, sample:str):
     Return as valid json with the first field being your reasoning, titled reasoning, and the second field being a number rating on how good the student did, titled correct.
     so something like { "reasoning" : (Actual reasoning here), "correct" : (1.0-10.0)}
     """
-    returnedAnswer = views.rag_logic(question)
+    returnedAnswer = json.loads(views.rag_logic(question).content)["answer"]
     userPrompt = f"""
     QUESTIONS : {question}
     GROUND TRUTH : {sample}
@@ -69,7 +78,7 @@ def Relevance(question:str):
                 so something like { "reasoning" : (Actual reasoning here), "relevant" : (1.0-10.0)}
             """
                     
-    returnedAnswer = views.rag_logic(question)
+    returnedAnswer = json.loads(views.rag_logic(question).content)["answer"]
     userPrompt = f"""
     QUESTIONS : {question}
     STUDENT ANSWERS : {returnedAnswer}
@@ -83,7 +92,7 @@ def Relevance(question:str):
 def Groundedness(question:str):
     prompt = """
     You are a teacher grading a quiz. You will be given FACTS and a STUDENT ANSWER. Here is the grade criteria to follow:
-    (1) Ensure the STUDENT ANSWER is grounded in the FACTS. \
+    (1) Ensure the STUDENT ANSWER is grounded in the FACTS.
     (2) Ensure the STUDENT ANSWER does not contain "hallucinated" information outside the scope of the FACTS.
 
     Grounded:
@@ -95,7 +104,7 @@ def Groundedness(question:str):
     so something like { "reasoning" : (Actual reasoning here), "grounded" : (1.0-10.0)}
     """
                     
-    returnedAnswer = views.rag_logic(question)
+    returnedAnswer = json.loads(views.rag_logic(question).content)["answer"]
     userPrompt = f"""
     QUESTIONS : {question}
     STUDENT ANSWERS : {returnedAnswer}
@@ -122,7 +131,7 @@ def retRelevance(question:str):
 
     """
                     
-    returnedAnswer = views.rag_logic(question)
+    returnedAnswer = json.loads(views.rag_logic(question).content)["answer"]
     userPrompt = f"""
     QUESTIONS : {question}
     STUDENT ANSWERS : {returnedAnswer}
@@ -194,4 +203,6 @@ def batchEval():
         results.append(retRelevance(i))
     avgGrade = sum(results)/len(results)
     print(f"AVERAGE RETRIEVAL RELEVANCE IS {avgGrade}")
+    
+batchEval()
 
