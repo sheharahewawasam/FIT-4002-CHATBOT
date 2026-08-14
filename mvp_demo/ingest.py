@@ -88,19 +88,29 @@ def extract_text_with_tables(pdf_path):
                 all_pages.append(clean_preserve_structure(page_text))
     return "\n\n".join(all_pages)
 
-
+# Detects statute-style numbered headings, for example:
+# "1 Short title"
+# "17A Definition of self managed superannuation fund"
 _HEADING_STATUTE_RE = re.compile(r"^\s*(\d{1,4}[A-Z]{0,3})\s+([A-Z][A-Za-z0-9,'\-\u2013\u2014\s]{2,90})$")
+
+# Detects numbered clause-style headings that end with a colon, for example:
+# "1. Membership:"
+# "12. Trustee Powers:"
 _HEADING_CLAUSE_RE = re.compile(r"^\s*\d{1,3}\.\s+[A-Z][A-Za-z0-9,'\-\u2013\u2014\s]{2,90}:\s*$")
 
+# Minimum number of detected headings required before heading-based section splitting is considered reliable.
 _MIN_HEADINGS_FOR_STRUCTURE = 3
+
+# Minimum number of paragraphs required before using paragraph-based splitting as the fallback method.
 _MIN_PARAGRAPHS_FOR_FALLBACK = 3
 
-# Regex for lines of dots
+# Detects dot leaders commonly used in Table of Contents entries.
 _DOT_LEADER_RE = re.compile(r"\.{3,}")
-# Regex for trailing page numbers (1-4 digits) at the end of a line
+
+# Detects a possible page number at the end of a line.
 _TRAILING_PAGE_NUM_RE = re.compile(r"\b\d{1,4}\s*$")
 
-# Searches for table of contents lines
+# Check whether a line appears to be part of a Table of Contents.
 def looks_like_toc_line(line):
     line = line.strip()
     if not line:
@@ -111,7 +121,7 @@ def looks_like_toc_line(line):
         return True
     return False
 
-# Check for uppercase headings with 1-6 words, all uppercase letters, and less than 60 characters 
+# Detect short headings written entirely in uppercase.
 def _is_all_caps_heading(line):
     words = line.strip().split()
     if not (1 <= len(words) <= 6):
@@ -121,15 +131,9 @@ def _is_all_caps_heading(line):
         return False
     return all(w.isupper() for w in letters) and len(line.strip()) < 60
 
-
-# Some TOC entries wrap across two physical lines: the descriptive text
-# on one line (no dots, no trailing page number -- so it independently
-# matches the heading regex), and the dot-leader + page number on the
-# NEXT line. Checking only the current line misses this entirely, since
-# the descriptive half genuinely looks like a valid heading in isolation.
-# This peeks at the next line and, if IT looks like a TOC continuation,
-# treats the current line as part of the same TOC entry rather than a
-# real heading.
+# Check whether the next physical line continues a Table of Contents entry.
+# Some PDF TOC entries wrap onto two lines. The first line may look like a real heading, 
+# while the next line contains dot leaders or a page number.
 def _next_line_is_toc_continuation(lines, index):
     for j in range(index + 1, min(index + 2, len(lines))):
         nxt = lines[j].strip()
@@ -138,7 +142,7 @@ def _next_line_is_toc_continuation(lines, index):
         return looks_like_toc_line(nxt)
     return False
 
-
+# Decide whether a particular line should be treated as a section heading.
 def is_heading_line(lines, index):
     line = lines[index].strip()
     if not line or len(line) > 100:
@@ -157,7 +161,9 @@ def is_heading_line(lines, index):
         return True
     return False
 
-
+# Check whether an entire detected section is mostly Table of Contents text.
+# Individual TOC entries may still be grouped into a section even after
+# heading detection. This provides a second filtering stage.
 def section_toc(section_text, threshold=0.6, short_section_len=400):
     lines = [l for l in section_text.split("\n") if l.strip()]
     if not lines:
@@ -170,17 +176,25 @@ def section_toc(section_text, threshold=0.6, short_section_len=400):
         return True
     return False
 
-
+# Split extracted document text into structural sections.
 def split_into_sections(text):
     lines = text.split("\n")
+    
+    # Record the line position of every detected heading.
     boundaries = [i for i, line in enumerate(lines) if is_heading_line(lines, i)]
 
+    # Use heading-based splitting only when enough headings were found to suggest that the
+    # document has a reliable structural pattern.
     if len(boundaries) >= _MIN_HEADINGS_FOR_STRUCTURE:
         sections = []
+
+        # Preserve any text appearing before the first detected heading.
         if boundaries[0] > 0:
             preamble = "\n".join(lines[: boundaries[0]]).strip()
             if preamble:
                 sections.append(preamble)
+
+        # Each heading starts a section and the next heading ends it.
         for idx, start in enumerate(boundaries):
             end = boundaries[idx + 1] if idx + 1 < len(boundaries) else len(lines)
             section = "\n".join(lines[start:end]).strip()
@@ -196,10 +210,13 @@ def split_into_sections(text):
     return [stripped] if stripped else []
 
 
-PARENT_MAX_CHARS = 1500          
+PARENT_MAX_CHARS = 1500         
+
+# If a detected section is too large, divide it into smaller parent chunks.
 PARENT_SUBSPLIT_TOKENS = 380     
 PARENT_SUBSPLIT_OVERLAP = 40
 
+# Smaller leaf chunks are used for dense and BM25 retrieval.
 LEAF_CHUNK_TOKENS = 130          
 LEAF_OVERLAP_TOKENS = 20
 
@@ -221,7 +238,7 @@ def trim_to_sentence_boundary(text, max_len):
             return truncated[:cut].strip()
     return truncated.strip()
 
-
+# Convert the document into parent/leaf chunk pairs.
 def build_section_based_chunks(full_text, base_metadata):
     sections = split_into_sections(full_text)
     entries = []

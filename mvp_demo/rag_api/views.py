@@ -160,10 +160,12 @@ def chat_with_advisor_bot(request):
         for i, item in enumerate(reranked):
             metadata = item["result"].get("metadata", {})
             chunk_text = (metadata.get("text", "") or metadata.get("child_match_text", ""))[:1500]
-            context_text += f"--- Document {i+1} ---\n{chunk_text}\n\n"
+            source_name = metadata.get("source_url", "Unknown")
+            fund_name = metadata.get("fund_name", "Unknown")
+            context_text += f"--- Source: {source_name} ({fund_name}) ---\n{chunk_text}\n\n"
             citations.append({
-                "source": metadata.get("source_url", "Unknown"),
-                "fund": metadata.get("fund_name", "Unknown")
+                "source": source_name,
+                "fund": fund_name
             })
 
         print("\n=== RETRIEVED CHUNKS ===")
@@ -179,15 +181,13 @@ def chat_with_advisor_bot(request):
         Answer the user's query using ONLY the provided document context below.
         Do not use any outside knowledge — only what appears in the context.
 
-        If the context contains relevant information, share ALL of it even if it is brief or partial.
-        Do not refuse to answer just because the information is incomplete — report what is there.
-        Only say "I cannot find information about this in the provided documents" if the context contains
-        absolutely nothing related to the query.
+        When referencing where information came from, cite the actual source
+        document name (e.g. "SIS Act -1.pdf") and, if a specific section or
+        clause number is visible in the context, include that too (e.g.
+        "Section 4(2) of SIS Act -1.pdf"). Never refer to a source by its
+        position in this prompt (e.g. do not say "Document 1").
 
-        If the query asks about methods, techniques, strategies, or types:
-        - enumerate ALL methods found in the context
-        - do not omit any
-        - use bullet points
+        ...(rest of your existing prompt)...
 
         CONTEXT:
         {context_text}
