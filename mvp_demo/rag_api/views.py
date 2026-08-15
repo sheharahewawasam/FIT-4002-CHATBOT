@@ -3,6 +3,8 @@ import re
 import hashlib
 import requests
 import datetime
+import textwrap
+
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from dotenv import load_dotenv
@@ -218,20 +220,26 @@ def write_audit_log(user, message, response):
     now = datetime.datetime.now()
     currentDate = now.strftime("%Y-%m-%d")
     currentTime = now.strftime("%X")
+    
+    user_dir = os.path.join("audit_logs", user)
+    os.makedirs(user_dir, exist_ok=True)
+    fileName = os.path.join(user_dir, f"{user}-{currentDate}_log.txt")
 
     try:    
-        with open(f"{user}-{currentDate}_log.txt", "a", encoding="utf-8") as f:
-            string = f"""
+        with open(fileName, "a", encoding="utf-8") as f:
+            template = textwrap.dedent("""
             ----------------------------------------------------------
             
-            At {currentTime}, user asked:
-            {message} 
+            At {time}, user asked:
+            {message2} 
             
             Chatbot responded with:
-            {response}
+            {response2}
             
             -----------------------------------------------------------
-            """
+            """)
+            
+            string = template.format(time=currentTime, message2=message, response2=response)
             f.write(string)
     except Exception as e:
         print(f"Audit Logging has failed, please diagnose, error: {e}")
