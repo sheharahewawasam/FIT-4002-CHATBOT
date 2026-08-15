@@ -290,7 +290,7 @@ def rag_logic(test_questions:str):
 
     answer = get_chat_response(system_prompt, user_query)
 
-    result = {"answer": answer, "citations": citations}
+    result = {"answer": answer, "citations": citations, "context": context_text}
     return JsonResponse(result)
 
     

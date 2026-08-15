@@ -4,7 +4,8 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 
 
-
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
 
 
 from rag_api import views
@@ -25,13 +26,13 @@ def get_chat_response(system_prompt, user_query):
     return strip_think_tags(response["message"]["content"])
 
 def printRes(question:str,answer:str,grade:str,reasoning:str):
-    print(f"Question is {question}")
+    print(f"Question is \n {question}")
     print("------------------------------------------------------")
-    print(f"Answer Given is {answer}")
+    print(f"Answer Given is \n {answer}")
     print("--------------------------------------------------------")
     print(f"Grade Given is {grade}")
     print("--------------------------------------------------------")
-    print(f"Reasoning Given is {reasoning}")
+    print(f"Reasoning Given is \n {reasoning}")
     print("\n=====================================================\n")
     
     
@@ -104,9 +105,13 @@ def Groundedness(question:str):
     so something like { "reasoning" : (Actual reasoning here), "grounded" : (1.0-10.0)}
     """
                     
-    returnedAnswer = json.loads(views.rag_logic(question).content)["answer"]
+    rag_result = json.loads(views.rag_logic(question).content)
+    returnedAnswer = rag_result["answer"]
+    facts = rag_result["context"]
+    
     userPrompt = f"""
     QUESTIONS : {question}
+    FACTS : {facts}
     STUDENT ANSWERS : {returnedAnswer}
     """
     grade = json.loads(get_chat_response(prompt,userPrompt))

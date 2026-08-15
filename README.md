@@ -49,7 +49,7 @@ pip install pinecone-text
 
 
 # Run Grader.py
-
+0. Run the thing first/ make sure its working (ollama is pulled etc)
 1. cd into mvp_demo
 2. python -u ragmetrics\Grader.py *> log.txt
 3. look it log.txt as the results populate
