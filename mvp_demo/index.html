@@ -110,13 +110,17 @@
         const loading = document.getElementById('loading');
         loading.style.display = 'block';
 
+        const selectedUser = document.getElementById('user').value; 
+        if (!selectedUser) { addMessage("Please select a user first.", 'bot-msg'); return; }
+
         try {
             const response = await fetch(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     query: query,
-                    funds: selectedFunds
+                    funds: selectedFunds,
+                    user: selectedUser
                  })
             });
 

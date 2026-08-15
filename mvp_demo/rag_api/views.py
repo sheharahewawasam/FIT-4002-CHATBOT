@@ -2,7 +2,7 @@ import os
 import re
 import hashlib
 import requests
-
+import datetime
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from dotenv import load_dotenv
@@ -204,6 +204,7 @@ def chat_with_advisor_bot(request):
 
         result = {"answer": answer, "citations": citations}
         _query_cache[cache_key] = result
+        write_audit_log(request.data.get("user"), user_query, answer)
         return JsonResponse(result)
 
     except Exception as e:
@@ -211,3 +212,28 @@ def chat_with_advisor_bot(request):
 
 
 print("USING PINECONE VECTOR STORE (BGE + CrossEncoder)")
+
+
+def write_audit_log(user, message, response):
+    now = datetime.datetime.now()
+    currentDate = now.strftime("%Y-%m-%d")
+    currentTime = now.strftime("%X")
+
+    try:    
+        with open(f"{user}-{currentDate}_log.txt", "a", encoding="utf-8") as f:
+            string = f"""
+            ----------------------------------------------------------
+            
+            At {currentTime}, user asked:
+            {message} 
+            
+            Chatbot responded with:
+            {response}
+            
+            -----------------------------------------------------------
+            """
+            f.write(string)
+    except Exception as e:
+        print(f"Audit Logging has failed, please diagnose, error: {e}")
+    
+    
