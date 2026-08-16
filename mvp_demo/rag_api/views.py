@@ -189,9 +189,11 @@ def chat_with_advisor_bot(request):
         Do not refuse to answer just because the information is incomplete — report what is there.
         Only say "I cannot find information about this in the provided documents" if the context contains
         absolutely nothing related to the query.
-        
-        Do not give any arbitary document numbers or names when giving answer since their names are wrong and different.
-        No need to say accodring to x or y.
+
+        When referencing where information came from, cite the actual source document name shown in the
+        context (e.g. "SIS Act -1.pdf") and, if a specific section or clause number is visible in the
+        context, include that too (e.g. "Section 4(2) of SIS Act -1.pdf"). Never refer to a source by a
+        generic label like "Document 1" or invent a document name or number that isn't shown in the context.
 
         If the query asks about methods, techniques, strategies, or types:
         - enumerate ALL methods found in the context
