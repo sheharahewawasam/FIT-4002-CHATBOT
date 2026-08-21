@@ -121,3 +121,11 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_EXPOSE_HEADERS = ['Retry-After']
+
+REST_FRAMEWORK = {
+    'DEFAULT_THROTTLE_RATES': {
+        'chatbot': '10/min',
+    }
+}

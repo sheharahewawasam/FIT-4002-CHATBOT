@@ -42,7 +42,6 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            cursor: pointer;
             font-size: 0.9em;
             color: #333;
         }
@@ -71,9 +70,9 @@
             <div class="selector-group">
                 <label>Knowledge Sources</label>
                 <div class="checkbox-group">
-                    <label class="checkbox-label">
-                        <label> Select a user to view avaliable funds
-                    </label>
+                    <span class="checkbox-label">
+                        Select a user to view available funds
+                    </span>
                 </div>
             </div>
         </div>
@@ -99,6 +98,10 @@
         const inputField = document.getElementById('query-input');
         const query = inputField.value.trim();
         if(!query) return;
+
+        const selectedUser = document.getElementById('user').value; 
+        if (!selectedUser) { addMessage("Please select a user first.", 'bot-msg'); return; }
+
         // Get all selected funds
         const selectedFunds = Array.from(
             document.querySelectorAll('input[name="doc-type"]:checked')
@@ -109,9 +112,6 @@
         
         const loading = document.getElementById('loading');
         loading.style.display = 'block';
-
-        const selectedUser = document.getElementById('user').value; 
-        if (!selectedUser) { addMessage("Please select a user first.", 'bot-msg'); return; }
 
         try {
             const response = await fetch(API_URL, {
@@ -124,11 +124,23 @@
                  })
             });
 
-            const data = await response.json();
             loading.style.display = 'none';
 
-            if(data.error) {
-                addMessage("Error: " + data.error, 'bot-msg');
+            if (response.status === 429) {
+                const retryAfter = parseInt(response.headers.get('Retry-After'), 10);
+                console.log(response.headers.get('Retry-After'));
+                if (!isNaN(retryAfter) && retryAfter > 0) {
+                    startRateLimitCountdown(retryAfter);
+                } else {
+                    addMessage("You're sending messages too quickly. Please wait a moment and try again.", 'bot-msg');
+                }
+                return;
+            }
+
+            const data = await response.json();
+
+            if(!response.ok || data.error) {
+                addMessage("Error: " + (data.error || data.detail || 'Someting went wrong'), 'bot-msg');
             } else {
                 addBotMessageWithCitations(data.answer, data.citations);
             }
@@ -136,6 +148,39 @@
             loading.style.display = 'none';
             addMessage("Failed to connect to the server.", 'bot-msg');
         }
+    }
+
+    function startRateLimitCountdown(seconds) {
+        const chatBox = document.getElementById('chat-box');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'message bot-msg';
+        chatBox.insertBefore(msgDiv, document.getElementById('loading'));
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        const inputField = document.getElementById('query-input');
+        const askButton = document.querySelector('.input-area button');
+        inputField.disabled = true;
+        askButton.disabled = true;
+
+        let remaining = seconds;
+
+        function render() {
+            msgDiv.textContent = `You're sending messages too quickly. Please wait ${remaining}s before trying again.`;
+        }
+
+        render();
+        const interval = setInterval(() => {
+            remaining -= 1;
+            if (remaining <= 0) {
+                clearInterval(interval);
+                msgDiv.textContent = "You can send messages again now.";
+                inputField.disabled = false;
+                askButton.disabled = false;
+                inputField.focus();
+            } else {
+                render();
+            }
+        }, 1000);
     }
 
     function addMessage(text, className) {

@@ -6,11 +6,12 @@ import datetime
 import textwrap
 
 from django.http import JsonResponse
-from rest_framework.decorators import api_view
 from dotenv import load_dotenv
 from pinecone import Pinecone
 from pinecone_text.sparse import BM25Encoder
 from sentence_transformers import SentenceTransformer, CrossEncoder
+from rest_framework.decorators import api_view, throttle_classes
+from rest_framework.throttling import AnonRateThrottle
 
 load_dotenv("secrets.env")
 
@@ -28,6 +29,9 @@ _bm25 = BM25Encoder().load(BM25_ENCODER_PATH)
 _embedder = SentenceTransformer("BAAI/bge-base-en-v1.5")
 _embedder.max_seq_length = 512
 _reranker = CrossEncoder("BAAI/bge-reranker-base", max_length=512)
+
+class ChatbotRateThrottle(AnonRateThrottle):
+    scope = "chatbot"
 
 # Simple in-memory cache — repeated identical queries return instantly
 _query_cache: dict = {}
@@ -112,6 +116,7 @@ def get_chat_response(system_prompt, user_query):
     return strip_think_tags(response.json()["message"]["content"])
 
 @api_view(["POST"])
+@throttle_classes([ChatbotRateThrottle])
 def chat_with_advisor_bot(request):
     user_query = request.data.get("query")
     funds = request.data.get("funds", [])
