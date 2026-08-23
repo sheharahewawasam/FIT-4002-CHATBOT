@@ -12,6 +12,7 @@ from rag_api import views
 import json
 import ollama
 import re
+import datetime
 
 #Testing pipeline for the RAG chatbot, for this we are using the sample, SUMMERS FAMILY SUPER FUND (deed.pdf in the repo) as the source of truth
 #REMINDER THAT IT RELIES ON A COPY AND PASTE OF THE RAG LOGIC FROM THE VIEWS.PY FILE SINCE THE LOGIC IS COUPLED, SO UPDATES TO THE RAG LOGIC SHOULD BE RECOPY PASTED BEFORE TESTING AGANE
@@ -147,6 +148,7 @@ def retRelevance(question:str):
 
 
 def correctnessBatch():
+    responseTimes = []
     results = []
     questions = [
         "What is the current deed date for this fund, and has it been updated to reflect all legislative changes since that date?",
@@ -169,8 +171,14 @@ def correctnessBatch():
     ]
     
     for i in range(len(questions)):
+        start = datetime.datetime.now()
         results.append(correctness(questions[i],samples[i]))
-    return results
+        end = datetime.datetime.now()
+        timeDiff = end - start
+        responseTimes.append(timeDiff.total_seconds())
+    
+    return (results,responseTimes)
+
 
 def batchEval():
     questions = [
@@ -184,9 +192,14 @@ def batchEval():
     ]
     
     print("CORRECTNESS \n ======================================")
-    correctnessrez = correctnessBatch()
+    correctnessrez, responseTimerez = correctnessBatch()
     avgCorrect = sum(correctnessrez)/len(correctnessrez)
     print(f"AVERAGE CORRECTNESS IS {avgCorrect}")
+    
+    print("RESPONSE TIMES\n ======================================")
+    print(responseTimerez)
+    averageRestime = sum(responseTimerez)/len(responseTimerez)
+    print(f"AVERAGE RESPONSETIME IS {averageRestime} SECONDS")
     
     print("RELEVANCE \n ======================================")
     results = []
