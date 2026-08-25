@@ -90,6 +90,8 @@
 <script>
     const API_URL = 'http://127.0.0.1:8000/api/chat/'; 
 
+    let hasActiveConversation = false;
+
     function handleKeyPress(e) {
         if(e.key === 'Enter') sendQuery();
     }
@@ -116,6 +118,7 @@
         try {
             const response = await fetch(API_URL, {
                 method: 'POST',
+                credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     query: query,
@@ -140,10 +143,16 @@
             const data = await response.json();
 
             if(!response.ok || data.error) {
-                addMessage("Error: " + (data.error || data.detail || 'Someting went wrong'), 'bot-msg');
-            } else {
-                addBotMessageWithCitations(data.answer, data.citations);
+                addMessage("Error: " + (data.error || data.detail || 'Something went wrong'), 'bot-msg');
+                return;
             }
+
+            if (data.session_expired && hasActiveConversation) {
+                addMessage("Your session had expired due to inactivity. This is a new session.", 'bot-msg');
+            }
+
+            hasActiveConversation = true;
+            addBotMessageWithCitations(data.answer, data.citations);
         } catch (error) {
             loading.style.display = 'none';
             addMessage("Failed to connect to the server.", 'bot-msg');

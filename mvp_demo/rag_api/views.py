@@ -123,11 +123,24 @@ def chat_with_advisor_bot(request):
     if not user_query:
         return JsonResponse({"error": "Query is required"}, status=400)
 
+    had_session_before = bool(request.session.get('last_active'))
+    request.session['last_active'] = datetime.datetime.now().isoformat()
+    session_is_new = not had_session_before
+
+    print(
+        "Time:", datetime.datetime.now(),
+        "| Incoming cookie:", request.COOKIES.get("sessionid"),
+        "| Django session key:", request.session.session_key,
+        "| last_active:", request.session.get("last_active"),
+    )
+
     # Return cached result for repeated identical queries
     cache_key = user_query.strip().lower()
     if cache_key in _query_cache:
         print(f"Cache hit for: {cache_key}")
-        return JsonResponse(_query_cache[cache_key])
+        cached = dict(_query_cache[cache_key])
+        cached["session_expired"] = session_is_new
+        return JsonResponse(cached)
 
     try:
         # 1. Embed query with BGE prefix (required for BGE retrieval quality)
@@ -162,6 +175,7 @@ def chat_with_advisor_bot(request):
             return JsonResponse({
                 "answer":    "I could not find any relevant information in the fund documents to answer your query.",
                 "citations": [],
+                "session_expired": session_is_new,
             })
 
         # 5. Build context — cap each chunk at 1500 chars to stay within num_ctx=8192
@@ -213,8 +227,8 @@ def chat_with_advisor_bot(request):
 
         answer = get_chat_response(system_prompt, user_query)
 
-        result = {"answer": answer, "citations": citations}
-        _query_cache[cache_key] = result
+        result = {"answer": answer, "citations": citations, "session_expired": session_is_new}
+        _query_cache[cache_key] = {"answer": answer, "citations": citations}
         write_audit_log(request.data.get("user"), user_query, answer)
         return JsonResponse(result)
 
