@@ -7,7 +7,7 @@ from pinecone import Pinecone, ServerlessSpec
 from pinecone_text.sparse import BM25Encoder
 from sentence_transformers import SentenceTransformer
 from datetime import datetime
-
+import json
 from llama_index.core.node_parser import SentenceSplitter
 
 from ocr_solution import OCR
@@ -288,6 +288,27 @@ def build_section_based_chunks(full_text, base_metadata):
     return entries
 
 
+def delete_document(source_url: str, index, manifest_path="chunk_manifest.json"):
+    manifest_path = Path(manifest_path)
+    with open(manifest_path, "r") as f:
+        manifest = json.load(f)
+
+    chunk_ids = manifest.get(source_url)
+    if not chunk_ids:
+        print(f"No chunks found for '{source_url}'")
+        return
+
+    # Pinecone delete-by-id also batches in groups of 1000 max
+    batch_size = 1000
+    for start in range(0, len(chunk_ids), batch_size):
+        index.delete(ids=chunk_ids[start:start + batch_size])
+
+    del manifest[source_url]
+    with open(manifest_path, "w") as f:
+        json.dump(manifest, f, indent=2)
+
+    print(f"Deleted {len(chunk_ids)} chunks for '{source_url}'")
+
 def main():
     print("Loading OCR model...")
     ocr = OCR()
@@ -373,6 +394,25 @@ def main():
         batch_size=32,
         show_progress_bar=True,
     ).tolist()
+    
+        # --- Build doc -> chunk_id manifest for later deletion ---
+    print("\nBuilding chunk manifest...")
+    manifest_path = Path("chunk_manifest.json")
+    if manifest_path.exists():
+        with open(manifest_path, "r") as f:
+            manifest = json.load(f)
+    else:
+        manifest = {}
+
+    for doc_id, meta in zip(ids, metadatas):
+        source = meta["source_url"]
+        manifest.setdefault(source, []).append(doc_id)
+
+    with open(manifest_path, "w") as f:
+        json.dump(manifest, f, indent=2)
+    print(f"Manifest saved to '{manifest_path}' ({len(manifest)} source docs).")
+    # -----------------------------------------------------------
+
 
     # Fit BM25 encoder on the same leaf texts used for dense embeddings.
     print(f"\nFitting BM25 encoder on {len(leaf_texts)} documents...")
