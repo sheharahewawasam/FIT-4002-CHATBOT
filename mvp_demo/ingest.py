@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from pinecone import Pinecone, ServerlessSpec
 from pinecone_text.sparse import BM25Encoder
 from sentence_transformers import SentenceTransformer
+from datetime import datetime
 
 from llama_index.core.node_parser import SentenceSplitter
 
@@ -22,15 +23,19 @@ BM25_ENCODER_PATH = os.getenv("BM25_ENCODER_PATH", "bm25_encoder.json")
 
 pc = Pinecone(api_key=PINECONE_API_KEY)
 
+def parse_document_date(date_str, fmt="%d %B %Y"):
+    dt = datetime.strptime(date_str, fmt)
+    return dt.strftime("%Y-%m-%d"), int(dt.strftime("%Y%m%d"))
+
 pdfs_to_process = [
-    {"filepath": "../Trust_Deed_Sample_Superannuation_Fund.pdf", "fund_name": "Sample Superannuation Fund",            "doc_type": "Trust Deed"},
-    {"filepath": "../deed.pdf",                                   "fund_name": "Summers Family Super Fund", "doc_type": "Trust Deed"},
-    {"filepath": "../sample-smsf-trust-deed.pdf",                 "fund_name": "Ausis Super Fund",            "doc_type": "Trust Deed"},
-    {"filepath": "../Project_26.pdf",                             "fund_name": "Triple A Super",            "doc_type": "Project Brief"},
-    {"filepath": "../Proposal Document.pdf",                      "fund_name": "Triple A Super",            "doc_type": "Development Proposal"},
-    {"filepath": "../SIS Act -1.pdf",                             "fund_name": "General",            "doc_type": "legal"},
-    {"filepath": "../SIS Act Part 2-1.pdf",                       "fund_name": "General",            "doc_type": "legal"},
-    {"filepath": "../Super-changes-timeline-1.pdf",               "fund_name": "General",            "doc_type": "Changelog"},
+    {"filepath": "../Trust_Deed_Sample_Superannuation_Fund.pdf",  "fund_name": "Sample Superannuation Fund", "doc_type": "Trust Deed",               "date": "21 January 2012"},
+    {"filepath": "../deed.pdf",                                   "fund_name": "Summers Family Super Fund",  "doc_type": "Trust Deed",               "date": "21 January 2012"},
+    {"filepath": "../sample-smsf-trust-deed.pdf",                 "fund_name": "Ausis Super Fund",           "doc_type": "Trust Deed",               "date": "21 January 2012"},
+    {"filepath": "../Project_26.pdf",                             "fund_name": "Triple A Super",             "doc_type": "Project Brief",            "date": "21 January 2012"},
+    {"filepath": "../Proposal Document.pdf",                      "fund_name": "Triple A Super",             "doc_type": "Development Proposal",     "date": "21 January 2012"},
+    {"filepath": "../SIS Act -1.pdf",                             "fund_name": "General",                    "doc_type": "legal",                    "date": "21 January 2012"},
+    {"filepath": "../SIS Act Part 2-1.pdf",                       "fund_name": "General",                    "doc_type": "legal",                    "date": "21 January 2012"},
+    {"filepath": "../Super-changes-timeline-1.pdf",               "fund_name": "General",                    "doc_type": "Changelog",                "date": "21 January 2012"},
 ]
 
 # Cleans extracted PDF text without destroying the document structure
@@ -321,10 +326,14 @@ def main():
             print("WARNING: no text extracted, skipped.")
             continue
 
+        date_display, date_numeric = parse_document_date(pdf_info["date"])
+
         base_metadata = {
-            "source_url": pdf_info["filepath"].split("/")[-1],
-            "fund_name":  pdf_info["fund_name"],
-            "doc_type":   pdf_info["doc_type"],
+            "source_url":   pdf_info["filepath"].split("/")[-1],
+            "fund_name":    pdf_info["fund_name"],
+            "doc_type":     pdf_info["doc_type"],
+            "date":         date_display,
+            "date_numeric": date_numeric,
         }
         entries = build_section_based_chunks(full_text, base_metadata)
         all_entries.extend(entries)
@@ -354,6 +363,8 @@ def main():
             "source_url": entry["source_url"],
             "fund_name": entry["fund_name"],
             "doc_type": entry["doc_type"],
+            "date": entry["date"],
+            "date_numeric": entry["date_numeric"],
         })
 
     print(f"\nBatch-embedding {len(leaf_texts)} leaf nodes...")

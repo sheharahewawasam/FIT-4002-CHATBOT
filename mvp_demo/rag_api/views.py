@@ -44,21 +44,29 @@ def strip_think_tags(text: str) -> str:
     return _THINK_RE.sub("", text).strip()
 
 
-def perform_vector_search(query_embedding, user_query, filters, top_k=40):
+def perform_vector_search(query_embedding, user_query, filters, top_k=40, date_from=None, date_to=None):
     """
     Pure vector search against Pinecone.
     Returns Pinecone match dicts: {"id", "score", "metadata": {...}}
     """
     sparse_vector = _bm25.encode_queries(user_query)
 
+    query_filter ={"fund_name": {"$in": filters}}
+
+    date_condition = {}
+    if date_from is not None:
+        date_condition["$gte"] = date_from
+    if date_to is not None:
+        date_condition["$lte"] = date_to
+    if date_condition:
+        query_filter["date_numeric"] = date_condition
+
     results = index.query(
         vector=query_embedding,
         sparse_vector=sparse_vector,
         top_k=top_k,
         include_metadata=True,
-        filter={
-             "fund_name": {"$in": filters}
-        }
+        filter=query_filter,
     )
     return results.get("matches", [])
 
@@ -105,7 +113,6 @@ def get_chat_response(system_prompt, user_query):
             {"role": "user", "content": user_query}
         ],
         "stream": False,
-        "think": False,
         "options": {
             "temperature": 0.0,
             # 5 parent chunks × ~500 tokens each + system prompt overhead — 8192 avoids silent truncation
@@ -116,11 +123,22 @@ def get_chat_response(system_prompt, user_query):
     response.raise_for_status()
     return strip_think_tags(response.json()["message"]["content"])
 
+def date_string_to_numeric(date_str):
+    if not date_str:
+        return None
+    try:
+        return int(date_str.replace("-", ""))
+    except ValueError:
+        return None
+
 @api_view(["POST"])
 @throttle_classes([ChatbotRateThrottle])
 def chat_with_advisor_bot(request):
     user_query = request.data.get("query")
     funds = request.data.get("funds", [])
+    date_from = date_string_to_numeric(request.data.get("date_from"))
+    date_to = date_string_to_numeric(request.data.get("date_to"))
+
     if not user_query:
         return JsonResponse({"error": "Query is required"}, status=400)
 
@@ -129,7 +147,7 @@ def chat_with_advisor_bot(request):
     session_is_new = not had_session_before
 
     # Return cached result for repeated identical queries
-    cache_key = (user_query.strip().lower(), tuple(sorted(funds)))
+    cache_key = (user_query.strip().lower(), tuple(sorted(funds)), date_from, date_to)
     if cache_key in _query_cache:
         print(f"Cache hit for: {cache_key}")
         cached = dict(_query_cache[cache_key])
@@ -143,7 +161,11 @@ def chat_with_advisor_bot(request):
         ).tolist()
 
         # 2. Vector search
-        raw_results = perform_vector_search(query_embedding, user_query, funds, top_k=60)
+        raw_results = perform_vector_search(query_embedding, 
+                                            user_query, funds, 
+                                            top_k=60,
+                                            date_from=date_from,
+                                            date_to=date_to,)
 
         # 3. Deduplicate — keep highest-scoring copy of each unique chunk
         best_by_hash = {}

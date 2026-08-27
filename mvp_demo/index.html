@@ -68,6 +68,14 @@
             </div>
 
             <div class="selector-group">
+                <label>Date range</label>
+                <div style="display:flex; gap:6px; justify-content:center;">
+                    <input type="date" id="date-from" style="padding:6px; border-radius:6px; border:none; font-size:0.85em;">
+                    <input type="date" id="date-to" style="padding:6px; border-radius:6px; border:none; font-size:0.85em;">
+                </div>
+            </div>
+
+            <div class="selector-group">
                 <label>Knowledge Sources</label>
                 <div class="checkbox-group">
                     <span class="checkbox-label">
@@ -75,6 +83,7 @@
                     </span>
                 </div>
             </div>
+
         </div>
     </div>
     <div class="chat-box" id="chat-box">
@@ -115,10 +124,12 @@
             document.querySelectorAll('input[name="doc-type"]:checked')
         ).map(cb => cb.value);
 
+        const dateFrom = document.getElementById('date-from').value;
+        const dateTo = document.getElementById('date-to').value;
+
         addMessage(query, 'user-msg');
         inputField.value = '';
 
-        // Disable IMMEDIATELY, synchronously, before the async request even starts
         isSending = true;
         const askButton = document.querySelector('.input-area button');
         inputField.disabled = true;
@@ -135,7 +146,9 @@
                 body: JSON.stringify({ 
                     query: query,
                     funds: selectedFunds,
-                    user: selectedUser
+                    user: selectedUser,
+                    date_from: dateFrom || null,
+                    date_to: dateTo || null,
                  })
             });
 
