@@ -105,13 +105,14 @@ def get_chat_response(system_prompt, user_query):
             {"role": "user", "content": user_query}
         ],
         "stream": False,
+        "think": False,
         "options": {
             "temperature": 0.0,
             # 5 parent chunks × ~500 tokens each + system prompt overhead — 8192 avoids silent truncation
             "num_ctx": 8192
         }
     }
-    response = requests.post(url, json=data, timeout=120)
+    response = requests.post(url, json=data, timeout=300)
     response.raise_for_status()
     return strip_think_tags(response.json()["message"]["content"])
 
@@ -127,15 +128,8 @@ def chat_with_advisor_bot(request):
     request.session['last_active'] = datetime.datetime.now().isoformat()
     session_is_new = not had_session_before
 
-    print(
-        "Time:", datetime.datetime.now(),
-        "| Incoming cookie:", request.COOKIES.get("sessionid"),
-        "| Django session key:", request.session.session_key,
-        "| last_active:", request.session.get("last_active"),
-    )
-
     # Return cached result for repeated identical queries
-    cache_key = user_query.strip().lower()
+    cache_key = (user_query.strip().lower(), tuple(sorted(funds)))
     if cache_key in _query_cache:
         print(f"Cache hit for: {cache_key}")
         cached = dict(_query_cache[cache_key])
@@ -357,4 +351,3 @@ def rag_logic(test_questions:str):
 
     result = {"answer": answer, "citations": citations, "context": context_text}
     return JsonResponse(result)
-
