@@ -147,7 +147,8 @@ def chat_with_advisor_bot(request):
     session_is_new = not had_session_before
 
     # Return cached result for repeated identical queries
-    cache_key = (user_query.strip().lower(), tuple(sorted(funds)), date_from, date_to)
+    selected_user = request.data.get("user")
+    cache_key = (selected_user, user_query.strip().lower(), tuple(sorted(funds)), date_from, date_to)
     if cache_key in _query_cache:
         print(f"Cache hit for: {cache_key}")
         cached = dict(_query_cache[cache_key])
@@ -245,7 +246,7 @@ def chat_with_advisor_bot(request):
 
         result = {"answer": answer, "citations": citations, "session_expired": session_is_new}
         _query_cache[cache_key] = {"answer": answer, "citations": citations}
-        write_audit_log(request.data.get("user"), user_query, answer)
+        write_audit_log(selected_user, user_query, answer)
         return JsonResponse(result)
 
     except Exception as e:
