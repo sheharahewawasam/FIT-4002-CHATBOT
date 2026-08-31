@@ -3,7 +3,7 @@ from paddleocr import PPStructureV3
 import pymupdf as pymu
 from chonkie import SemanticChunker
 from ollama import generate
-from langchain_text_splitters import MarkdownTextSplitter
+# from langchain_text_splitters import MarkdownTextSplitter
 
 class OCR():
     TEXT_MIN = 50
@@ -20,6 +20,21 @@ class OCR():
         "Do NOT return a number or explanation — return the full text of the chosen chunk only. "
         "The chunks are split by '||'. The chunks to analyse are: "
     )   
+
+    CLEANING_PROMPT = """
+        You are cleaning up OCR output. The text below may contain scanning artifacts: misrecognized characters, broken words, stray line breaks, extra whitespace, or garbled punctuation.
+
+        Your task:
+
+        Fix obvious OCR errors (e.g., "rn" misread as "m", "0" for "O", "1" for "l", merged or split words).
+        Normalize spacing and line breaks so the text reads naturally.
+        Preserve all original content, meaning, numbers, names, and structure exactly — do not summarize, paraphrase, omit, or add anything.
+        If a word or phrase is too garbled to confidently reconstruct, leave it as-is rather than guessing.
+
+        Return only the cleaned text, with no commentary.
+
+        Text:
+    """
 
     def __init__(self, output: Path = Path("./ocr_output"), gpu: bool = False):
         """
@@ -85,7 +100,10 @@ class OCR():
         #     chunk2 = self.safe_pop(med_chunks)
         #     # chunk3 = self.safe_pop(hi_chunks)
         
-        res = thresh_med
+        while chunk2:
+            response = self.clean_text(chunk2)
+
+            res += response
 
         mkd_file_path = self.output / f"{pdf_path.stem}.md"
         mkd_file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -150,6 +168,35 @@ class OCR():
                     image.save(file_path)
         
         return markdown_texts
+
+    def ocr_test(self, pdf_path: Path, threshold: int) -> str:
+        if not pdf_path.is_file():
+            return
+        
+        if not 0 <= threshold <= 1:
+            return
+        
+        input_file = str(pdf_path)
+
+        output = self.pipelineV3.predict(
+            input=str(input_file),
+            layout_threshold=threshold, 
+            layout_nms=True,
+            use_table_recognition=True,
+            use_formula_recognition=True,
+            use_doc_orientation_classify=True,
+            use_doc_unwarping=True,
+            use_region_detection=True
+        )
+
+        markdown_list = []
+
+        for res in output:
+            markdown_list.append(res.markdown)
+
+        markdown_texts = self.pipelineV3.concatenate_markdown_pages(markdown_list).get("markdown_texts")
+
+        return markdown_texts
     
     def align_text(self, prompt: str) -> str:
         """
@@ -161,6 +208,22 @@ class OCR():
         response = generate(
             model="qwen3",
             prompt=self.REASONING_PROMPT + prompt,
+            think=False,
+            stream=False
+        )
+
+        return response.response
+
+    def clean_text(self, prompt: str) -> str:
+        """
+        Query an LLM model with a prompt that cleans the returned chunk
+        
+        :param prompt: prompt containing the OCR text to clean
+        :return: cleaned OCR output
+        """
+        response = generate(
+            model="qwen3.8",
+            prompt=self.CLEANING_PROMPT + prompt,
             think=False,
             stream=False
         )
@@ -206,12 +269,17 @@ class OCR():
 if __name__ == "__main__":
     ocr = OCR(Path("./ocr_output"), False)
 
-    input_file = Path("./pdfs/Proposal Document.pdf")
+    # input_file = Path("./pdfs/Proposal Document.pdf")
+    # ocr.output_document(input_file)
 
-    input_file2 = Path("./pdfs/scansmpl.pdf")
+    # input_file2 = Path("./pdfs/scansmpl.pdf")
+    # ocr.output_document(input_file2)
 
-    input_file3 = Path("./pdfs/image-based-pdf-sample_rotated.pdf")
+    # input_file3 = Path("./pdfs/image-based-pdf-sample_rotated.pdf")
+    # ocr.output_document(input_file3)
 
+    input_file4 = Path("./pdfs/atoform.pdf")
+    ocr.output_document(input_file4)
     # input_file3 = Path("./pdfs/deed.pdf")
     # ocr.predictV3(input_file3)
 
@@ -224,7 +292,3 @@ if __name__ == "__main__":
     # )
 
     # print(ocr.align_text(prompt))
-
-    ocr.output_document(input_file)
-    ocr.output_document(input_file2)
-    ocr.output_document(input_file3)
