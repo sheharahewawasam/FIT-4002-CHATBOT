@@ -131,3 +131,11 @@ REST_FRAMEWORK = {
         'chatbot': '10/min',
     }
 }
+
+# Uploaded documents are stored here; ingestion reads them from disk.
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# Uploads are streamed to disk rather than buffered in memory.
+FILE_UPLOAD_MAX_MEMORY_SIZE = 2 * 1024 * 1024
+DATA_UPLOAD_MAX_MEMORY_SIZE = 26 * 1024 * 1024

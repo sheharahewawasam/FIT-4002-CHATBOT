@@ -49,6 +49,43 @@
         .checkbox-label input[type="checkbox"] {
             cursor: pointer;
         }
+            /* --- Documents panel ------------------------------------------- */
+        body { flex-wrap: wrap; align-items: flex-start; gap: 20px; }
+        .docs-panel {
+            width: 340px; background: white; border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex;
+            flex-direction: column; max-height: 80vh;
+        }
+        .docs-panel .header { border-radius: 10px 10px 0 0; }
+        .docs-body { padding: 15px; overflow-y: auto; }
+        .docs-body label { display: block; font-size: 0.8em; color: #555; margin: 10px 0 4px; }
+        .docs-body input[type="file"], .docs-body select, .docs-body input[type="text"] {
+            width: 100%; padding: 8px; border: 1px solid #ccc;
+            border-radius: 5px; box-sizing: border-box; font-size: 0.9em;
+        }
+        .docs-body button { width: 100%; margin-top: 12px; }
+        .docs-body button:disabled { background: #9bb8d6; cursor: not-allowed; }
+        .upload-msg { font-size: 0.8em; margin-top: 8px; min-height: 1em; }
+        .doc-list { list-style: none; padding: 0; margin: 14px 0 0; }
+        .doc-item {
+            border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px;
+            margin-bottom: 8px; font-size: 0.82em;
+        }
+        .doc-name { font-weight: 600; word-break: break-all; }
+        .doc-meta { color: #666; margin-top: 3px; }
+        .doc-actions { margin-top: 6px; }
+        .doc-actions button {
+            width: auto; padding: 3px 10px; font-size: 0.9em;
+            margin: 0; background: #c0392b;
+        }
+        .badge {
+            display: inline-block; padding: 1px 7px; border-radius: 10px;
+            font-size: 0.9em; color: white;
+        }
+        .badge-pending, .badge-processing { background: #f39c12; }
+        .badge-ready { background: #27ae60; }
+        .badge-failed { background: #c0392b; }
+        .divider { border-top: 1px solid #eee; margin: 14px 0 0; }
     </style>
 </head>
 <body>
@@ -84,6 +121,33 @@
     <div class="input-area">
         <input type="text" id="query-input" placeholder="e.g., What is the purpose of the RAG chatbot?" onkeypress="handleKeyPress(event)">
         <button onclick="sendQuery()">Ask</button>
+    </div>
+</div>
+
+
+<div class="docs-panel">
+    <div class="header"><h2 style="font-size:1.1em;margin:0;">Documents</h2></div>
+    <div class="docs-body">
+        <div id="docs-locked" style="color:#666;font-size:0.9em;">
+            Select a user to upload and view documents.
+        </div>
+
+        <div id="docs-active" style="display:none;">
+            <label for="doc-file">PDF file (max 25 MB)</label>
+            <input type="file" id="doc-file" accept="application/pdf">
+
+            <label for="doc-fund">Fund</label>
+            <select id="doc-fund"><option value="">No fund (private to you)</option></select>
+
+            <label for="doc-kind">Document type</label>
+            <input type="text" id="doc-kind" placeholder="e.g. Trust Deed">
+
+            <button id="doc-upload-btn" onclick="uploadDocument()">Upload &amp; ingest</button>
+            <div class="upload-msg" id="upload-msg"></div>
+
+            <div class="divider"></div>
+            <ul class="doc-list" id="doc-list"></ul>
+        </div>
     </div>
 </div>
 
@@ -299,6 +363,168 @@
                 checkboxGroup.innerHTML = '<span style="color: red;">Error loading knowledge sources</span>';
             });
     });
+    });
+
+    /* --- Documents: upload, status polling, deletion -------------------- */
+    const DOCS_API = 'http://127.0.0.1:8000/api/documents/';
+    let docsPollTimer = null;
+
+    function currentUser() {
+        return document.getElementById('user').value;
+    }
+
+    function escapeHtmlDoc(str) {
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    function setUploadMessage(text, colour) {
+        const el = document.getElementById('upload-msg');
+        el.textContent = text;
+        el.style.color = colour || '#666';
+    }
+
+    // Keep the upload panel in step with whichever user is selected.
+    function onUserChangedForDocs() {
+        const user = currentUser();
+        document.getElementById('docs-locked').style.display = user ? 'none' : 'block';
+        document.getElementById('docs-active').style.display = user ? 'block' : 'none';
+        setUploadMessage('');
+        if (!user) {
+            if (docsPollTimer) { clearInterval(docsPollTimer); docsPollTimer = null; }
+            return;
+        }
+        populateUploadFunds(user);
+        refreshDocuments();
+    }
+
+    function populateUploadFunds(user) {
+        const select = document.getElementById('doc-fund');
+        fetch(API_BASE + '/' + encodeURIComponent(user) + '/')
+            .then(r => r.ok ? r.json() : Promise.reject(new Error(r.status)))
+            .then(res => {
+                select.innerHTML = '<option value="">No fund (private to you)</option>';
+                (res.data || []).forEach(fund => {
+                    const opt = document.createElement('option');
+                    opt.value = fund;
+                    opt.textContent = fund;
+                    select.appendChild(opt);
+                });
+            })
+            .catch(err => console.error('Error loading funds for upload:', err));
+    }
+
+    async function uploadDocument() {
+        const user = currentUser();
+        if (!user) { setUploadMessage('Select a user first.', '#c0392b'); return; }
+
+        const fileInput = document.getElementById('doc-file');
+        const file = fileInput.files[0];
+        if (!file) { setUploadMessage('Choose a PDF to upload.', '#c0392b'); return; }
+
+        const form = new FormData();
+        form.append('file', file);
+        form.append('user', user);
+        form.append('fund', document.getElementById('doc-fund').value);
+        form.append('doc_type', document.getElementById('doc-kind').value);
+
+        const btn = document.getElementById('doc-upload-btn');
+        btn.disabled = true;
+        setUploadMessage('Uploading...');
+
+        try {
+            // The server accepts the file and ingests in the background, so a
+            // 202 means queued, not searchable - the list below shows progress.
+            const response = await fetch(DOCS_API + 'upload/', { method: 'POST', body: form });
+            const data = await response.json();
+            if (!response.ok) {
+                setUploadMessage(data.error || 'Upload failed.', '#c0392b');
+            } else {
+                setUploadMessage('Queued for ingestion.', '#27ae60');
+                fileInput.value = '';
+                document.getElementById('doc-kind').value = '';
+                refreshDocuments();
+            }
+        } catch (err) {
+            setUploadMessage('Could not reach the server.', '#c0392b');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    async function refreshDocuments() {
+        const user = currentUser();
+        if (!user) return;
+        try {
+            const response = await fetch(DOCS_API + '?user=' + encodeURIComponent(user));
+            if (!response.ok) return;
+            const data = await response.json();
+            renderDocuments(data.documents || []);
+        } catch (err) {
+            console.error('Error loading documents:', err);
+        }
+    }
+
+    function renderDocuments(docs) {
+        const list = document.getElementById('doc-list');
+        if (!docs.length) {
+            list.innerHTML = '<li style="color:#666;font-size:0.95em;">No documents uploaded yet.</li>';
+        } else {
+            list.innerHTML = docs.map(function (doc) {
+                var fund = doc.fund ? escapeHtmlDoc(doc.fund) : 'private';
+                var detail;
+                if (doc.status === 'ready') {
+                    detail = doc.chunk_count + ' chunks';
+                } else if (doc.status === 'failed') {
+                    detail = escapeHtmlDoc(doc.error || 'failed');
+                } else {
+                    detail = 'working...';
+                }
+                return '<li class="doc-item">'
+                     + '<div class="doc-name">' + escapeHtmlDoc(doc.filename) + '</div>'
+                     + '<div class="doc-meta"><span class="badge badge-' + doc.status + '">'
+                     + doc.status + '</span> ' + fund + ' &middot; ' + detail + '</div>'
+                     + '<div class="doc-actions"><button onclick="deleteDocument('
+                     + doc.id + ')">Delete</button></div>'
+                     + '</li>';
+            }).join('');
+        }
+
+        // Only poll while something is actually in flight.
+        var busy = docs.some(function (d) {
+            return d.status === 'pending' || d.status === 'processing';
+        });
+        if (busy && !docsPollTimer) {
+            docsPollTimer = setInterval(refreshDocuments, 2500);
+        } else if (!busy && docsPollTimer) {
+            clearInterval(docsPollTimer);
+            docsPollTimer = null;
+        }
+    }
+
+    async function deleteDocument(id) {
+        const user = currentUser();
+        if (!user) return;
+        if (!confirm('Delete this document and remove it from the search index?')) return;
+        try {
+            const response = await fetch(
+                DOCS_API + id + '/delete/?user=' + encodeURIComponent(user),
+                { method: 'DELETE' });
+            if (!response.ok) {
+                const data = await response.json();
+                setUploadMessage(data.error || 'Delete failed.', '#c0392b');
+                return;
+            }
+            setUploadMessage('Document deleted.', '#27ae60');
+            refreshDocuments();
+        } catch (err) {
+            setUploadMessage('Could not reach the server.', '#c0392b');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        document.getElementById('user').addEventListener('change', onUserChangedForDocs);
+        onUserChangedForDocs();
     });
 </script>
 

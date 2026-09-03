@@ -6,32 +6,17 @@ import datetime
 import textwrap
 
 from django.http import JsonResponse
-from dotenv import load_dotenv
-from pinecone import Pinecone
-from pinecone_text.sparse import BM25Encoder
-from sentence_transformers import SentenceTransformer, CrossEncoder
 from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.throttling import AnonRateThrottle
 
-load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "secrets.env"))
+from . import resources
 
-PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")
-
-BM25_ENCODER_PATH = os.getenv(
-    "BM25_ENCODER_PATH",
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bm25_encoder.json")
-)
-
-pc = Pinecone(api_key=PINECONE_API_KEY)
-index = pc.Index(PINECONE_INDEX_NAME)
-
-_bm25 = BM25Encoder().load(BM25_ENCODER_PATH)
-
-# Both models loaded once at startup — reused across all requests
-_embedder = SentenceTransformer("BAAI/bge-base-en-v1.5")
-_embedder.max_seq_length = 512
-_reranker = CrossEncoder("BAAI/bge-reranker-base", max_length=512)
+# Shared with the ingestion path so the BGE models are loaded once, not
+# twice. Aliased so the rest of this module reads unchanged.
+index = resources.index
+_bm25 = resources.bm25
+_embedder = resources.embedder
+_reranker = resources.reranker
 
 class ChatbotRateThrottle(AnonRateThrottle):
     scope = "chatbot"
@@ -47,22 +32,47 @@ def strip_think_tags(text: str) -> str:
     return _THINK_RE.sub("", text).strip()
 
 
-def perform_vector_search(query_embedding, user_query, filters, top_k=40):
+def build_access_filter(fund_names, owner_name):
+    """
+    Pinecone filter limiting results to what this advisor may see.
+
+    Visibility is "belongs to one of their funds" OR "they uploaded it".
+    Documents added by the bulk ingest script carry no owner, so they are
+    reachable only through the fund clause.
+
+    Returns None when there is nothing to match on at all, which the caller
+    treats as "no accessible documents" rather than querying unfiltered.
+    """
+    clauses = []
+    if fund_names:
+        clauses.append({"fund_name": {"$in": list(fund_names)}})
+    if owner_name:
+        clauses.append({"owner": {"$eq": owner_name}})
+
+    if not clauses:
+        return None
+    if len(clauses) == 1:
+        return clauses[0]
+    return {"$or": clauses}
+
+
+def perform_vector_search(query_embedding, user_query, access_filter, top_k=40):
     """
     Pure vector search against Pinecone.
     Returns Pinecone match dicts: {"id", "score", "metadata": {...}}
     """
     sparse_vector = _bm25.encode_queries(user_query)
 
-    results = index.query(
-        vector=query_embedding,
-        sparse_vector=sparse_vector,
-        top_k=top_k,
-        include_metadata=True,
-        filter={
-             "fund_name": {"$in": filters}
-        }
-    )
+    query_kwargs = {
+        "vector": query_embedding,
+        "sparse_vector": sparse_vector,
+        "top_k": top_k,
+        "include_metadata": True,
+    }
+    if access_filter:
+        query_kwargs["filter"] = access_filter
+
+    results = index.query(**query_kwargs)
     return results.get("matches", [])
 
 
@@ -139,7 +149,14 @@ def chat_with_advisor_bot(request):
         ).tolist()
 
         # 2. Vector search
-        raw_results = perform_vector_search(query_embedding, user_query, funds, top_k=60)
+        access_filter = build_access_filter(funds, request.data.get("user"))
+        if access_filter is None:
+            return JsonResponse({
+                "answer": "Select a fund, or upload a document, before asking a question.",
+                "citations": [],
+            })
+
+        raw_results = perform_vector_search(query_embedding, user_query, access_filter, top_k=60)
 
         # 3. Deduplicate — keep highest-scoring copy of each unique chunk
         best_by_hash = {}
@@ -268,7 +285,9 @@ def rag_logic(test_questions:str):
     ).tolist()
 
     # 2. Vector search
-    raw_results = perform_vector_search(query_embedding, user_query, ["Summers Family Super Fund"], top_k=60)
+    raw_results = perform_vector_search(
+        query_embedding, user_query,
+        build_access_filter(["Summers Family Super Fund"], None), top_k=60)
 
     # 3. Deduplicate — keep highest-scoring copy of each unique chunk
     best_by_hash = {}
