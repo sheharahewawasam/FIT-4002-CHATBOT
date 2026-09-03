@@ -1,8 +1,25 @@
+# Secrets
 secrets.env
 mvp_demo/secrets.env
+.env
+mvp_demo/.env
+*.pem
+
+# Terraform — never commit state, vars or provider binaries
+oci-infra/terraform.tfvars
+oci-infra/.terraform/
+oci-infra/*.tfstate
+oci-infra/*.tfstate.backup
+oci-infra/.terraform.lock.hcl
+
+# Python
+*.pyc
+__pycache__/
+.venv/
+
+# Local data / artefacts
 mvp_demo/chroma_db/
-mvp_demo/config/__pycache__/
-mvp_demo/config/__pycache__/urls.cpython-310.pyc
-mvp_demo/rag_api/__pycache__/views.cpython-310.pyc
-mvp_demo/config/__pycache__/urls.cpython-310.pyc
-mvp_demo/rag_api/__pycache__/
+audit_logs/
+
+# OS
+.DS_Store

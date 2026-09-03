@@ -13,12 +13,15 @@ from sentence_transformers import SentenceTransformer, CrossEncoder
 from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.throttling import AnonRateThrottle
 
-load_dotenv("secrets.env")
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "secrets.env"))
 
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")
 
-BM25_ENCODER_PATH = os.getenv("BM25_ENCODER_PATH", "bm25_encoder.json")
+BM25_ENCODER_PATH = os.getenv(
+    "BM25_ENCODER_PATH",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bm25_encoder.json")
+)
 
 pc = Pinecone(api_key=PINECONE_API_KEY)
 index = pc.Index(PINECONE_INDEX_NAME)
