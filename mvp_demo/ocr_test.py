@@ -9,6 +9,13 @@ ocr = OCR(Path("./testing"),False)
 ocr.initiate_model_v3()
 
 def precision_recall_test(actual: str, predicted: str) -> dict:
+    """
+    Performs a precision and recall test for an OCR prediction
+
+    :param actual: The actual test in the image
+    :param predicted: The text the OCR model predicted
+    :return dict: dictionary containing precision, recall, F1 value and amount of missed and extra words
+    """
     actual_words = set(actual.lower().split())
     predicted_words = set(predicted.lower().split())
 
@@ -28,7 +35,14 @@ def precision_recall_test(actual: str, predicted: str) -> dict:
         "extra_words": false_positives
     }
 
-def character_error_rate(actual: str, predicted: str):
+def character_error_rate(actual: str, predicted: str) -> int:
+    """
+    Performs a character error rate evaluation of an OCR output using dynamically programmed edit distance calculations
+
+    :param actual: The actual test in the image
+    :param predicted: The text the OCR model predicted
+    :return cer: Character error rate between the predicted and actual texts
+    """
     ref, hyp = list(actual), list(predicted)
     n, m = len(ref), len(hyp)
 
@@ -73,22 +87,21 @@ for file in ocr_tests.iterdir():
 
         ocr_prediction = ocr.ocr_test(image_path,0.50)
 
-        print(ocr_prediction)
-        print(full_text)
-
         results = precision_recall_test(full_text, ocr_prediction)
-
-        print(f"File: {file.name}")
-        print(f"Precision: {results['precision']:.2%}  (of what OCR returned, how much was correct)")
-        print(f"Recall: {results['recall']:.2%}  (of ground truth, how much OCR found)")
-        print(f"F1 Score: {results['f1']:.2%}  (balance of both)")
-        print(f"Missed words: {results['missed_words']}")
-        print(f"Extra words: {results['extra_words']}")
-        print("-" * 40)
 
         cer = character_error_rate(full_text, ocr_prediction)
 
-        print(f"Character Error Rate: {cer}")
+        if cer > 0.1:
+            print(f"File: {file.name}")
+            print(f"Precision: {results['precision']:.2%}  (of what OCR returned, how much was correct)")
+            print(f"Recall: {results['recall']:.2%}  (of ground truth, how much OCR found)")
+            print(f"F1 Score: {results['f1']:.2%}  (balance of both)")
+            print(f"Missed words: {results['missed_words']}")
+            print(f"Extra words: {results['extra_words']}")
+            print("-" * 40)
+
+            print(f"Character Error Rate: {cer}")
+
 
 
 
