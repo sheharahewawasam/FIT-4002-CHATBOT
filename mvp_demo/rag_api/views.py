@@ -1,4 +1,5 @@
 import os
+import logging
 import re
 import hashlib
 import requests
@@ -10,6 +11,9 @@ from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.throttling import AnonRateThrottle
 
 from . import resources
+from .models import Advisor
+
+logger = logging.getLogger(__name__)
 
 # Shared with the ingestion path so the BGE models are loaded once, not
 # twice. Aliased so the rest of this module reads unchanged.
@@ -245,35 +249,65 @@ def chat_with_advisor_bot(request):
 print("USING PINECONE VECTOR STORE (BGE + CrossEncoder)")
 
 
-def write_audit_log(user, message, response):
-    now = datetime.datetime.now()
-    currentDate = now.strftime("%Y-%m-%d")
-    currentTime = now.strftime("%X")
-    
-    user_dir = os.path.join("audit_logs", user)
-    os.makedirs(user_dir, exist_ok=True)
-    fileName = os.path.join(user_dir, f"{user}-{currentDate}_log.txt")
+AUDIT_LOG_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "audit_logs")
 
-    try:    
-        with open(fileName, "a", encoding="utf-8") as f:
+# Anything outside this set is replaced before a name reaches the filesystem.
+_UNSAFE_PATH_CHARS = re.compile(r"[^A-Za-z0-9_-]+")
+
+
+def write_audit_log(user, message, response):
+    """
+    Append one exchange to the acting advisor's audit log.
+
+    The path is keyed by the advisor's primary key, resolved from the database -
+    never by the name in the request body. Joining that name straight into a path
+    meant a value like "../../.." wrote outside the project, on an endpoint with
+    no authentication. Directory creation is also inside the try now; it used to
+    sit outside it, so a bad name raised past this function entirely.
+    """
+    try:
+        advisor = Advisor.objects.filter(name=user).first()
+        if advisor is None:
+            logger.warning("Audit log skipped: no advisor named %r", user)
+            return
+
+        now = datetime.datetime.now()
+        slug = _UNSAFE_PATH_CHARS.sub("_", advisor.name) or "advisor"
+        stem = f"{advisor.pk}_{slug}"
+
+        user_dir = os.path.join(AUDIT_LOG_ROOT, stem)
+        file_name = os.path.join(user_dir, f'{stem}-{now.strftime("%Y-%m-%d")}_log.txt')
+
+        # The components above cannot escape, but assert it rather than assume:
+        # this is the property the whole function exists to guarantee.
+        root = os.path.realpath(AUDIT_LOG_ROOT)
+        if os.path.commonpath([root, os.path.realpath(file_name)]) != root:
+            logger.error("Audit log path escaped %s; refusing to write.", root)
+            return
+
+        os.makedirs(user_dir, exist_ok=True)
+        with open(file_name, "a", encoding="utf-8") as f:
             template = textwrap.dedent("""
             ----------------------------------------------------------
-            
-            At {time}, user asked:
-            {message2} 
-            
+
+            At {time}, {who} asked:
+            {message2}
+
             Chatbot responded with:
             {response2}
-            
+
             -----------------------------------------------------------
             """)
-            
-            string = template.format(time=currentTime, message2=message, response2=response)
-            f.write(string)
-    except Exception as e:
-        print(f"Audit Logging has failed, please diagnose, error: {e}")
-    
-    
+            f.write(template.format(
+                time=now.strftime("%X"),
+                who=advisor.name,
+                message2=message,
+                response2=response,
+            ))
+    except Exception:
+        logger.exception("Audit logging failed")
+
+
 #a copy of the rag logic just for testing purposes, kindly change this also when you are making any changes to the chat with advisor bot funciton, or we should seperate logic better
 #but I cba do that 
 def rag_logic(test_questions:str):

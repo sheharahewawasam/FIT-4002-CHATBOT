@@ -261,7 +261,10 @@
         const msgDiv = document.createElement('div');
         msgDiv.className = 'message bot-msg';
         
-        let htmlContent = `<div class="answer-text">${answer.replace(/\n/g, '<br>')}</div>`;
+        // Escape first, then insert line breaks: the <br> we add survives but markup
+        // in the model's answer does not. The answer is built from retrieved document
+        // text, and documents are user-uploaded, so it must be treated as untrusted.
+        let htmlContent = `<div class="answer-text">${escapeHtmlDoc(answer).replace(/\n/g, '<br>')}</div>`;
         
         if (citations && citations.length > 0) {
             // Deduplicate citations based on source_url
@@ -270,7 +273,13 @@
                                          
             htmlContent += `<div class="citations"><strong>Sources:</strong><ul>`;
             uniqueCitations.forEach(cit => {
-                htmlContent += `<li><a href="../${cit.source.split('/').pop()}" target="_blank" style="color:#0056b3;">${cit.source.split('/').pop()}</a> (${cit.fund})</li>`;
+                // source and fund come from document metadata, which for an upload is
+                // the filename the user chose. Escape for text, URL-encode for the href.
+                const rawName = String(cit.source || '').split('/').pop();
+                const fileText = escapeHtmlDoc(rawName);
+                const fileHref = encodeURIComponent(rawName);
+                const fundText = escapeHtmlDoc(String(cit.fund || ''));
+                htmlContent += `<li><a href="../${fileHref}" target="_blank" style="color:#0056b3;">${fileText}</a> (${fundText})</li>`;
             });
             htmlContent += `</ul></div>`;
         }
