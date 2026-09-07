@@ -2,12 +2,31 @@
 
 ## How to run it locally
 
-1. Make sure you have all the requirements installed
-2. Open index
-3. cd into mvp_demo
-4. run python manage.py runserver
-5. pull both models in ollama (or whatever models you are testing with)
-6. Boom bang everything should work
+1. `cd mvp_demo`
+2. Create and activate a virtualenv, then install deps:
+   ```
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install -r requirements.txt python-dotenv pinecone pinecone-text
+   ```
+   (`pinecone`, `pinecone-text`, and `python-dotenv` are required by `rag_api/views.py` but not listed in `requirements.txt`.)
+3. Copy `.env` to `secrets.env` — the code loads `secrets.env`, not `.env`:
+   ```
+   cp .env secrets.env
+   ```
+   Required keys: `OPENAI_API_KEY`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_VECTORIZE_INDEX`, `PINECONE_API_KEY`, `PINECONE_INDEX_NAME`. Keys are in the shared folder in the API keys folder.
+4. Install and start Ollama, then pull the models used in `rag_api/views.py`:
+   ```
+   ollama serve &
+   ollama pull qwen3
+   ollama pull jina/jina-embeddings-v2-base-en
+   ```
+5. Run migrations and start the server:
+   ```
+   python manage.py migrate
+   python manage.py runserver
+   ```
+6. Open http://127.0.0.1:8000/ for the chat UI, or POST to `/api/chat/` with `{"query": "...", "funds": [...]}`.
 
 ## Common Issues
 
