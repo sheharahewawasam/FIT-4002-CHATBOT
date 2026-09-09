@@ -4,7 +4,9 @@ from rest_framework.decorators import api_view
 userList = {"John" : ["Sample Superannuation Fund", "Summers Family Super Fund", "General"],
             "Emily" : ["Ausis Super Fund", "General"],
             "Jake" : ["Triple A Super", "General"],
-            "Shrek" : ["General"]
+            "Shrek" : ["A and C Super Fund", "General"],
+            "Bob": ["Andres Family Superannuation Fund", "Bell Family Superannuation Fund", "General"],
+            "Steve": ["Darto Super Fund", "Powell Superannuation Fund", "General"]
             }
 
 @api_view(['GET'])

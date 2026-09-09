@@ -6,6 +6,8 @@ import datetime
 import textwrap
 
 from django.http import JsonResponse
+from django.utils import timezone
+from django.conf import settings
 from dotenv import load_dotenv
 from pinecone import Pinecone
 from pinecone_text.sparse import BM25Encoder
@@ -138,21 +140,36 @@ def chat_with_advisor_bot(request):
     funds = request.data.get("funds", [])
     date_from = date_string_to_numeric(request.data.get("date_from"))
     date_to = date_string_to_numeric(request.data.get("date_to"))
-
     if not user_query:
         return JsonResponse({"error": "Query is required"}, status=400)
 
-    had_session_before = bool(request.session.get('last_active'))
-    request.session['last_active'] = datetime.datetime.now().isoformat()
-    session_is_new = not had_session_before
+    # Session timeout check
+    last_active = request.session.get("last_active")
+    session_expired = False
+
+    if last_active:
+        last_active_time = datetime.datetime.fromisoformat(last_active)
+
+        if timezone.is_naive(last_active_time):
+            last_active_time = timezone.make_aware(last_active_time)
+
+        elapsed = (timezone.now() - last_active_time).total_seconds()
+
+        if elapsed >= settings.SESSION_COOKIE_AGE:
+            session_expired = True
+
+    # Refresh the user's activity time
+    request.session["last_active"] = timezone.now().isoformat()
 
     # Return cached result for repeated identical queries
     selected_user = request.data.get("user")
+
     cache_key = (selected_user, user_query.strip().lower(), tuple(sorted(funds)), date_from, date_to)
+    
     if cache_key in _query_cache:
         print(f"Cache hit for: {cache_key}")
         cached = dict(_query_cache[cache_key])
-        cached["session_expired"] = session_is_new
+        cached["session_expired"] = session_expired
         return JsonResponse(cached)
 
     try:
@@ -192,7 +209,7 @@ def chat_with_advisor_bot(request):
             return JsonResponse({
                 "answer":    "I could not find any relevant information in the fund documents to answer your query.",
                 "citations": [],
-                "session_expired": session_is_new,
+                "session_expired": session_expired,
             })
 
         # 5. Build context — cap each chunk at 1500 chars to stay within num_ctx=8192
@@ -244,7 +261,7 @@ def chat_with_advisor_bot(request):
 
         answer = get_chat_response(system_prompt, user_query)
 
-        result = {"answer": answer, "citations": citations, "session_expired": session_is_new}
+        result = {"answer": answer, "citations": citations, "session_expired": session_expired}
         _query_cache[cache_key] = {"answer": answer, "citations": citations}
         write_audit_log(selected_user, user_query, answer)
         return JsonResponse(result)
@@ -287,90 +304,90 @@ def write_audit_log(user, message, response):
     
 #a copy of the rag logic just for testing purposes, kindly change this also when you are making any changes to the chat with advisor bot funciton, or we should seperate logic better
 #but I cba do that 
-def rag_logic(test_questions:str):
-    user_query = test_questions
+# def rag_logic(test_questions:str):
+#     user_query = test_questions
 
-    # 1. Embed query with BGE prefix (required for BGE retrieval quality)
-    query_embedding = _embedder.encode(
-        "Represent this sentence for searching relevant passages: " + user_query
-    ).tolist()
+#     # 1. Embed query with BGE prefix (required for BGE retrieval quality)
+#     query_embedding = _embedder.encode(
+#         "Represent this sentence for searching relevant passages: " + user_query
+#     ).tolist()
 
-    # 2. Vector search
-    raw_results = perform_vector_search(query_embedding, user_query, ["Summers Family Super Fund"], top_k=60)
+#     # 2. Vector search
+#     raw_results = perform_vector_search(query_embedding, user_query, ["Summers Family Super Fund"], top_k=60)
 
-    # 3. Deduplicate — keep highest-scoring copy of each unique chunk
-    best_by_hash = {}
-    for res in raw_results:
-        metadata = res.get("metadata", {})
-        content = metadata.get("text", "") or metadata.get("child_match_text", "")
+#     # 3. Deduplicate — keep highest-scoring copy of each unique chunk
+#     best_by_hash = {}
+#     for res in raw_results:
+#         metadata = res.get("metadata", {})
+#         content = metadata.get("text", "") or metadata.get("child_match_text", "")
 
-        if ".........." in content or "Table of Contents" in content:
-            continue
+#         if ".........." in content or "Table of Contents" in content:
+#             continue
 
-        text_hash = hashlib.md5(content.encode()).hexdigest()
-        score = res.get("score", 0)
-        if text_hash not in best_by_hash or score > best_by_hash[text_hash][0]:
-            best_by_hash[text_hash] = (score, res)
+#         text_hash = hashlib.md5(content.encode()).hexdigest()
+#         score = res.get("score", 0)
+#         if text_hash not in best_by_hash or score > best_by_hash[text_hash][0]:
+#             best_by_hash[text_hash] = (score, res)
 
-    deduped = [res for _, res in best_by_hash.values()]
+#     deduped = [res for _, res in best_by_hash.values()]
 
-    # 4. Batch-rerank all deduped chunks, keep top 5
-    reranked = rerank(user_query, deduped, top_k=5)
+#     # 4. Batch-rerank all deduped chunks, keep top 5
+#     reranked = rerank(user_query, deduped, top_k=5)
 
-    if not reranked:
-        return JsonResponse({
-            "answer":    "I could not find any relevant information in the fund documents to answer your query.",
-            "citations": [],
-        })
+#     if not reranked:
+#         return JsonResponse({
+#             "answer":    "I could not find any relevant information in the fund documents to answer your query.",
+#             "citations": [],
+#         })
 
-    # 5. Build context — cap each chunk at 1500 chars to stay within num_ctx=8192
-    context_text = ""
-    citations = []
+#     # 5. Build context — cap each chunk at 1500 chars to stay within num_ctx=8192
+#     context_text = ""
+#     citations = []
 
-    for i, item in enumerate(reranked):
-        metadata = item["result"].get("metadata", {})
-        chunk_text = (metadata.get("text", "") or metadata.get("child_match_text", ""))[:1500]
-        source_name = metadata.get("source_url", "Unknown")
-        fund_name = metadata.get("fund_name", "Unknown")
-        context_text += f"--- Source: {source_name} ({fund_name}) ---\n{chunk_text}\n\n"
-        citations.append({
-            "source": source_name,
-            "fund": fund_name
-        })
+#     for i, item in enumerate(reranked):
+#         metadata = item["result"].get("metadata", {})
+#         chunk_text = (metadata.get("text", "") or metadata.get("child_match_text", ""))[:1500]
+#         source_name = metadata.get("source_url", "Unknown")
+#         fund_name = metadata.get("fund_name", "Unknown")
+#         context_text += f"--- Source: {source_name} ({fund_name}) ---\n{chunk_text}\n\n"
+#         citations.append({
+#             "source": source_name,
+#             "fund": fund_name
+#         })
 
-    # print("\n=== RETRIEVED CHUNKS ===")
-    # for i, item in enumerate(reranked):
-    #     metadata = item["result"].get("metadata", {})
-    #     print(f"\nChunk {i+1}  score={item['rerank_score']:.4f}")
-    #     print(metadata.get("text", "")[:500])
-    #     print("=" * 50)
+#     # print("\n=== RETRIEVED CHUNKS ===")
+#     # for i, item in enumerate(reranked):
+#     #     metadata = item["result"].get("metadata", {})
+#     #     print(f"\nChunk {i+1}  score={item['rerank_score']:.4f}")
+#     #     print(metadata.get("text", "")[:500])
+#     #     print("=" * 50)
 
-    # 6. Generate answer
-    system_prompt = f"""
-    You are an expert AI assistant for financial advisors at Triple A Super.
-    Answer the user's query using ONLY the provided document context below.
-    Do not use any outside knowledge — only what appears in the context.
+#     # 6. Generate answer
+#     system_prompt = f"""
+#     You are an expert AI assistant for financial advisors at Triple A Super.
+#     Answer the user's query using ONLY the provided document context below.
+#     Do not use any outside knowledge — only what appears in the context.
 
-    If the context contains relevant information, share ALL of it even if it is brief or partial.
-    Do not refuse to answer just because the information is incomplete — report what is there.
-    Only say "I cannot find information about this in the provided documents" if the context contains
-    absolutely nothing related to the query.
+#     If the context contains relevant information, share ALL of it even if it is brief or partial.
+#     Do not refuse to answer just because the information is incomplete — report what is there.
+#     Only say "I cannot find information about this in the provided documents" if the context contains
+#     absolutely nothing related to the query.
 
-    When referencing where information came from, cite the actual source document name shown in the
-    context (e.g. "SIS Act -1.pdf") and, if a specific section or clause number is visible in the
-    context, include that too (e.g. "Section 4(2) of SIS Act -1.pdf"). Never refer to a source by a
-    generic label like "Document 1" or invent a document name or number that isn't shown in the context.
+#     When referencing where information came from, cite the actual source document name shown in the
+#     context (e.g. "SIS Act -1.pdf") and, if a specific section or clause number is visible in the
+#     context, include that too (e.g. "Section 4(2) of SIS Act -1.pdf"). Never refer to a source by a
+#     generic label like "Document 1" or invent a document name or number that isn't shown in the context.
 
-    If the query asks about methods, techniques, strategies, or types:
-    - enumerate ALL methods found in the context
-    - do not omit any
-    - use bullet points
+#     If the query asks about methods, techniques, strategies, or types:
+#     - enumerate ALL methods found in the context
+#     - do not omit any
+#     - use bullet points
 
-    CONTEXT:
-    {context_text}
-    """
+#     CONTEXT:
+#     {context_text}
+#     """
 
-    answer = get_chat_response(system_prompt, user_query)
+#     answer = get_chat_response(system_prompt, user_query)
 
-    result = {"answer": answer, "citations": citations, "context": context_text}
-    return JsonResponse(result)
+#     result = {"answer": answer, "citations": citations, "context": context_text}
+#     return JsonResponse(result)

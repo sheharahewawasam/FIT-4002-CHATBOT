@@ -113,19 +113,33 @@
 
         const inputField = document.getElementById('query-input');
         const query = inputField.value.trim();
+
         if(!query) return;
 
         const selectedUser = document.getElementById('user').value; 
-        if (!selectedUser) { addMessage("Please select a user first.", 'bot-msg'); return; }
 
+        if (!selectedUser) {
+             addMessage("Please select a user first.", 'bot-msg'); 
+            return; 
+        }
+
+        const dateFrom = document.getElementById('date-from').value;
+        const dateTo = document.getElementById('date-to').value;
+
+        if (!dateFrom || !dateTo) {
+            addMessage("Please select a date range first.", 'bot-msg');
+            return;
+        }
+
+        if (dateFrom > dateTo) {
+            addMessage("The start date cannot be later than the end date.", 'bot-msg');
+            return;
+        }
 
         // Get all selected funds
         const selectedFunds = Array.from(
             document.querySelectorAll('input[name="doc-type"]:checked')
         ).map(cb => cb.value);
-
-        const dateFrom = document.getElementById('date-from').value;
-        const dateTo = document.getElementById('date-to').value;
 
         addMessage(query, 'user-msg');
         inputField.value = '';
@@ -147,8 +161,8 @@
                     query: query,
                     funds: selectedFunds,
                     user: selectedUser,
-                    date_from: dateFrom || null,
-                    date_to: dateTo || null,
+                    date_from: dateFrom,
+                    date_to: dateTo,
                  })
             });
 

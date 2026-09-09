@@ -28,14 +28,32 @@ def parse_document_date(date_str, fmt="%d %B %Y"):
     return dt.strftime("%Y-%m-%d"), int(dt.strftime("%Y%m%d"))
 
 pdfs_to_process = [
-    {"filepath": "../Trust_Deed_Sample_Superannuation_Fund.pdf",  "fund_name": "Sample Superannuation Fund", "doc_type": "Trust Deed",               "date": "21 January 2012"},
-    {"filepath": "../deed.pdf",                                   "fund_name": "Summers Family Super Fund",  "doc_type": "Trust Deed",               "date": "21 January 2012"},
-    {"filepath": "../sample-smsf-trust-deed.pdf",                 "fund_name": "Ausis Super Fund",           "doc_type": "Trust Deed",               "date": "21 January 2012"},
-    {"filepath": "../Project_26.pdf",                             "fund_name": "Triple A Super",             "doc_type": "Project Brief",            "date": "21 January 2012"},
-    {"filepath": "../Proposal Document.pdf",                      "fund_name": "Triple A Super",             "doc_type": "Development Proposal",     "date": "21 January 2012"},
-    {"filepath": "../SIS Act -1.pdf",                             "fund_name": "General",                    "doc_type": "legal",                    "date": "21 January 2012"},
-    {"filepath": "../SIS Act Part 2-1.pdf",                       "fund_name": "General",                    "doc_type": "legal",                    "date": "21 January 2012"},
-    {"filepath": "../Super-changes-timeline-1.pdf",               "fund_name": "General",                    "doc_type": "Changelog",                "date": "21 January 2012"},
+    {"filepath": "../pdfs/Trust_Deed_Sample_Superannuation_Fund.pdf",                                                                        "fund_name": "Sample Superannuation Fund",         "doc_type": "Trust Deed",                            "date": "21 January 2012"},
+    {"filepath": "../pdfs/deed.pdf",                                                                                                         "fund_name": "Summers Family Super Fund",          "doc_type": "Trust Deed",                            "date": "21 January 2012"},
+    {"filepath": "../pdfs/sample-smsf-trust-deed.pdf",                                                                                       "fund_name": "Ausis Super Fund",                   "doc_type": "Trust Deed",                            "date": "21 January 2012"},
+    {"filepath": "../pdfs/Project_26.pdf",                                                                                                   "fund_name": "Triple A Super",                     "doc_type": "Project Brief",                         "date": "21 January 2012"},
+    {"filepath": "../pdfs/roposal Document.pdf",                                                                                             "fund_name": "Triple A Super",                     "doc_type": "Development Proposal",                  "date": "21 January 2012"},
+    {"filepath": "../pdfs/SIS Act -1.pdf",                                                                                                   "fund_name": "General",                            "doc_type": "legal",                                 "date": "21 January 2012"},
+    {"filepath": "../pdfsSIS Act Part 2-1.pdf",                                                                                              "fund_name": "General",                            "doc_type": "legal",                                 "date": "21 January 2012"},
+    {"filepath": "../pdfs/Super-changes-timeline-1.pdf",                                                                                     "fund_name": "General",                            "doc_type": "Changelog",                             "date": "21 January 2012"},
+    {"filepath": "../pdfs/Investment Strategy.pdf",                                                                                          "fund_name": "A and C Super Fund",                 "doc_type": "Investment Strategy",                   "date": "21 January 2012"},
+    {"filepath": "../pdfs/A and C SF  - FY2024 Audit Report_unlocked.pdf",                                                                   "fund_name": "A and C Super Fund",                 "doc_type": "Signed Financials and Tax Returns",     "date": "21 January 2012"},
+    {"filepath": "../pdfs/A and C SF - FY2024 Management Letter_unlocked.pdf",                                                               "fund_name": "A and C Super Fund",                 "doc_type": "Signed Financials and Tax Returns",     "date": "21 January 2012"},
+    {"filepath": "../pdfs/A and C SF - Signed 2024 Financials_unlocked.pdf",                                                                 "fund_name": "A and C Super Fund",                 "doc_type": "Signed Financials and Tax Returns",     "date": "21 January 2012"},
+    {"filepath": "../pdfs/A and C Super Fund - Deed of Amendment & Consolidation (signed) 23.07.2017_unlocked.pdf",                          "fund_name": "A and C Super Fund",                 "doc_type": "Trust Deed",                            "date": "21 January 2012"},
+    {"filepath": "../pdfs/A and C Super Fund Trust Deed 14.11.2016_unlocked.pdf",                                                            "fund_name": "A and C Super Fund",                 "doc_type": "Trust Deed",                            "date": "21 January 2012"},
+    {"filepath": "../pdfs/3_0 Investment Strategy and Trustee Minutes 2015.pdf",                                                             "fund_name": "Andres Family Superannuation Fund",  "doc_type": "Investment Strategy",                   "date": "21 January 2012"},
+    {"filepath": "../pdfs/Andres Family Superannuation Fund Trust Deed 09.07.2015.pdf",                                                      "fund_name": "Andres Family Superannuation Fund",  "doc_type": "Trust Deed",                            "date": "21 January 2012"},
+    {"filepath": "../pdfs/pdfs/Bellenger Family Superannuation Fund (VIC400BELLEN) - 2023 Signed AUDITED Financials & Annual Return.pdf",    "fund_name": "Bell Family Superannuation Fund",    "doc_type": "Signed Financials and Tax Returns",     "date": "21 January 2012"},
+    {"filepath": "../pdfs/1. SMSF Deed of Variation.pdf",                                                                                    "fund_name": "Bell Family Superannuation Fund",    "doc_type": "Trust Deed",                            "date": "21 January 2012"},
+    {"filepath": "../pdfs/Signed_2023_Annual_Return_NOT_AUDITED[1]_unlocked.pdf",                                                            "fund_name": "Bell Family Superannuation Fund",    "doc_type": "SMSF Annual Return",                    "date": "21 January 2012"},
+    {"filepath": "../pdfs/DARTO Super Fund (NSW400DART) - 2023 Signed AUDITED Financials & Annual Return.pdf",                               "fund_name": "Darto Super Fund",                   "doc_type": "Signed Financials and Tax Returns",     "date": "21 January 2012"},
+    {"filepath": "../pdfs/DARTO Super Fund (NSW400DART) - 2024 Signed AUDITED Financials & Annual Return.pdf",                               "fund_name": "Darto Super Fund",                   "doc_type": "Signed Financials and Tax Returns",     "date": "21 January 2012"},
+    {"filepath": "../pdfs/20111122 - Original Trust Deed.pdf",                                                                               "fund_name": "Darto Super Fund",                   "doc_type": "Trust Deed",                            "date": "21 January 2012"},
+    {"filepath": "../pdfs/20111122 - Trust Deed (Signed Pages Only).pdf",                                                                    "fund_name": "Darto Super Fund",                   "doc_type": "Trust Deed",                            "date": "21 January 2012"},
+    {"filepath": "../pdfs/Unsigned 2024 Annual Return.pdf",                                                                                  "fund_name": "Darto Super Fund",                   "doc_type": "SMSF Annual Return",                    "date": "21 January 2012"},
+    {"filepath": "../pdfs/Powell - SMSF Investment Strategy 2020.pdf",                                                                       "fund_name": "Powell Superannuation Fund",         "doc_type": "Investment Strategy",                   "date": "21 January 2012"},
+    {"filepath": "../pdfs/Powell SF - Amended Trust Deed 27.04.2020.pdf",                                                                    "fund_name": "Powell Superannuation Fund",         "doc_type": "Trust Deed",                            "date": "21 January 2012"},
 ]
 
 # Cleans extracted PDF text without destroying the document structure
@@ -389,10 +407,35 @@ def main():
     # Each vector carries both dense (semantic) and sparse (BM25 keyword) representations.
     print("\nUploading to Pinecone...")
     batch_size = 100
-    vectors = [
-        {"id": doc_id, "values": emb, "sparse_values": sparse, "metadata": meta}
-        for doc_id, emb, sparse, meta in zip(ids, embeddings, sparse_embeddings, metadatas)
-    ]
+    vectors = []
+
+    for doc_id, emb, sparse, meta in zip(
+        ids, 
+        embeddings,
+        sparse_embeddings,
+        metadatas
+    ):
+        vector = {
+            "id": doc_id,
+            "values": emb,
+            "metadata": meta
+        }
+
+        if (sparse and sparse.get("indeces") and sparse.get("values")):
+            vector["sparse_values"] = sparse
+
+        vectors.append(vector)
+
+    empty_sparse_count = 0
+    
+    for i, sparse in enumerate(sparse_embeddings):
+        if not sparse.get("values"):
+            empty_sparse_count += 1
+            print(f"\nEmpty sparse vector #{empty_sparse_count}")
+            print(f"Source: {metadatas[i]['source_url']}")
+            print(f"Leaf: {leaf_texts[i]!r}")
+
+    print(f"\nTotal empty sparse vectors: {empty_sparse_count}")
 
     for start in range(0, len(vectors), batch_size):
         batch = vectors[start : start + batch_size]
