@@ -6,7 +6,6 @@ from pinecone_text.sparse import BM25Encoder
 from sentence_transformers import SentenceTransformer
 
 
-from ocr_solution import OCR
 from chunking import (
     extract_text_with_tables,
     build_section_based_chunks,
@@ -38,9 +37,40 @@ pdfs_to_process = [
 # Cleans extracted PDF text without destroying the document structure
 
 
-def main():
+def _load_ocr():
+    """
+    Return an OCR instance, or None when OCR is unavailable.
+
+    ocr_solution imports paddleocr, pymupdf, chonkie and ollama at module level,
+    and the README treats PaddleOCR as a separate manual install. Importing it
+    here rather than at module scope means a machine without those packages can
+    still run the ingest against text PDFs via pdfplumber, instead of failing
+    before it starts. rag_api/ingestion.py does the same for uploads.
+    """
+    try:
+        from ocr_solution import OCR
+    except Exception as exc:
+        print(f"  OCR unavailable ({exc.__class__.__name__}); using pdfplumber only.")
+        print("  Scanned PDFs will yield little or no text. Install PaddleOCR for those.")
+        return None
     print("Loading OCR model...")
-    ocr = OCR()
+    return OCR()
+
+
+def _extract(ocr, filepath):
+    """Prefer OCR for scanned documents, fall back to pdfplumber."""
+    if ocr is not None:
+        try:
+            text = ocr.output_document(Path(filepath))
+            if text:
+                return text
+        except Exception as exc:
+            print(f"  OCR failed ({exc.__class__.__name__}), falling back to pdfplumber.")
+    return extract_text_with_tables(filepath)
+
+
+def main():
+    ocr = _load_ocr()
 
     # Create index if it doesn't exist
     if not pc.has_index(PINECONE_INDEX_NAME):
@@ -66,9 +96,7 @@ def main():
     for pdf_info in pdfs_to_process:
         print(f"  {pdf_info['filepath']}...", end=" ", flush=True)
         try:
-            full_text = ocr.output_document(Path(pdf_info["filepath"]))
-            if not full_text:
-                full_text = extract_text_with_tables(pdf_info["filepath"])
+            full_text = _extract(ocr, pdf_info["filepath"])
         except Exception as e:
             print(f"ERROR: {e}")
             continue

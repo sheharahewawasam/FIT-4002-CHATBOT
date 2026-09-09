@@ -88,16 +88,25 @@ _DOT_LEADER_RE = re.compile(r"\.{3,}")
 _TRAILING_PAGE_NUM_RE = re.compile(r"\b\d{1,4}\s*$")
 
 # Check whether a line appears to be part of a Table of Contents.
+# A real TOC entry is a short, title-like line, usually with dot leaders or a
+# page number. The naive version of this test breaks on legal text: clause
+# numbers, ACNs, dates and dollar amounts all leave a line ending in digits, so
+# "ends in a number" describes most lines in a trust deed rather than a table of
+# contents. Requiring the line to be short as well restores the distinction.
+_TOC_LINE_MAX_CHARS = 80
+
+
 def looks_like_toc_line(line):
     line = line.strip()
     if not line:
         return False
     if _DOT_LEADER_RE.search(line):
         return True
-    if _TRAILING_PAGE_NUM_RE.search(line) and not line.endswith((".", "!", "?")):
+    if (len(line) <= _TOC_LINE_MAX_CHARS
+            and _TRAILING_PAGE_NUM_RE.search(line)
+            and not line.endswith((".", "!", "?"))):
         return True
     return False
-
 # Detect short headings written entirely in uppercase.
 def _is_all_caps_heading(line):
     words = line.strip().split()
@@ -141,18 +150,36 @@ def is_heading_line(lines, index):
 # Check whether an entire detected section is mostly Table of Contents text.
 # Individual TOC entries may still be grouped into a section even after
 # heading detection. This provides a second filtering stage.
-def section_toc(section_text, threshold=0.6, short_section_len=400):
+# Content a table of contents never carries. A chunk holding any of these is
+# real content whatever its line endings look like. This is what keeps deed
+# schedules - deed date, trustee ACN, member names - in the index.
+_SUBSTANTIVE_RE = re.compile(
+    r"\b\d{1,2}\s+(?:January|February|March|April|May|June|July|August"
+    r"|September|October|November|December)\s+\d{4}\b"   # 21 January 2012
+    r"|\b\d{1,2}/\d{1,2}/\d{2,4}\b"                      # 09/10/2020
+    r"|\bA[CB]N\b"                                       # ACN / ABN
+    r"|\$\s?\d",                                         # $1,000
+    re.IGNORECASE,
+)
+
+
+def section_toc(section_text, threshold=0.6):
+    """
+    True when a chunk is table-of-contents noise and should not be indexed.
+
+    This previously also discarded any chunk under 400 characters that contained
+    even one suspect line. That single rule caused 96% of all deletions and cost
+    18% of the corpus - 23% of the SIS Act - because it fires on exactly the
+    short, dense, number-heavy blocks that deed schedules are made of. A deed
+    date, a trustee ACN and a fund name were all being deleted before indexing.
+    """
     lines = [l for l in section_text.split("\n") if l.strip()]
     if not lines:
         return True
+    if _SUBSTANTIVE_RE.search(section_text):
+        return False
     toc_lines = sum(1 for l in lines if looks_like_toc_line(l))
-    ratio = toc_lines / len(lines)
-    if ratio >= threshold:
-        return True
-    if len(section_text) <= short_section_len and toc_lines >= 1:
-        return True
-    return False
-
+    return (toc_lines / len(lines)) >= threshold
 # Split extracted document text into structural sections.
 def split_into_sections(text):
     lines = text.split("\n")
@@ -241,20 +268,21 @@ def build_section_based_chunks(full_text, base_metadata):
             if section_toc(parent_text):
                 continue
 
-            leaves = _leaf_splitter.split_text(parent_text)
-            if not leaves:
-                leaves = [parent_text]
+            leaves = _leaf_splitter.split_text(parent_text) or [parent_text]
+            kept = [l.strip() for l in leaves
+                    if l.strip() and not section_toc(l.strip())]
 
-            for leaf_text in leaves:
-                leaf_text = leaf_text.strip()
-                if not leaf_text:
-                    continue
-                if section_toc(leaf_text):
-                    continue
+            # Only the leaf is embedded, but the parent is what the model reads.
+            # Filtering away every leaf therefore left the parent sitting in the
+            # index with nothing pointing at it: present, but reachable by no
+            # query at all. Index the parent as its own leaf rather than lose it.
+            if not kept:
+                kept = [parent_text.strip()]
+
+            for leaf_text in kept:
                 entries.append({
                     "leaf_text": leaf_text,
                     "parent_text": parent_text,
                     **base_metadata,
                 })
-
     return entries

@@ -112,3 +112,41 @@ class AccessFilterTests(TestCase):
         Pinecone unfiltered and expose every document in the index.
         """
         self.assertIsNone(views.build_access_filter([], None))
+
+
+class QueryCacheIsolationTests(TestCase):
+    """
+    The in-memory answer cache is part of the access boundary.
+
+    Its key was once the question text alone, so two advisers asking the same
+    question shared one answer regardless of which funds each could see. An
+    adviser received documents from funds they had no access to, without the
+    access filter ever being consulted.
+    """
+
+    def _key(self, question, user, funds):
+        # Mirrors the key built in chat_with_advisor_bot.
+        import json
+        return json.dumps(
+            {"q": question.strip().lower(), "user": user, "funds": sorted(funds)},
+            sort_keys=True,
+        )
+
+    def test_same_question_different_advisers_do_not_share_a_cache_entry(self):
+        question = "What is the deed date for this fund?"
+        john = self._key(question, "John", ["Summers Family Super Fund", "General"])
+        emily = self._key(question, "Emily", ["Ausis Super Fund", "General"])
+        self.assertNotEqual(john, emily)
+
+    def test_same_adviser_different_funds_do_not_share_a_cache_entry(self):
+        question = "What is the deed date for this fund?"
+        a = self._key(question, "John", ["Summers Family Super Fund"])
+        b = self._key(question, "John", ["Sample Superannuation Fund"])
+        self.assertNotEqual(a, b)
+
+    def test_identical_asker_and_scope_still_hits_the_cache(self):
+        question = "What is the deed date for this fund?"
+        a = self._key(question, "John", ["General", "Summers Family Super Fund"])
+        b = self._key("  What is the DEED date for this fund?  ",
+                      "John", ["Summers Family Super Fund", "General"])
+        self.assertEqual(a, b)

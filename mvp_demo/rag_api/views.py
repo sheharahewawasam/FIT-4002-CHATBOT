@@ -3,6 +3,7 @@ import logging
 import uuid
 import re
 import hashlib
+import json
 import requests
 import datetime
 import textwrap
@@ -175,8 +176,18 @@ def chat_with_advisor_bot(request):
     if not user_query:
         return JsonResponse({"error": "Query is required"}, status=400)
 
-    # Return cached result for repeated identical queries
-    cache_key = user_query.strip().lower()
+    # Cache per asker, not per question.
+    #
+    # The key used to be the question text alone, so two advisers asking the same
+    # thing shared one answer regardless of which documents each may see. That
+    # bypassed the access filter completely: an adviser could receive an answer
+    # built from another fund's documents simply by asking a question someone
+    # else had already asked.
+    cache_key = json.dumps({
+        "q": user_query.strip().lower(),
+        "user": request.data.get("user"),
+        "funds": sorted(funds),
+    }, sort_keys=True)
     if cache_key in _query_cache:
         print(f"Cache hit for: {cache_key}")
         return JsonResponse(_query_cache[cache_key])
@@ -255,6 +266,13 @@ def chat_with_advisor_bot(request):
         Do not refuse to answer just because the information is incomplete — report what is there.
         Only say "I cannot find information about this in the provided documents" if the context contains
         absolutely nothing related to the query.
+
+        Every source below is labelled with the fund it belongs to. Facts belong to
+        the fund whose document states them. Never report a value found in one
+        fund's document as though it belonged to a different fund.
+
+        If the question says "this fund" and the context covers more than one fund,
+        do not guess. Name the funds you can see and ask which one is meant.
 
         When referencing where information came from, cite the actual source document name shown in the
         context (e.g. "SIS Act -1.pdf") and, if a specific section or clause number is visible in the
