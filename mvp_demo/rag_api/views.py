@@ -1,5 +1,6 @@
 import os
 import logging
+import uuid
 import re
 import hashlib
 import requests
@@ -265,8 +266,15 @@ def chat_with_advisor_bot(request):
         write_audit_log(request.data.get("user"), user_query, answer)
         return JsonResponse(result)
 
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+    except Exception:
+        # Pinecone and filesystem errors carry index names and paths, so the
+        # exception text stays server-side. The reference lets a report be
+        # matched to the traceback in the logs.
+        reference = uuid.uuid4().hex[:12]
+        logger.exception("Chat request failed [ref=%s]", reference)
+        return JsonResponse({
+            "error": f"Something went wrong answering that question. Reference: {reference}",
+        }, status=500)
 
 
 print("USING PINECONE VECTOR STORE (BGE + CrossEncoder)")

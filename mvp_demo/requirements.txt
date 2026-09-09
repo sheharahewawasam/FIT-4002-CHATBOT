@@ -1,12 +1,43 @@
-django
-djangorestframework
-django-cors-headers
-requests
-pdfplumber
-chromadb
-llama-index-core
-sentence-transformers
-pinecone
-pinecone_text
-gunicorn
-python-dotenv
+# Pinned so every environment installs what was actually tested.
+#
+# These are the versions the local environment and the test suite run against.
+# Before pinning, a deploy a few days later picked up Django 6.1.1, pinecone
+# 10.0.0 and sentence-transformers 6.0.1 - two major bumps - against 6.0.4,
+# 9.1.0 and 5.5.1 locally. It happened to work, but nothing guaranteed it.
+#
+# Bump deliberately: change a pin, run `python manage.py test rag_api`, commit.
+
+django==6.0.4
+djangorestframework==3.17.1
+django-cors-headers==4.9.0
+requests==2.33.1
+pdfplumber==0.11.9
+llama-index-core==0.14.21
+sentence-transformers==5.5.1
+pinecone==9.1.0
+pinecone-text==0.11.0
+python-dotenv==1.2.2
+
+# Production WSGI server; not needed for `manage.py runserver`.
+gunicorn==26.2.0
+
+# torch is deliberately not pinned to an exact build.
+#
+# The wheel is platform specific: the default PyPI wheel on Linux bundles CUDA
+# and costs roughly 2.5GB, which does not fit on a small VM. CPU-only hosts
+# must install it from the CPU index FIRST, so sentence-transformers cannot
+# pull the CUDA build in as a dependency:
+#
+#     pip install torch --index-url https://download.pytorch.org/whl/cpu
+#     pip install -r requirements.txt
+#
+# Verified on 2.12.0 (local) and 2.14.0+cpu (deployment).
+torch>=2.12
+
+# chromadb was removed: nothing has imported it since the move to Pinecone,
+# and it pulls in onnxruntime, which matters on a small disk.
+#
+# OCR extras (paddleocr, pymupdf, chonkie, ollama, langchain-text-splitters)
+# are intentionally absent. ocr_solution.py imports them, but ingestion falls
+# back to pdfplumber when they are missing, so they are optional. Install them
+# separately if you need OCR for scanned PDFs.

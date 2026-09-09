@@ -1,3 +1,6 @@
+# For the OCI/Ubuntu deployment provisioned by oci-infra/ (user: ubuntu,
+# app at /opt/chatbot/mvp_demo). The client EC2 box runs a different unit:
+# see deploy/chatbot.service and deploy/README.md.
 [Unit]
 Description=Triple A Super Chatbot (Gunicorn/Django)
 After=network.target ollama.service

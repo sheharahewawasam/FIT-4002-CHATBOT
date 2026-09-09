@@ -12,9 +12,20 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load secrets.env before any setting is read.
+#
+# Without this the DJANGO_* values in that file were silently ignored by
+# manage.py: settings.py is evaluated long before rag_api.resources calls
+# load_dotenv(). They only took effect under systemd, which injects the file
+# via EnvironmentFile= - so local runs had DEBUG=True while the deployment had
+# DEBUG=False, from the same file. Real environment variables still win, which
+# is what override=False gives us.
+load_dotenv(BASE_DIR / "secrets.env", override=False)
 
 
 # Quick-start development settings - unsuitable for production
@@ -27,7 +38,12 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-^(*z#uf(fusi+sbq6b-
 DEBUG = os.getenv('DJANGO_DEBUG', 'True') == 'True'
 
 _allowed = os.getenv('DJANGO_ALLOWED_HOSTS', '')
-ALLOWED_HOSTS = [h.strip() for h in _allowed.split(',') if h.strip()] or ['*']
+ALLOWED_HOSTS = [h.strip() for h in _allowed.split(',') if h.strip()]
+if not ALLOWED_HOSTS:
+    # A wildcard fallback meant a misconfigured deploy silently answered on any
+    # hostname. Local development still gets a usable default; anything else
+    # has to name its hosts through DJANGO_ALLOWED_HOSTS.
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]'] if DEBUG else []
 
 
 # Application definition
@@ -122,7 +138,13 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
-CORS_ALLOW_ALL_ORIGINS = True
+# The frontend is served by this same app and uses relative URLs, so it needs
+# no CORS grant at all. Allowing every origin let any site on the internet call
+# this API from a visitor's browser. Set DJANGO_CORS_ORIGINS (comma separated)
+# only if something is genuinely hosted elsewhere.
+_cors = os.getenv('DJANGO_CORS_ORIGINS', '')
+CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors.split(',') if o.strip()]
+CORS_ALLOW_ALL_ORIGINS = DEBUG and not CORS_ALLOWED_ORIGINS
 
 CORS_EXPOSE_HEADERS = ['Retry-After']
 

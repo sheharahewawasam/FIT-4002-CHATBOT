@@ -161,7 +161,11 @@
 </div>
 
 <script>
-    const API_URL = 'http://127.0.0.1:8000/api/chat/'; 
+    // Relative, so the page talks to whichever host served it. Absolute
+    // 127.0.0.1 URLs meant a page served from a remote host would call the
+    // viewer's own machine instead - failing, or worse, silently hitting a
+    // local dev server and showing its data as though it were the server's.
+    const API_URL = '/api/chat/'; 
     const THINKING_TEXT = 'Let me think about the answer';
 
     function handleKeyPress(e) {
@@ -326,7 +330,7 @@
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    const API_BASE = 'http://127.0.0.1:8000/users';
+    const API_BASE = '/users';
 
     document.addEventListener('DOMContentLoaded', () => {
         const userSelect = document.getElementById('user');
@@ -412,7 +416,7 @@
     });
 
     /* --- Documents: upload, status polling, deletion -------------------- */
-    const DOCS_API = 'http://127.0.0.1:8000/api/documents/';
+    const DOCS_API = '/api/documents/';
     let docsPollTimer = null;
 
     function currentUser() {
