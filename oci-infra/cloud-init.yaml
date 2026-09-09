@@ -40,8 +40,8 @@ runcmd:
 
   # ── Pull required models (synchronous — takes 10-20 min on first boot) ────
   # HOME must be set explicitly — cloud-init runs without a home directory
-  - echo "Pulling qwen3 model (~5 GB)..."
-  - HOME=/root ollama pull qwen3
+  - echo "Pulling qwen3:1.7b model (~1.4 GB)..."
+  - HOME=/root ollama pull qwen3:1.7b
   - echo "Pulling nomic-embed-text model (~274 MB)..."
   - HOME=/root ollama pull nomic-embed-text
   - echo "All Ollama models downloaded."

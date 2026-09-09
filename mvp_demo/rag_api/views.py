@@ -113,10 +113,33 @@ def rerank(query, chunks, top_k=5, score_threshold=0.0):
 
     return [{"result": c, "rerank_score": float(s)} for s, c in filtered]
 
+# Ollama connection details. These were literals, which is how the app and
+# cloud-init.yaml drifted onto different models. Override per environment.
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/chat")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:1.7b")
+OLLAMA_TIMEOUT_SECONDS = int(os.getenv("OLLAMA_TIMEOUT_SECONDS", "120"))
+
+
 def get_chat_response(system_prompt, user_query):
-    url = "http://localhost:11434/api/chat"
+    """
+    Ask Ollama for an answer.
+
+    Two settings here matter a lot on CPU-only hosts:
+
+    * qwen3:1.7b rather than qwen3 (8B). Measured on a dev laptop with a
+      ~1900 token context, the 8B model generates at ~3.5 tok/s and never
+      finished inside the timeout; the 1.7b answers the same prompt in ~3s.
+    * think=False. qwen3 is a reasoning model, so it emits a <think> block
+      that strip_think_tags() then throws away. On the same prompt that was
+      314 generated tokens instead of 29, and 21s instead of 3s - paying to
+      generate text that is immediately discarded.
+
+    strip_think_tags() is still applied: older Ollama builds ignore the think
+      flag, and this keeps their output clean rather than leaking markup.
+    """
     data = {
-        "model": "qwen3",
+        "model": OLLAMA_MODEL,
+        "think": False,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_query}
@@ -124,11 +147,11 @@ def get_chat_response(system_prompt, user_query):
         "stream": False,
         "options": {
             "temperature": 0.0,
-            # 5 parent chunks × ~500 tokens each + system prompt overhead — 8192 avoids silent truncation
+            # 5 parent chunks x ~500 tokens each plus system prompt overhead.
             "num_ctx": 8192
         }
     }
-    response = requests.post(url, json=data, timeout=120)
+    response = requests.post(OLLAMA_URL, json=data, timeout=OLLAMA_TIMEOUT_SECONDS)
     response.raise_for_status()
     return strip_think_tags(response.json()["message"]["content"])
 
