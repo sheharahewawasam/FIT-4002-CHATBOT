@@ -119,28 +119,39 @@ def rerank(query, chunks, top_k=5, score_threshold=0.0):
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/chat")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:1.7b")
 OLLAMA_TIMEOUT_SECONDS = int(os.getenv("OLLAMA_TIMEOUT_SECONDS", "120"))
+OLLAMA_THINK = os.getenv("OLLAMA_THINK", "true").lower() not in ("0", "false", "no")
 
 
 def get_chat_response(system_prompt, user_query):
     """
     Ask Ollama for an answer.
 
-    Two settings here matter a lot on CPU-only hosts:
+    Model: qwen3:1.7b rather than qwen3 (8B). Measured on a CPU-only dev
+    machine with a ~1900 token context, the 8B generates at ~3.5 tok/s and
+    never finished inside the timeout; the 1.7b answers in seconds.
 
-    * qwen3:1.7b rather than qwen3 (8B). Measured on a dev laptop with a
-      ~1900 token context, the 8B model generates at ~3.5 tok/s and never
-      finished inside the timeout; the 1.7b answers the same prompt in ~3s.
-    * think=False. qwen3 is a reasoning model, so it emits a <think> block
-      that strip_think_tags() then throws away. On the same prompt that was
-      314 generated tokens instead of 29, and 21s instead of 3s - paying to
-      generate text that is immediately discarded.
+    Thinking: ON. It was briefly disabled to save time, which was a mistake.
+    The saving was measured on a single simple question (21s vs 3s) and did
+    not generalise - across four questions the real cost is roughly 2x, or
+    3-7 seconds. The quality difference is large on compound questions:
 
-    strip_think_tags() is still applied: older Ollama builds ignore the think
-      flag, and this keeps their output clean rather than leaking markup.
+        "What is the deed date, and has it been updated since?"
+
+    where the deed date is in the context but the update history is not.
+    Without thinking the model refuses both halves, contradicting itself in
+    the process ("does not include the current deed date ... only mentions
+    the date of the deed as 21 January 2012"). With thinking it answers the
+    first half and correctly reports the second as unavailable. Advisers ask
+    compound questions, so the seconds are worth it.
+
+    Set OLLAMA_THINK=false to trade that quality back for latency.
+
+    strip_think_tags() is applied either way: older Ollama builds ignore the
+    flag, and this stops <think> markup leaking into the UI.
     """
     data = {
         "model": OLLAMA_MODEL,
-        "think": False,
+        "think": OLLAMA_THINK,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_query}
