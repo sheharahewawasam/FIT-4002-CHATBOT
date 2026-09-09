@@ -19,6 +19,15 @@
         button { padding: 10px 20px; background: #0056b3; color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.3s; }
         button:hover { background: #004494; }   
         .loading { align-self: flex-start; color: #888; font-style: italic; display: none; }
+        /* Thinking bubble: a real chat message, with a quiet animated ellipsis
+           so a 20s wait does not look frozen. Settles to plain text on reply. */
+        .thinking-dots span { animation: tas-blink 1.4s infinite both; }
+        .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes tas-blink { 0%, 80%, 100% { opacity: 0.25 } 40% { opacity: 1 } }
+        @media (prefers-reduced-motion: reduce) {
+            .thinking-dots span { animation: none; opacity: 0.6; }
+        }
         .selector-group select {
             width: 180px;
             padding: 8px;
@@ -153,9 +162,34 @@
 
 <script>
     const API_URL = 'http://127.0.0.1:8000/api/chat/'; 
+    const THINKING_TEXT = 'Let me think about the answer';
 
     function handleKeyPress(e) {
         if(e.key === 'Enter') sendQuery();
+    }
+
+    // The assistant acknowledges the question before answering it, so the user
+    // gets an immediate reply rather than silence while retrieval and the LLM run.
+    function addThinkingMessage() {
+        const chatBox = document.getElementById('chat-box');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'message bot-msg';
+        msgDiv.textContent = THINKING_TEXT;
+        const dots = document.createElement('span');
+        dots.className = 'thinking-dots';
+        dots.innerHTML = '<span>.</span><span>.</span><span>.</span>';
+        msgDiv.appendChild(dots);
+        chatBox.insertBefore(msgDiv, document.getElementById('loading'));
+        chatBox.scrollTop = chatBox.scrollHeight;
+        return msgDiv;
+    }
+
+    // Stop the animation once the reply lands; the message itself stays in the
+    // transcript so the conversation reads as asked -> acknowledged -> answered.
+    function settleThinkingMessage(el) {
+        if (!el) return;
+        const dots = el.querySelector('.thinking-dots');
+        if (dots) dots.remove();
     }
 
     async function sendQuery() {
@@ -172,10 +206,11 @@
         ).map(cb => cb.value);
 
         addMessage(query, 'user-msg');
+        const thinking = addThinkingMessage();
         inputField.value = '';
         
         const loading = document.getElementById('loading');
-        loading.style.display = 'block';
+        // (the thinking bubble above now conveys this; banner left in place unused)
 
         try {
             const response = await fetch(API_URL, {
@@ -211,6 +246,8 @@
         } catch (error) {
             loading.style.display = 'none';
             addMessage("Failed to connect to the server.", 'bot-msg');
+        } finally {
+            settleThinkingMessage(thinking);
         }
     }
 
