@@ -1,0 +1,500 @@
+
+==========================================================================================
+../pdfs/Proposal Document.pdf
+==========================================================================================
+Extracted text: 25,401 chars
+Detection method: paragraph-fallback (headings found: 0)
+
+Total chunks:            53
+Leaf length avg/min/max: 426 / 25 / 705 chars
+Parent length avg:       1207 chars
+
+Parent-contains-child rate:  100.0%
+Parent == child rate:        28.3%
+Possible mid-sentence cuts:  52.8%
+TOC-noise-leaked rate:       0.0%
+
+------------------------------------------------------------------------------------------
+POSSIBLE CUT POINTS
+------------------------------------------------------------------------------------------
+
+Cut #1 — Chunk 1
+
+Current chunk ending:
+Project 26: RAG-based Chatbot for
+Advisors
+Mark Shim
+Shehara Hewawasam
+Yiyou (Fred) Xu
+Weihom Tan
+Jun Ng
+
+Next chunk beginning:
+1.0 Introduction
+This document illustrates the research and considerations that our team has conducted
+regarding the proposed project of producing a RAG-based chatbot for Triple A SuperPty Ltd.
+The introduction aims to provide a short outline of the 
+
+............................................................
+
+Cut #2 — Chunk 4
+
+Current chunk ending:
+2.0 System Use Case Diagram
+Fig 2.0.1 System Use Case Diagram
+
+Next chunk beginning:
+3.0 What is Rag? Why is it useful here?
+RAG (Retrieval-Augmented Generation) is a technique used to give Large Language
+Models (LLMs) access to specific, private, or up-to-date data without the need to retrain the
+model itself.
+Think of an LLM as a b
+
+............................................................
+
+Cut #3 — Chunk 10
+
+Current chunk ending:
+4. Transparency and Citations
+Because RAG pulls information from specific documents, the system can provide source
+citations. In an FAQ or legal context, this is vital because it allows the user to verify exactly
+
+Next chunk beginning:
+Developer Frameworks (For building custom solutions)
+If you have engineering resources and want full control over the pipeline, these are the
+industry standards:
+● LlamaIndex: Widely considered the best orchestration framework for RAG. It excels
+at "
+
+............................................................
+
+Cut #4 — Chunk 14
+
+Current chunk ending:
+uence, etc.) and provides a
+ChatGPT-like interface for asking questions across all those sources.
+Similar existing software, with RAG functions:
+- Make.com
+- n8n.io
+These are automation softwares with additional features centered around AI automation
+
+Next chunk beginning:
+4.0 Proposed Project Pipeline
+Fig 4.2.1 Storing document into vector database
+
+............................................................
+
+Cut #5 — Chunk 15
+
+Current chunk ending:
+4.0 Proposed Project Pipeline
+Fig 4.2.1 Storing document into vector database
+
+Next chunk beginning:
+Fig 4.2.2 Retrieving from vector database and prompting LLM
+
+............................................................
+
+Cut #6 — Chunk 16
+
+Current chunk ending:
+Fig 4.2.2 Retrieving from vector database and prompting LLM
+
+Next chunk beginning:
+4.1 Proposed Pipeline Methods
+Processing of Documents
+● Source Ingestion: Documents are ingested directly from the client’s existing S3
+buckets, maintaining the current mapping to MongoDB.
+● OCR Integration: To process the "picture-based PDFs" identi
+
+............................................................
+
+Cut #7 — Chunk 21
+
+Current chunk ending:
+ble Citations: The AI generates responses solely based on these retrieved
+chunks. Crucially, the response will include direct citations and source links back to
+the original PDFs in the S3 bucket, allowing advisors to verify the information
+instantly
+
+Next chunk beginning:
+5.0 OCR options
+Types Description Advantages Disadvantages
+Tesseract OCR An open source OCR engine - Free and open source - Lower accuracy compared
+developed by Google that - Can run locally to enterprise tools
+converts images or scanned - Customisab
+
+............................................................
+
+Cut #8 — Chunk 22
+
+Current chunk ending:
+oud-based OCR service by - Higher accuracy - Paid service
+Textract AWS that can extract text and - Able to extract tables - Potential data privacy risks
+structured information such as and forms - Dependant on AWS
+tables and forms - Scalable and fully
+
+Next chunk beginning:
+information such as and forms - Dependant on AWS
+tables and forms - Scalable and fully infrastructure
+managed
+Google An advanced document - Very high accuracy - Paid service
+Document AI understanding platform that - Able to extract tables - Requires 
+
+............................................................
+
+Cut #9 — Chunk 23
+
+Current chunk ending:
+m that - Able to extract tables - Requires Google Cloud
+combines OCR with AI models and forms setup
+to extract structured and - Able to extract - More complex to configure
+contextual information contextual relationships - Potential data privacy risks
+
+Next chunk beginning:
+6.0 Indexing Strategies
+Indexing in RAG involves turning large amounts of data into vectors which are then input into
+a multidimensional space. In this section we will explore the different strategies which were
+considered for use in the project.
+
+............................................................
+
+Cut #10 — Chunk 25
+
+Current chunk ending:
+he system summaries are time to generate
+shorter summaries
+- Helps for queries
+that use different
+wording than the
+document
+Hierarchical Indexing This approach involves - Efficient retrieval by - More complex system
+creating multiple narrowing search
+
+Next chunk beginning:
+Indexing This approach involves - Efficient retrieval by - More complex system
+creating multiple narrowing search design
+hierarchies of documents from summary to - Requires maintaining
+into various levels of detail,
+
+............................................................
+
+Cut #11 — Chunk 26
+
+Current chunk ending:
+Indexing This approach involves - Efficient retrieval by - More complex system
+creating multiple narrowing search design
+hierarchies of documents from summary to - Requires maintaining
+into various levels of detail,
+
+Next chunk beginning:
+of documents from summary to - Requires maintaining
+into various levels of detail, detailed chunks multiple index layers
+with lower levels containing - Scales well for very - Errors in higher-level
+more detailed documents large document summaries can
+
+............................................................
+
+Cut #12 — Chunk 27
+
+Current chunk ending:
+filtering irrelevant
+sections early
+Time-Based Indexing This approach involves - Ensures recent and - Older documents may
+embedding each piece of therefore more still contain useful
+document with a date relevant information information but get
+label,
+
+Next chunk beginning:
+this way the AI is prioritized ignored
+knows which document is - Useful for domains - Requires accurate
+the most recent and with frequently timestamp metadata
+therefore the most relevant changing data (such - Adds complexity to
+as our use case in ran
+
+............................................................
+
+Cut #13 — Chunk 28
+
+Current chunk ending:
+ set up
+labeling different chunks accuracy for - Requires domain
+according to what domain specialized queries knowledge or manual
+of knowledge they contain - Allows domain labeling
+filtering before - May fail if documents
+retrieval belong to multiple
+
+Next chunk beginning:
+- Helps reduce domains
+irrelevant results
+from unrelated
+topics
+ColBERT This approach involves - Very high retrieval - Very high storage
+embedding everything at accuracy requirements
+the token level. Improving - Very good at - Increased
+accuracy at t
+
+............................................................
+
+Cut #14 — Chunk 31
+
+Current chunk ending:
+higher
+relevant documents are multi-query retrieval. compute cost.
+ranked higher and - Documents retrieved - Still depends on the
+therefore used to create by multiple queries quality of generated
+the output. get boosted, queries.
+improving relevance.
+
+Next chunk beginning:
+get boosted, queries.
+improving relevance.
+Query Decomposition This strategy involves - Effective for multi-step - Slower due to
+breaking questions into reasoning questions. multiple retrieval
+smaller sub-questions, the - Improves retrieval cycles.
+a
+
+............................................................
+
+Cut #15 — Chunk 32
+
+Current chunk ending:
+r from the earlier accuracy for complex - Errors in early
+sub questions can be used queries. sub-questions can
+to improve or inform the - Allows chaining of propagate into later
+answers for the later sub knowledge across answers.
+questions documents.
+
+Next chunk beginning:
+questions documents.
+Step-Back prompting Uses a more abstract - Helps retrieve - Abstract questions
+question to broaden the higher-level may retrieve overly
+search radius to provide conceptual general documents.
+better context for the knowledge. Usef
+
+............................................................
+
+Cut #16 — Chunk 33
+
+Current chunk ending:
+ses a more abstract - Helps retrieve - Abstract questions
+question to broaden the higher-level may retrieve overly
+search radius to provide conceptual general documents.
+better context for the knowledge. Useful - Requires additional
+original problem.
+
+Next chunk beginning:
+better context for the knowledge. Useful - Requires additional
+original problem. Eg: “Can when the original prompt generation
+the police arrest query is too specific step.
+someone?” -> “What can or poorly phrased.
+the police do?” - Improves contextua
+
+............................................................
+
+Cut #17 — Chunk 34
+
+Current chunk ending:
+ontain the answer to the short prompts. document is
+prompt; then searches - Often improves inaccurate, retrieval
+around where that retrieval when the quality may
+document would be user query is vague decrease.
+embedded. or lacks context. - Adds extra
+
+Next chunk beginning:
+generation step
+before retrieval.
+I recommend we go with some combination of these strategies. However, these strategies
+may not be needed depending on how flexible the user prompts are allowed to be; as having
+a set list of questions that the user i
+
+............................................................
+
+Cut #18 — Chunk 35
+
+Current chunk ending:
+hat, I would recommend some combination of RAG fusion,
+Query decomposition if the user asks multi step questions, and Step-Back prompting. HyDE
+may generate false documents with inaccurate information, and must therefore be
+thoroughly tested if used.
+
+Next chunk beginning:
+8.0 Output Generation Optimization Strategies
+Strategy Description Advantages Disadvantages
+Prompt Engineering This approach involved - Reduce hallucinations by - Poorly designed prompts can
+designing structured, guiding the model to use only lead to
+
+............................................................
+
+Cut #19 — Chunk 37
+
+Current chunk ending:
+t information may be
+selecting only the most information excluded if filtering is too strict
+relevant document - Improves response - Requires tuning
+chunks to send to the accuracy
+LLM, instead of passing - Faster processing due to
+all retrieved data.
+
+Next chunk beginning:
+smaller input size
+Response This approach involved - Improve accuracy and - May limit the model’s ability to
+Grounding ensuring that the LLM reliability provide a broader response
+generates answers strictly - Ensures responses are
+based on the retrie
+
+............................................................
+
+Cut #20 — Chunk 38
+
+Current chunk ending:
+nowledge.
+Citation Generation This approach involved - Allows verification of - Requires proper metadata
+including references to information and tracking
+the source documents in - Make the response - Adds complexity to response
+the model’s responses.
+
+Next chunk beginning:
+trustable formatting
+- Improves explainability and
+transparency
+Fallback This approach involved - Prevents incorrect or - May keep unable to give a
+Mechanism preventing the system misleading answers response
+from generating answers - Improves system 
+
+............................................................
+
+Cut #21 — Chunk 39
+
+Current chunk ending:
+Mechanism preventing the system misleading answers response
+from generating answers - Improves system reliability - Needs to set appropriate
+when the retrieved - Safer for sensitive domains thresholds
+information is insufficient
+or has low relevance.
+
+Next chunk beginning:
+9.0 Considered LLM Models
+Models Strengths Weaknesses
+Ollama(used - Runs locally so it has full data privacy - May have lower performance compared to large
+to run LLM - No API cost after setup cloud-based models
+models) - Works offline - Requires str
+
+............................................................
+
+Cut #22 — Chunk 40
+
+Current chunk ending:
+ble in handling highly complex
+reasoning tasks compared to advanced cloud
+models
+Gemini - Strong multimodal capabilities, able to - Privacy issues due to cloud-based processing
+handle text and images - Requires integration with Google Cloud services,
+
+Next chunk beginning:
+- Works well with Google Cloud services which may increase setup complexity
+- Good performance in reasoning and
+general tasks
+OpenAI - Very strong performance in reasoning, - Continuous usage costs through API pricing
+accuracy and reliability - Data 
+
+............................................................
+
+Cut #23 — Chunk 41
+
+Current chunk ending:
+asoning, - Continuous usage costs through API pricing
+accuracy and reliability - Data is processed externally, which may raise
+- Best for complex reasoning and built-in data privacy concerns
+RAG tooling - Requires internet connectivity for API access
+
+Next chunk beginning:
+10.0 Developer Frameworks
+
+............................................................
+
+Cut #24 — Chunk 42
+
+Current chunk ending:
+10.0 Developer Frameworks
+
+Next chunk beginning:
+11.0 Integration Strategy
+● Django Backend Hook: The chatbot service will be deployed as a microservice that
+communicates with the client’s current Django API via RESTful requests.
+● Apex Frontend Compatibility: The user interface will be designed fo
+
+............................................................
+
+Cut #25 — Chunk 49
+
+Current chunk ending:
+nt categories.
+● Accuracy: Unlike autonomous agents, RAG provides controlled, verifiable output
+suitable for "high stakes" financial domains.
+● Maintenance: RAG allows for real-time updates as fund policies change without the
+cost of model retraining
+
+Next chunk beginning:
+2.1 RAG Alternatives
+Alternatives What is it Advantages Disadvantages
+Fine-Tuning Train a pre-trained - Faster responses - Difficult to update if the
+language model on your - Knowledge is embedded documents change
+own dataset to embed directly in the
+
+............................................................
+
+Cut #26 — Chunk 50
+
+Current chunk ending:
+ outdated or
+wrong information
+Keyword-Based A retrieval method - Simple and easy to - Does not understand meaning or
+Search where the system implement context
+matches the exact - Fast retrieval - Poor performance on questions
+keywords in the query -
+
+Next chunk beginning:
+implement context
+matches the exact - Fast retrieval - Poor performance on questions
+keywords in the query - Works well with exact terms asked in natural language
+with the words in the - May miss relevant results
+documents because of the way of wordi
+
+............................................................
+
+Cut #27 — Chunk 51
+
+Current chunk ending:
+ay of wording
+Hybrid Search A retrieval method that - Higher accuracy and - Requires ranking and merging
+combines both coverage strategies which increases the
+keyword-based search - Able to handle both exact complexity to implement
+and vector search.
+
+Next chunk beginning:
+the
+keyword-based search - Able to handle both exact complexity to implement
+and vector search. The term matching and natural
+results are retrieved, language queries
+ranked and then
+merged to produce a
+more accurate result
+Agent-Based An extension of
+
+............................................................
+
+Cut #28 — Chunk 52
+
+Current chunk ending:
+omplex, multi-step - Harder to control
+System which the AI acts as an queries - Slower because of those
+autonomous agent - More flexible and intelligent additional steps
+- Can combine multiple data - Less predictable and is more
+sources prone to risk
+
+Next chunk beginning:
+13.0 Conclusion
+This document should serve as a
+
+............................................................

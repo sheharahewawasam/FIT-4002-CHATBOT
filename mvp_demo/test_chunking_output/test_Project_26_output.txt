@@ -1,0 +1,86 @@
+
+==========================================================================================
+../pdfs/Project_26.pdf
+==========================================================================================
+Extracted text: 1,121 chars
+Detection method: whole-document-fallback (headings found: 0)
+
+Total chunks:            3
+Leaf length avg/min/max: 432 / 334 / 547 chars
+Parent length avg:       1121 chars
+
+Parent-contains-child rate:  100.0%
+Parent == child rate:        0.0%
+Possible mid-sentence cuts:  100.0%
+TOC-noise-leaked rate:       0.0%
+
+------------------------------------------------------------------------------------------
+POSSIBLE CUT POINTS
+------------------------------------------------------------------------------------------
+
+Cut #1 — Chunk 1
+
+Current chunk ending:
+n:
+● RAG (Retrieval-Augmented Generation) chatbot to answer advisor questions
+● Uses documents stored in S3
+● Provides compliant, consistent, explainable answers
+Requirements:
+Objectives
+● Provide advisors with instant access to policies, procedures,
+
+Next chunk beginning:
+explainable answers
+Requirements:
+Objectives
+● Provide advisors with instant access to policies, procedures, guidelines
+● Provide advisors with the current updates or issues with the documents
+● Reduce human dependency and turnaround time
+● Ensure co
+
+............................................................
+
+Cut #2 — Chunk 2
+
+Current chunk ending:
+nitial reference)
+Include RAG pipeline:
+1. Document ingestion from S3
+2. Chunking + embeddings
+3. Vector store
+4. LLM retrieves relevant context
+5. Response generated + citations
+6. Logs &amp; analytics
+Functional Steps:
+1. Advisor asks a question
+2.
+
+Next chunk beginning:
+Logs &amp; analytics
+Functional Steps:
+1. Advisor asks a question
+2. Query embedded and matched with vector store
+3. Top-K context retrieved
+4. LLM generates response
+5. Output returned with references
+Required skills/knowledge: Backend:
+
+Project own
+
+............................................................
+
+Cut #3 — Chunk 3
+
+Current chunk ending:
+and matched with vector store
+3. Top-K context retrieved
+4. LLM generates response
+5. Output returned with references
+Required skills/knowledge: Backend:
+
+Project owner:
+Champ Mendis (Champake.Mendis@tripleasuper.com.au)
+Additional Info (if any)
+None
+
+............................................................

@@ -15,6 +15,8 @@ It evaluates:
 import sys
 import re
 
+from pathlib import Path
+from contextlib import redirect_stdout
 from ingest import (
     extract_text_with_tables,
     build_section_based_chunks,
@@ -53,14 +55,12 @@ _LOOKS_LIKE_HEADING_RE = re.compile(
     r"^[A-Z][A-Za-z0-9\s\-/,]{0,60}$"
 )
 
-def looks_cut(text, strict=False):
+def looks_cut(text, next_text="", strict=False):
     """
-    Heuristic for detecting possible mid-sentence / mid-clause cuts.
+    Heuristic for detecting likely mid-sentence / mid-clause cuts.
 
-    This is only an evaluation heuristic. It does NOT change
-    the actual chunking behaviour in ingest.py.
-
-    Checks whether the chunk starts with lowercase or ends without any punctuations
+    This is only an evaluation metric.
+    It does NOT change chunking behaviour.
     """
 
     if not text:
@@ -71,33 +71,121 @@ def looks_cut(text, strict=False):
     if not t:
         return False
 
-    starts_lower = (
-        t[0].islower()
-        if t[0].isalpha()
-        else False
-    )
+    lines = [line.strip() for line in t.split("\n") if line.strip()]
 
-    if strict:
-        ends_no_punct = t[-1] not in '.!?":)'
-        return starts_lower or ends_no_punct
+    if not lines:
+        return False
+
+    last_line = lines[-1]
+    first_line = lines[0]
+
+    # -------------------------------------------------
+    # 1. Ignore obvious headings
+    # -------------------------------------------------
+
+    if (
+        len(lines) <= 2
+        and len(t) < 120
+        and (
+            _LOOKS_LIKE_HEADING_RE.match(last_line)
+            or last_line.isupper()
+        )
+    ):
+        return False
+
+    # -------------------------------------------------
+    # 2. Ignore standalone page numbers
+    # -------------------------------------------------
+
+    if last_line.isdigit():
+        return False
+
+    # -------------------------------------------------
+    # 3. Ignore signatures / document-ending labels
+    # -------------------------------------------------
+
+    signature_terms = {
+        "yours faithfully",
+        "yours sincerely",
+        "signed",
+        "signature",
+        "name of witness",
+    }
+
+    if last_line.lower() in signature_terms:
+        return False
+
+    # -------------------------------------------------
+    # 4. Ignore obvious table / financial rows
+    # -------------------------------------------------
+
+    # If the last line contains multiple numbers,
+    # it is probably a table/financial row rather than prose.
+    number_count = len(re.findall(r"\b[\d,.$%()-]+\b", last_line))
+
+    if number_count >= 3:
+        return False
+
+    # -------------------------------------------------
+    # 5. Ignore legal/list markers
+    # -------------------------------------------------
+
+    if _LIST_MARKER_START_RE.match(first_line):
+        starts_lower = False
+    else:
+        starts_lower = (
+            first_line[0].islower()
+            if first_line and first_line[0].isalpha()
+            else False
+        )
+
+    # -------------------------------------------------
+    # 6. Check end punctuation
+    # -------------------------------------------------
 
     ends_no_punct = t[-1] not in '.!?":);'
 
-    # Legal list markers such as:
-    # (a), (b), i., ii., iii)
-    if starts_lower and _LIST_MARKER_START_RE.match(t):
-        starts_lower = False
+    # -------------------------------------------------
+    # 7. Use next chunk to strengthen the decision
+    # -------------------------------------------------
 
-    # Short heading-like chunks legitimately do not end
-    # with sentence punctuation.
-    last_line = t.split("\n")[-1].strip()
+    if next_text:
+        next_t = next_text.strip()
 
-    if (
-        ends_no_punct
-        and len(t) < 60
-        and _LOOKS_LIKE_HEADING_RE.match(last_line)
-    ):
-        ends_no_punct = False
+        if next_t:
+            next_lines = [
+                line.strip()
+                for line in next_t.split("\n")
+                if line.strip()
+            ]
+
+            if next_lines:
+                next_first = next_lines[0]
+
+                # If next chunk starts with a heading,
+                # current chunk probably ended at a valid boundary.
+                if (
+                    len(next_first) < 100
+                    and (
+                        _LOOKS_LIKE_HEADING_RE.match(next_first)
+                        or next_first.isupper()
+                    )
+                ):
+                    return False
+
+                # Strong evidence of a real continuation:
+                # current chunk has no punctuation and next starts lowercase
+                next_starts_lower = (
+                    next_first[0].islower()
+                    if next_first and next_first[0].isalpha()
+                    else False
+                )
+
+                if ends_no_punct and next_starts_lower:
+                    return True
+
+    if strict:
+        return starts_lower or ends_no_punct
 
     return starts_lower or ends_no_punct
 
@@ -136,11 +224,16 @@ def compute_metrics(entries):
         == entry["leaf_text"].strip()
     )
 
-    cut_leaves = sum(
-        1
-        for entry in entries
-        if looks_cut(entry["leaf_text"])
-    )
+    cut_leaves = 0
+
+    for i, entry in enumerate(entries):
+        next_text = ""
+
+        if i + 1 < len(entries):
+            next_text = entries[i + 1]["leaf_text"]
+
+        if looks_cut(entry["leaf_text"], next_text):
+            cut_leaves += 1
 
     # Compare the leaf to check whether there are any that looks like a TOC
     toc_leaves = sum(
@@ -187,14 +280,15 @@ def print_cut_points(entries):
     for i, entry in enumerate(entries):
         leaf = entry["leaf_text"]
 
-        if not looks_cut(leaf):
+        next_leaf = ""
+
+        if i + 1 < len(entries):
+            next_leaf = entries[i + 1]["leaf_text"]
+
+        if not looks_cut(leaf, next_leaf):
             continue
 
         cut_count += 1
-
-        next_leaf = ""
-        if i + 1 < len(entries):
-            next_leaf = entries[i + 1]["leaf_text"]
 
         print(f"\nCut #{cut_count} — Chunk {i + 1}")
 
@@ -321,71 +415,37 @@ def report_for_document(
 
     return metrics
 
-
-
-
 def main():
-    if len(sys.argv) < 2:
-        print(
-            "Usage: python3 chunking_metrics.py "
-            "<pdf1> <pdf2> ..."
-        )
+    args = sys.argv[1:]
 
-        sys.exit(1)
+    if not args:
+        print("Usage:")
+        print("  python3 chunk_structure_metrics.py <pdf1> <pdf2> ...")
+        print("  python3 chunk_structure_metrics.py --all")
+        return
 
-    all_metrics = []
+    if "--all" in args:
+        pdf_paths = sorted(Path("../pdfs").glob("*.pdf"))
+    else:
+        pdf_paths = [Path(arg) for arg in args]
 
-    for pdf_path in sys.argv[1:]:
+    for pdf_path in pdf_paths:
+        output_dir = Path("test_chunking_output")
+        output_dir.mkdir(exist_ok=True)
 
-        metrics = report_for_document(
-            pdf_path
-        )
+        output_name = output_dir / f"test_{pdf_path.stem}_output.txt"
 
-        all_metrics.append(
-            (pdf_path, metrics)
-        )
+        print(f"Processing: {pdf_path.name}")
 
-    print("\n" + "=" * 90)
-    print("CORPUS SUMMARY")
-    print("=" * 90)
+        try:
+            with open(output_name, "w", encoding="utf-8") as f:
+                with redirect_stdout(f):
+                    report_for_document(str(pdf_path))
 
-    total_chunks = sum(
-        metrics["total_chunks"]
-        for _, metrics in all_metrics
-    )
+            print(f"Saved: {output_name}")
 
-    print(
-        f"{'Document':<50} "
-        f"{'Chunks':>8} "
-        f"{'Cut%':>8} "
-        f"{'TOC%':>8} "
-        f"{'Contain%':>10}"
-    )
-
-    for path, metrics in all_metrics:
-
-        name = path.split("/")[-1]
-
-        if metrics["total_chunks"] == 0:
-            print(
-                f"{name:<50} "
-                f"{'0':>8}"
-            )
-            continue
-
-        print(
-            f"{name:<50} "
-            f"{metrics['total_chunks']:>8} "
-            f"{metrics['cut_leaf_rate'] * 100:>7.1f}% "
-            f"{metrics['toc_leaf_rate'] * 100:>7.1f}% "
-            f"{metrics['containment_rate'] * 100:>9.1f}%"
-        )
-
-    print(
-        f"\nTotal chunks across corpus: "
-        f"{total_chunks}"
-    )
-
+        except Exception as e:
+            print(f"ERROR processing {pdf_path.name}: {e}")
 
 if __name__ == "__main__":
     main()
