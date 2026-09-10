@@ -63,13 +63,23 @@ def perform_vector_search(query_embedding, user_query, filters, top_k=40, date_f
     if date_condition:
         query_filter["date_numeric"] = date_condition
 
-    results = index.query(
-        vector=query_embedding,
-        sparse_vector=sparse_vector,
-        top_k=top_k,
-        include_metadata=True,
-        filter=query_filter,
-    )
+    query_args = {
+        "vector": query_embedding,
+        "top_k": top_k,
+        "include_metadata": True,
+        "filter": query_filter,
+    }
+
+    if (sparse_vector and sparse_vector.get("indices") and sparse_vector.get("values")):
+        query_args["sparse_vector"] = sparse_vector
+    else:
+        print(
+            f"[BM25] Empty sparse vector for query {user_query!r}. "
+            f"Falling back to dense-only search."
+        )
+
+    results = index.query(**query_args)
+    
     return results.get("matches", [])
 
 
@@ -144,25 +154,30 @@ def chat_with_advisor_bot(request):
         return JsonResponse({"error": "Query is required"}, status=400)
 
     # Session timeout check
-    last_active = request.session.get("last_active")
-    session_expired = False
+    session_expired = not bool(request.session.get("active"))
 
-    if last_active:
-        last_active_time = datetime.datetime.fromisoformat(last_active)
+    last_active_str = request.session.get("last_active")
 
+    if last_active_str:
+        last_active_time = datetime.datetime.fromisoformat(last_active_str)
         if timezone.is_naive(last_active_time):
             last_active_time = timezone.make_aware(last_active_time)
-
         elapsed = (timezone.now() - last_active_time).total_seconds()
+        print(f"[SESSION CHECK] Inactive for {elapsed:.1f}s  (session_expired={session_expired})")
+    else:
+        print(f"[SESSION CHECK] No prior activity recorded  (session_expired={session_expired})")
 
-        if elapsed >= settings.SESSION_COOKIE_AGE:
-            session_expired = True
-
-    # Refresh the user's activity time
+    request.session["active"] = True
     request.session["last_active"] = timezone.now().isoformat()
 
     # Return cached result for repeated identical queries
     selected_user = request.data.get("user")
+
+    if session_expired:
+        keys_to_delete = [key for key in _query_cache if key[0] == selected_user]
+        for key in keys_to_delete:
+            del _query_cache[key]
+        print(f"[CACHE CLEARED] Cleared cache for user: {selected_user}")
 
     cache_key = (selected_user, user_query.strip().lower(), tuple(sorted(funds)), date_from, date_to)
     
