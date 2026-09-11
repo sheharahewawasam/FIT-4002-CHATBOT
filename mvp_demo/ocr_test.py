@@ -85,7 +85,7 @@ for file in ocr_tests.iterdir():
 
         full_text = " ".join(field['text'] for field in data['form'] if field['text'].strip())
 
-        ocr_prediction = ocr.ocr_test(image_path,0.50)
+        ocr_prediction = ocr.output_document(image_path)
 
         results = precision_recall_test(full_text, ocr_prediction)
 

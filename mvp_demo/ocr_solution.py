@@ -2,7 +2,8 @@ from pathlib import Path
 from paddleocr import PPStructureV3
 import pymupdf as pymu
 from chonkie import SemanticChunker
-from ollama import generate
+from ollama import generate, chat
+import os
 # from langchain_text_splitters import MarkdownTextSplitter
 
 class OCR():
@@ -36,6 +37,14 @@ class OCR():
         Text:
     """
 
+    VLM_PROMPT = """
+        Extract all content from this document image and format it strictly as JSON.
+        Preserve reading order top to bottom. Transcribe exactly what is visible, no need for any calculations; 
+
+        Output ONLY: { "blocks": [...] }
+        No explanation, no markdown, no commentary.
+    """
+
     def __init__(self, output: Path = Path("./ocr_output"), gpu: bool = False):
         """
         Constructor for OCR pipeline
@@ -55,14 +64,18 @@ class OCR():
             device = "gpu" if self.gpu else "cpu",
         )
 
-    def output_document(self, pdf_path: Path) -> str:
+    def output_document(self, pdf_path: Path, cleanup: bool) -> str:
         """
         Output document with OCR results 
         Uses semi-ensemble learning to produce the most accurate result
 
         :param pdf_path: Path object of PDF to process
+        :param cleanup: Enable or disable LLM cleanup to reduce the time processing
         :return: text processed from the PDF
         """
+        if not os.path.exists(pdf_path):
+            raise FileNotFoundError("Could not find file at: {pdf_path}")
+
         if not self.determine_if_OCR(pdf_path):
             print("File does not need OCR processing")
             return
@@ -101,9 +114,13 @@ class OCR():
         #     # chunk3 = self.safe_pop(hi_chunks)
         
         while chunk2:
-            response = self.clean_text(chunk2)
-
+            if cleanup:
+                response = self.clean_text(chunk2)
+            else:
+                response = chunk2
             res += response
+
+            chunk2 = self.safe_pop(med_chunks)
 
         mkd_file_path = self.output / f"{pdf_path.stem}.md"
         mkd_file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -112,6 +129,41 @@ class OCR():
             f.write(res)
 
         return res
+
+
+    def predictVLM(self, pdf_path: Path) -> str:
+        doc = pymu.open(pdf_path)
+
+        for page_num in range(len(doc)):
+            page = doc[page_num]
+
+            img = page.get_pixmap(dpi=300)
+            image_bytes = img.tobytes("png")
+
+            response = chat(
+                model='qwen3-vl',
+                messages=[
+                    {
+                        'role': 'user',
+                        'content': self.VLM_PROMPT,
+                        'images': [image_bytes]
+                    }
+                ],
+                format='json',
+                options={
+                    'num_ctx': 16384,    
+                    'num_predict': -1,  
+                }
+            )
+
+            # content = response['message']['content']
+
+            print(response)
+
+        doc.close()
+
+        return response
+
             
     def predictV3(self, pdf_path: Path, threshold: int) -> str:
         """
@@ -169,34 +221,6 @@ class OCR():
         
         return markdown_texts
 
-    def ocr_test(self, pdf_path: Path, threshold: int) -> str:
-        if not pdf_path.is_file():
-            return
-        
-        if not 0 <= threshold <= 1:
-            return
-        
-        input_file = str(pdf_path)
-
-        output = self.pipelineV3.predict(
-            input=str(input_file),
-            layout_threshold=threshold, 
-            layout_nms=True,
-            use_table_recognition=True,
-            use_formula_recognition=True,
-            use_doc_orientation_classify=True,
-            use_doc_unwarping=True,
-            use_region_detection=True
-        )
-
-        markdown_list = []
-
-        for res in output:
-            markdown_list.append(res.markdown)
-
-        markdown_texts = self.pipelineV3.concatenate_markdown_pages(markdown_list).get("markdown_texts")
-
-        return markdown_texts
     
     def align_text(self, prompt: str) -> str:
         """
@@ -266,6 +290,36 @@ class OCR():
         except IndexError:
             return ""
 
+
+    def ocr_test(self, pdf_path: Path, threshold: int) -> str:
+        if not pdf_path.is_file():
+            return
+        
+        if not 0 <= threshold <= 1:
+            return
+        
+        input_file = str(pdf_path)
+
+        output = self.pipelineV3.predict(
+            input=str(input_file),
+            layout_threshold=threshold, 
+            layout_nms=True,
+            use_table_recognition=True,
+            use_formula_recognition=True,
+            use_doc_orientation_classify=True,
+            use_doc_unwarping=True,
+            use_region_detection=True
+        )
+
+        markdown_list = []
+
+        for res in output:
+            markdown_list.append(res.markdown)
+
+        markdown_texts = self.pipelineV3.concatenate_markdown_pages(markdown_list).get("markdown_texts")
+
+        return markdown_texts
+
 if __name__ == "__main__":
     ocr = OCR(Path("./ocr_output"), False)
 
@@ -279,7 +333,12 @@ if __name__ == "__main__":
     # ocr.output_document(input_file3)
 
     input_file4 = Path("./pdfs/atoform.pdf")
-    ocr.output_document(input_file4)
+    vlm = ocr.predictVLM(input_file4)
+    print(vlm)
+
+    ocr_out = ocr.output_document(input_file4, False)
+    print(ocr_out)
+    # ocr.output_document(input_file4)
     # input_file3 = Path("./pdfs/deed.pdf")
     # ocr.predictV3(input_file3)
 
