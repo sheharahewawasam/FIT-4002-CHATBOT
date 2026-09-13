@@ -20,7 +20,7 @@ class OCR():
         "If the chunks contain any images then prioritise that chunk less. "
         "Do NOT return a number or explanation — return the full text of the chosen chunk only. "
         "The chunks are split by '||'. The chunks to analyse are: "
-    )   
+    )
 
     CLEANING_PROMPT = """
         You are cleaning up OCR output. The text below may contain scanning artifacts: misrecognized characters, broken words, stray line breaks, extra whitespace, or garbled punctuation.
@@ -39,7 +39,7 @@ class OCR():
 
     VLM_PROMPT = """
         Extract all content from this document image and format it strictly as JSON.
-        Preserve reading order top to bottom. Transcribe exactly what is visible, no need for any calculations; 
+        Preserve reading order top to bottom. Transcribe exactly what is visible, no need for any calculations;
 
         Output ONLY: { "blocks": [...] }
         No explanation, no markdown, no commentary.
@@ -48,13 +48,13 @@ class OCR():
     def __init__(self, output: Path = Path("./ocr_output"), gpu: bool = False):
         """
         Constructor for OCR pipeline
-        
+
         :param output: Path object for output of OCR results
         :param gpu: If to use GPU for processing (must have support NVIDIA GPU)
         """
         self.output = output
         self.gpu = gpu
-    
+
     def initiate_model_v3(self):
         """
         Creates the PPStructureV3 model
@@ -66,7 +66,7 @@ class OCR():
 
     def output_document(self, pdf_path: Path, cleanup: bool) -> str:
         """
-        Output document with OCR results 
+        Output document with OCR results
         Uses semi-ensemble learning to produce the most accurate result
 
         :param pdf_path: Path object of PDF to process
@@ -76,9 +76,9 @@ class OCR():
         if not os.path.exists(pdf_path):
             raise FileNotFoundError("Could not find file at: {pdf_path}")
 
-        if not self.determine_if_OCR(pdf_path):
-            print("File does not need OCR processing")
-            return
+        # if not self.determine_if_OCR(pdf_path):
+        #     print("File does not need OCR processing")
+        #     return
 
         res = ""
 
@@ -86,6 +86,7 @@ class OCR():
 
         # thresh_low = self.predictV3(pdf_path, 0.30)
         thresh_med = self.predictV3(pdf_path, 0.50)
+        thresh_med = self.predictV3(pdf_path, 0.65)
         # thresh_hi = self.predictV3(pdf_path, 0.70)
 
         chunker = SemanticChunker(
@@ -97,7 +98,7 @@ class OCR():
         # low_chunks = chunker.chunk(thresh_low)
         med_chunks = chunker.chunk(thresh_med)
         # hi_chunks = chunker.chunk(thresh_hi)
-        
+
         # chunk1 = self.safe_pop(low_chunks)
         chunk2 = self.safe_pop(med_chunks)
         # chunk3 = self.safe_pop(hi_chunks)
@@ -112,7 +113,7 @@ class OCR():
         #     # chunk1 = self.safe_pop(low_chunks)
         #     chunk2 = self.safe_pop(med_chunks)
         #     # chunk3 = self.safe_pop(hi_chunks)
-        
+
         while chunk2:
             if cleanup:
                 response = self.clean_text(chunk2)
@@ -151,20 +152,20 @@ class OCR():
                 ],
                 format='json',
                 options={
-                    'num_ctx': 16384,    
-                    'num_predict': -1,  
+                    'num_ctx': 16384,
+                    'num_predict': -1,
                 }
             )
 
             # content = response['message']['content']
 
-            print(response)
+            print(response['message']['content'])
 
         doc.close()
 
         return response
 
-            
+
     def predictV3(self, pdf_path: Path, threshold: int) -> str:
         """
         OCR solution for processing document with PPStructureV3
@@ -177,15 +178,15 @@ class OCR():
         """
         if not pdf_path.is_file():
             return
-        
+
         if not 0 <= threshold <= 1:
             return
-        
+
         input_file = str(pdf_path)
 
         output = self.pipelineV3.predict(
             input=str(input_file),
-            layout_threshold=threshold, 
+            layout_threshold=threshold,
             layout_nms=True,
             # use_seal_recognition=True, currently bugged
             use_table_recognition=True,
@@ -218,10 +219,10 @@ class OCR():
                     file_path = self.output / path
                     file_path.parent.mkdir(parents=True, exist_ok=True)
                     image.save(file_path)
-        
+
         return markdown_texts
 
-    
+
     def align_text(self, prompt: str) -> str:
         """
         Query an LLM model with separate chunks to determine which chunk is best
@@ -241,7 +242,7 @@ class OCR():
     def clean_text(self, prompt: str) -> str:
         """
         Query an LLM model with a prompt that cleans the returned chunk
-        
+
         :param prompt: prompt containing the OCR text to clean
         :return: cleaned OCR output
         """
@@ -272,7 +273,7 @@ class OCR():
             text = " ".join(text.split())
             if len(text) < self.TEXT_MIN:
                 count += 1
-        
+
         if count < total_pages/10:
             return False
 
@@ -294,15 +295,15 @@ class OCR():
     def ocr_test(self, pdf_path: Path, threshold: int) -> str:
         if not pdf_path.is_file():
             return
-        
+
         if not 0 <= threshold <= 1:
             return
-        
+
         input_file = str(pdf_path)
 
         output = self.pipelineV3.predict(
             input=str(input_file),
-            layout_threshold=threshold, 
+            layout_threshold=threshold,
             layout_nms=True,
             use_table_recognition=True,
             use_formula_recognition=True,
@@ -332,12 +333,17 @@ if __name__ == "__main__":
     # input_file3 = Path("./pdfs/image-based-pdf-sample_rotated.pdf")
     # ocr.output_document(input_file3)
 
-    input_file4 = Path("./pdfs/atoform.pdf")
-    vlm = ocr.predictVLM(input_file4)
-    print(vlm)
+    # input_file4 = Path("./pdfs/atoform.pdf")
+    # vlm = ocr.predictVLM(input_file4)
+    # print(vlm)
 
-    ocr_out = ocr.output_document(input_file4, False)
-    print(ocr_out)
+    # ocr_out = ocr.output_document(input_file4, False)
+    # print(ocr_out)
+
+    input_file5 = Path("./pdfs/Signed_2023_Annual_Return_NOT_AUDITED[1]_unlocked.pdf")
+    # ocr.predictVLM(input_file5)
+    ocr.output_document(input_file5, False)
+
     # ocr.output_document(input_file4)
     # input_file3 = Path("./pdfs/deed.pdf")
     # ocr.predictV3(input_file3)
