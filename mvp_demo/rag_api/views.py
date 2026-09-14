@@ -8,7 +8,7 @@ import requests
 import datetime
 import textwrap
 
-from django.http import JsonResponse
+from django.http import JsonResponse, StreamingHttpResponse
 from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.throttling import AnonRateThrottle
 
@@ -168,6 +168,93 @@ def get_chat_response(system_prompt, user_query):
     response.raise_for_status()
     return strip_think_tags(response.json()["message"]["content"])
 
+def stream_chat_response(system_prompt, user_query):
+    """
+    Yield the answer from Ollama piece by piece as it is generated.
+
+    Total time is unchanged - this only removes the wait before the first word.
+    A query takes 90-230s on a CPU-only host, so without this the user watches a
+    blank panel for minutes.
+
+    Ollama returns reasoning in message.thinking, separate from message.content,
+    so forwarding content alone never leaks a <think> block to the browser.
+    Verified on 0.33.3 and 0.34.0. The inline guard below covers older builds
+    that put it in content instead.
+    """
+    data = {
+        "model": OLLAMA_MODEL,
+        "think": OLLAMA_THINK,
+        "stream": True,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_query},
+        ],
+        "options": {"temperature": 0.0, "num_ctx": 8192},
+    }
+    inside_think = False
+    with requests.post(OLLAMA_URL, json=data,
+                       timeout=OLLAMA_TIMEOUT_SECONDS, stream=True) as response:
+        response.raise_for_status()
+        for line in response.iter_lines():
+            if not line:
+                continue
+            chunk = json.loads(line)
+            piece = (chunk.get("message") or {}).get("content") or ""
+
+            # Fallback for builds that inline reasoning: swallow it rather than
+            # streaming <think> markup into the transcript.
+            if piece:
+                if "<think>" in piece:
+                    inside_think = True
+                if inside_think:
+                    if "</think>" in piece:
+                        inside_think = False
+                        piece = piece.split("</think>", 1)[1]
+                    else:
+                        piece = ""
+            if piece:
+                yield piece
+            if chunk.get("done"):
+                break
+
+
+def _streamed_answer(system_prompt, user_query, citations, cache_key, acting_user):
+    """
+    Newline-delimited JSON, one object per line:
+
+        {"type": "citations", "citations": [...]}   sent first
+        {"type": "token", "text": "..."}            repeated
+        {"type": "done"}                            or {"type": "error", ...}
+
+    Citations come from retrieval and are known before generation starts, so the
+    sources render immediately while the answer is still being written.
+
+    Errors have to travel in the body: once streaming begins the HTTP status is
+    already sent, so a failure cannot become a 500 any more.
+    """
+    yield json.dumps({"type": "citations", "citations": citations}) + "\n"
+
+    pieces = []
+    try:
+        for piece in stream_chat_response(system_prompt, user_query):
+            pieces.append(piece)
+            yield json.dumps({"type": "token", "text": piece}) + "\n"
+    except Exception:
+        reference = uuid.uuid4().hex[:12]
+        logger.exception("Streamed chat request failed [ref=%s]", reference)
+        yield json.dumps({
+            "type": "error",
+            "error": f"Something went wrong answering that question. Reference: {reference}",
+        }) + "\n"
+        return
+
+    answer = strip_think_tags("".join(pieces))
+    # Cache and audit only on success, matching the non-streaming path.
+    _query_cache[cache_key] = {"answer": answer, "citations": citations}
+    write_audit_log(acting_user, user_query, answer)
+    yield json.dumps({"type": "done"}) + "\n"
+
+
 @api_view(["POST"])
 @throttle_classes([ChatbotRateThrottle])
 def chat_with_advisor_bot(request):
@@ -287,6 +374,15 @@ def chat_with_advisor_bot(request):
         CONTEXT:
         {context_text}
         """
+
+        # Opt-in: a client that does not ask for streaming keeps receiving one
+        # JSON object, so the ui_demo widget and any script stay working.
+        if str(request.data.get("stream", "")).lower() in ("1", "true", "yes"):
+            return StreamingHttpResponse(
+                _streamed_answer(system_prompt, user_query, citations,
+                                 cache_key, request.data.get("user")),
+                content_type="application/x-ndjson",
+            )
 
         answer = get_chat_response(system_prompt, user_query)
 
