@@ -1,5 +1,7 @@
 
 
+# Self-managed superannuation fund annual return 2023
+
 ## Who should complete this annual return?
 
  Only self-managed superannuation funds (SMSFs) can complete this annual return. All other funds must complete the Fund income tax return 2023 (NAT 71287).
@@ -22,6 +24,8 @@ Print clearly, using a BLACK pen only.
 
  Place x in ALL applicable boxes..
 
+For example;
+
 ## Section A: Fund information 
 
 ## 1 Tax file number (TFN)
@@ -36,20 +40,30 @@ Print clearly, using a BLACK pen only.
 
 ## 4 Current postal address 
 
+Locked Bag 20050
+
 ## 5 Annual return status 
 
 Is this an amendment to the SMSF's 2023 return?
 
+Is this the first required return for a newly registered SMSF?
+
+Signature as prescribed in tax return 
+
 <div style="text-align: center;"><img src="imgs/img_in_image_box_63_113_1090_747.jpg" alt="Image" width="86%" /></div>
 
 
-We need your self-managed super fund's financial institution details to pay any super payments and tax refunds owing to you.
-
 ## 7 Electronic funds transfer (EFT)
+
+We need your self-managed super fund's financial institution details to pay any super payments and tax refunds owing to you.
 
 ## A Fund's financial institution account details 
 
 This account is used for super contributions and rollovers. Do not provide a tax agent account here.
+
+Fund account name 
+
+Bellenger Family Superannuation Fund.
 
 I would like my tax refunds made to this account. Go to C.
 
@@ -73,6 +87,8 @@ To claim a tax exemption for current pension income, you must pay at least the m
 
 No Go to Section B: Income.
 
+Which method did you use to calculate your exempt current pension income?
+
 Did the fund have any other income that was assessable?.
 
 E Yes  Go to Section B: Income.
@@ -84,30 +100,37 @@ No Choosing 'No' means that you do not have any assessable income, including no-
 <div style="text-align: center;"><img src="imgs/img_in_image_box_95_28_1117_1566.jpg" alt="Image" width="85%" /></div>
 
 
-## J0R00CO0O100n01O11 
+## Section C: Deductions and non-deductible expenses  
+
+## 12 Dot 
 
 expenses', list all other expenses or normally allowable deductions that you cannot claim as a deduction (for example, all expenses related to exempt current pension income should be recorded in the 'Non-deductible expenses' column).
 
 <div style="text-align: center;"><img src="imgs/img_in_image_box_84_303_1136_1136.jpg" alt="Image" width="88%" /></div>
 
 
-## Section D: Income tax calculation statement 
+# Section D: Income tax calculation statement 
 
 Section B label R3, Section C label O and Section D labels A,T1, J, T5 and I are mandatory. If you leave these labels blank, you will have specified a zero amount..
 
 
 
-<div style="text-align: center;"><img src="imgs/img_in_image_box_74_261_997_1523.jpg" alt="Image" width="77%" /></div>
+<div style="text-align: center;">13 Calculation statement </div>
 
 
 <div style="text-align: center;"><img src="imgs/img_in_image_box_89_84_1084_1126.jpg" alt="Image" width="83%" /></div>
 
+
+## Section E: Losses 
 
  If total loss is greater than $100,000,complete and attach a Losses schedule 2023.
 
 
 
 <div style="text-align: center;"><img src="imgs/img_in_image_box_69_18_1123_1583.jpg" alt="Image" width="88%" /></div>
+
+
+<div style="text-align: center;">OFFICIAL: Sensitive (when completed)</div>
 
 
 <div style="text-align: center;"><img src="imgs/img_in_image_box_84_69_1138_1597.jpg" alt="Image" width="88%" /></div>
@@ -122,7 +145,13 @@ Section B label R3, Section C label O and Section D labels A,T1, J, T5 and I are
 <div style="text-align: center;"><img src="imgs/img_in_image_box_76_43_1127_809.jpg" alt="Image" width="88%" /></div>
 
 
+### Section I: Taxation of financial arrangements.17 Taxation of financial arrangements (TOFA) Total TOFA gainsH $ 
+
 ## Section J: Other information
+
+If revoking or varying a family trust election, print R for revoke or print V for variation,B and complete and attach the Family trust election, revocation or variation 2023.
+
+If revoking an interposed entity election, print R, and complete D and attach the Interposed entity election or revocation 2023.
 
 ## Section K:Declarations 
 
@@ -132,9 +161,9 @@ Penalties may be imposed for false or misleading information in addition to pena
 
 Before making this  declaration check to ensure that all income has been disclosed and the annual return, all attached schedules and any additional documents are true and correct inevery detail.f you leave labels blankyou wil have specified azero amount or the label was not applicable to you.lf you are in doubt about any aspect of the annual returnplace al the facts before the ATO.
 
-Privacy 
+## Privacy 
 
-The ATO is authorised by the Taxation Administration Act 1953 to request the provision of tax file numbers (TFNs).We will use the TFN to identify the entity in our records.It is not an offence not to provide the TFN.However if you do not provide the TFN, the processing of this form.may.be.delaved.
+The ATO is authorised by the Taxation Administration Act 1953 to request the provision of tax file numbers TFNsWe wll use theTFNto identify the entity in our records.It is not an offence not to provide the TFN.However if you do not provide the TFN, the processing of this form.may.be.delaved.
 
 
 
@@ -170,13 +199,23 @@ The Commissioner of Taxation as Registrar of the Australian Business Register, m
 
  Print clearly, using a black or dark blue pen only.
 
+ Use BLOCK LETTERS and print one character in each box.
+
+
+<div style="text-align: center;"><html><body><table border="1"><tr><td>8</td><td>M</td><td>1</td><td>T</td><td>#</td><td></td><td>s</td><td>T</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></table></body></html></div>
+
+
  Do not use correction fluid or covering stickers.
 
  Sign next to any corrections with your full signature (not initials)..
 
+## Tax file number (TFN)Provided 
+
  Use in conjunction with company, trust, fund income tax return or the self-managed superannuation fund annual return.
 
 Refer to the Guide to capital gains tax 2023available on our website at ato.gov.au for instructions on how to complete this schedule..! We are authorised by law to request your TFN. You do not have to quote your TFN.However, if you don't it could increase the chance of delay or error in processing your form.
+
+##  Taxpayer's name 
 
 Bell Family Superannuation Fund 
 
@@ -188,7 +227,8 @@ Bell Family Superannuation Fund
 <div style="text-align: center;"><img src="imgs/img_in_image_box_109_76_1109_1289.jpg" alt="Image" width="83%" /></div>
 
 
-# 8Other CGT information required (if applicable)
+<div style="text-align: center;"><img src="imgs/img_in_image_box_82_77_1119_990.jpg" alt="Image" width="87%" /></div>
+
 
 ## Taxpayer's declaration 
 
@@ -207,11 +247,21 @@ Before making this declaration check to ensure that al the information required 
 
 ## Losses schedule 
 
+2023
+
  Refer to Losses schedule instructions 2023, available on our website ato.gov.au for instructions on how to complete this schedule.
 
 
 
+ Australian business number 
+
+Transfer the amount at U to the Tax losses carried forward to later income years label on your tax return.
+
+## 2 Net capital losses carried forward to later income years 
+
 Transfer the amount at V to the Net capital losses carried forward to later income years label on your tax return.
+
+## Part B -- Ownership and business continuity test - company and isted widely held trust only 
 
 Complete item 3 of Part B if a loss is being carried forward to later income years and the business continuity test has to be satis ied in relation to that loss.Stsdnratootatoss 
 
@@ -221,6 +271,9 @@ Do not complete items 1 or 2 of Part B if, in the 2022-23 income year, no loss h
 
 Note: If the entity has deducted, applied,transferred in or transferred out (as applicable)in the 2022-23 income year a loss incurred in any of the listed years, print X in the Yes or No box to indicate whether the entity has satisfied the continuity of majority ownership test in respect of that loss.
 
+
+
+<div style="text-align: center;"><img src="imgs/img_in_image_box_572_342_877_623.jpg" alt="Image" width="25%" /></div>
 
 
 2 Amount of losses deducted/applied for which the continuity of majority ownership test is not passed but the business continuity test is satisfied - excludes film losses.
@@ -263,6 +316,8 @@ If you printed X in the Yes box at N, what was the amount of.unrealised net loss
 <div style="text-align: center;"><img src="imgs/img_in_image_box_97_88_1126_1220.jpg" alt="Image" width="86%" /></div>
 
 
+## Tax File Number IProvided 
+
 If the schedule is not lodged with the income tax retum you are required to sign and date the schedule.
 
  Before making this declaration check to ensure that al the information required has been provided on this form and any atachments Important 
@@ -279,4 +334,6 @@ Taxation law authorises the ATO to collect information and disclose it to other 
 
 ## Taxpayer's declaration 
 
-I declare that the information on this form is true and correct.
+I declare that the information on this fom is true and correct 
+
+<div style="text-align: center;"><img src="imgs/img_in_image_box_108_447_1089_627.jpg" alt="Image" width="82%" /></div>

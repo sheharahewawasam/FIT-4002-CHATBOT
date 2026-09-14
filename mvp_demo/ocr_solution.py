@@ -86,7 +86,6 @@ class OCR():
 
         # thresh_low = self.predictV3(pdf_path, 0.30)
         thresh_med = self.predictV3(pdf_path, 0.50)
-        thresh_med = self.predictV3(pdf_path, 0.65)
         # thresh_hi = self.predictV3(pdf_path, 0.70)
 
         chunker = SemanticChunker(
