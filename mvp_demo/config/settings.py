@@ -121,3 +121,16 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_EXPOSE_HEADERS = ['Retry-After']
+
+CORS_ALLOW_CREDENTIALS = True
+
+SESSION_COOKIE_AGE = 1500 #25 mintes
+SESSION_SAVE_EVERY_REQUEST = True
+
+REST_FRAMEWORK = {
+    'DEFAULT_THROTTLE_RATES': {
+        'chatbot': '10/min',
+    }
+}

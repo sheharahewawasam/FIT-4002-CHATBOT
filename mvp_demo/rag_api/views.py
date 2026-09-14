@@ -6,11 +6,14 @@ import datetime
 import textwrap
 
 from django.http import JsonResponse
-from rest_framework.decorators import api_view
+from django.utils import timezone
+from django.conf import settings
 from dotenv import load_dotenv
 from pinecone import Pinecone
 from pinecone_text.sparse import BM25Encoder
 from sentence_transformers import SentenceTransformer, CrossEncoder
+from rest_framework.decorators import api_view, throttle_classes
+from rest_framework.throttling import AnonRateThrottle
 
 load_dotenv("secrets.env")
 
@@ -29,6 +32,9 @@ _embedder = SentenceTransformer("BAAI/bge-base-en-v1.5")
 _embedder.max_seq_length = 512
 _reranker = CrossEncoder("BAAI/bge-reranker-base", max_length=512)
 
+class ChatbotRateThrottle(AnonRateThrottle):
+    scope = "chatbot"
+
 # Simple in-memory cache — repeated identical queries return instantly
 _query_cache: dict = {}
 
@@ -40,21 +46,29 @@ def strip_think_tags(text: str) -> str:
     return _THINK_RE.sub("", text).strip()
 
 
-def perform_vector_search(query_embedding, user_query, filters, top_k=40):
+def perform_vector_search(query_embedding, user_query, filters, top_k=40, date_from=None, date_to=None):
     """
     Pure vector search against Pinecone.
     Returns Pinecone match dicts: {"id", "score", "metadata": {...}}
     """
     sparse_vector = _bm25.encode_queries(user_query)
 
+    query_filter ={"fund_name": {"$in": filters}}
+
+    date_condition = {}
+    if date_from is not None:
+        date_condition["$gte"] = date_from
+    if date_to is not None:
+        date_condition["$lte"] = date_to
+    if date_condition:
+        query_filter["date_numeric"] = date_condition
+
     results = index.query(
         vector=query_embedding,
         sparse_vector=sparse_vector,
         top_k=top_k,
         include_metadata=True,
-        filter={
-             "fund_name": {"$in": filters}
-        }
+        filter=query_filter,
     )
     return results.get("matches", [])
 
@@ -107,22 +121,56 @@ def get_chat_response(system_prompt, user_query):
             "num_ctx": 8192
         }
     }
-    response = requests.post(url, json=data, timeout=120)
+    response = requests.post(url, json=data, timeout=300)
     response.raise_for_status()
     return strip_think_tags(response.json()["message"]["content"])
 
+def date_string_to_numeric(date_str):
+    if not date_str:
+        return None
+    try:
+        return int(date_str.replace("-", ""))
+    except ValueError:
+        return None
+
 @api_view(["POST"])
+@throttle_classes([ChatbotRateThrottle])
 def chat_with_advisor_bot(request):
     user_query = request.data.get("query")
     funds = request.data.get("funds", [])
+    date_from = date_string_to_numeric(request.data.get("date_from"))
+    date_to = date_string_to_numeric(request.data.get("date_to"))
     if not user_query:
         return JsonResponse({"error": "Query is required"}, status=400)
 
+    # Session timeout check
+    last_active = request.session.get("last_active")
+    session_expired = False
+
+    if last_active:
+        last_active_time = datetime.datetime.fromisoformat(last_active)
+
+        if timezone.is_naive(last_active_time):
+            last_active_time = timezone.make_aware(last_active_time)
+
+        elapsed = (timezone.now() - last_active_time).total_seconds()
+
+        if elapsed >= settings.SESSION_COOKIE_AGE:
+            session_expired = True
+
+    # Refresh the user's activity time
+    request.session["last_active"] = timezone.now().isoformat()
+
     # Return cached result for repeated identical queries
-    cache_key = user_query.strip().lower()
+    selected_user = request.data.get("user")
+
+    cache_key = (selected_user, user_query.strip().lower(), tuple(sorted(funds)), date_from, date_to)
+    
     if cache_key in _query_cache:
         print(f"Cache hit for: {cache_key}")
-        return JsonResponse(_query_cache[cache_key])
+        cached = dict(_query_cache[cache_key])
+        cached["session_expired"] = session_expired
+        return JsonResponse(cached)
 
     try:
         # 1. Embed query with BGE prefix (required for BGE retrieval quality)
@@ -131,7 +179,11 @@ def chat_with_advisor_bot(request):
         ).tolist()
 
         # 2. Vector search
-        raw_results = perform_vector_search(query_embedding, user_query, funds, top_k=60)
+        raw_results = perform_vector_search(query_embedding, 
+                                            user_query, funds, 
+                                            top_k=60,
+                                            date_from=date_from,
+                                            date_to=date_to,)
 
         # 3. Deduplicate — keep highest-scoring copy of each unique chunk
         best_by_hash = {}
@@ -157,6 +209,7 @@ def chat_with_advisor_bot(request):
             return JsonResponse({
                 "answer":    "I could not find any relevant information in the fund documents to answer your query.",
                 "citations": [],
+                "session_expired": session_expired,
             })
 
         # 5. Build context — cap each chunk at 1500 chars to stay within num_ctx=8192
@@ -166,10 +219,12 @@ def chat_with_advisor_bot(request):
         for i, item in enumerate(reranked):
             metadata = item["result"].get("metadata", {})
             chunk_text = (metadata.get("text", "") or metadata.get("child_match_text", ""))[:1500]
-            context_text += f"--- Document {i+1} ---\n{chunk_text}\n\n"
+            source_name = metadata.get("source_url", "Unknown")
+            fund_name = metadata.get("fund_name", "Unknown")
+            context_text += f"--- Source: {source_name} ({fund_name}) ---\n{chunk_text}\n\n"
             citations.append({
-                "source": metadata.get("source_url", "Unknown"),
-                "fund": metadata.get("fund_name", "Unknown")
+                "source": source_name,
+                "fund": fund_name
             })
 
         # print("\n=== RETRIEVED CHUNKS ===")
@@ -189,9 +244,11 @@ def chat_with_advisor_bot(request):
         Do not refuse to answer just because the information is incomplete — report what is there.
         Only say "I cannot find information about this in the provided documents" if the context contains
         absolutely nothing related to the query.
-        
-        Do not give any arbitary document numbers or names when giving answer since their names are wrong and different.
-        No need to say accodring to x or y.
+
+        When referencing where information came from, cite the actual source document name shown in the
+        context (e.g. "SIS Act -1.pdf") and, if a specific section or clause number is visible in the
+        context, include that too (e.g. "Section 4(2) of SIS Act -1.pdf"). Never refer to a source by a
+        generic label like "Document 1" or invent a document name or number that isn't shown in the context.
 
         If the query asks about methods, techniques, strategies, or types:
         - enumerate ALL methods found in the context
@@ -204,9 +261,9 @@ def chat_with_advisor_bot(request):
 
         answer = get_chat_response(system_prompt, user_query)
 
-        result = {"answer": answer, "citations": citations}
-        _query_cache[cache_key] = result
-        write_audit_log(request.data.get("user"), user_query, answer)
+        result = {"answer": answer, "citations": citations, "session_expired": session_expired}
+        _query_cache[cache_key] = {"answer": answer, "citations": citations}
+        write_audit_log(selected_user, user_query, answer)
         return JsonResponse(result)
 
     except Exception as e:
@@ -247,89 +304,90 @@ def write_audit_log(user, message, response):
     
 #a copy of the rag logic just for testing purposes, kindly change this also when you are making any changes to the chat with advisor bot funciton, or we should seperate logic better
 #but I cba do that 
-def rag_logic(test_questions:str):
-    user_query = test_questions
+# def rag_logic(test_questions:str):
+#     user_query = test_questions
 
-    # 1. Embed query with BGE prefix (required for BGE retrieval quality)
-    query_embedding = _embedder.encode(
-        "Represent this sentence for searching relevant passages: " + user_query
-    ).tolist()
+#     # 1. Embed query with BGE prefix (required for BGE retrieval quality)
+#     query_embedding = _embedder.encode(
+#         "Represent this sentence for searching relevant passages: " + user_query
+#     ).tolist()
 
-    # 2. Vector search
-    raw_results = perform_vector_search(query_embedding, user_query, ["Summers Family Super Fund"], top_k=60)
+#     # 2. Vector search
+#     raw_results = perform_vector_search(query_embedding, user_query, ["Summers Family Super Fund"], top_k=60)
 
-    # 3. Deduplicate — keep highest-scoring copy of each unique chunk
-    best_by_hash = {}
-    for res in raw_results:
-        metadata = res.get("metadata", {})
-        content = metadata.get("text", "") or metadata.get("child_match_text", "")
+#     # 3. Deduplicate — keep highest-scoring copy of each unique chunk
+#     best_by_hash = {}
+#     for res in raw_results:
+#         metadata = res.get("metadata", {})
+#         content = metadata.get("text", "") or metadata.get("child_match_text", "")
 
-        if ".........." in content or "Table of Contents" in content:
-            continue
+#         if ".........." in content or "Table of Contents" in content:
+#             continue
 
-        text_hash = hashlib.md5(content.encode()).hexdigest()
-        score = res.get("score", 0)
-        if text_hash not in best_by_hash or score > best_by_hash[text_hash][0]:
-            best_by_hash[text_hash] = (score, res)
+#         text_hash = hashlib.md5(content.encode()).hexdigest()
+#         score = res.get("score", 0)
+#         if text_hash not in best_by_hash or score > best_by_hash[text_hash][0]:
+#             best_by_hash[text_hash] = (score, res)
 
-    deduped = [res for _, res in best_by_hash.values()]
+#     deduped = [res for _, res in best_by_hash.values()]
 
-    # 4. Batch-rerank all deduped chunks, keep top 5
-    reranked = rerank(user_query, deduped, top_k=5)
+#     # 4. Batch-rerank all deduped chunks, keep top 5
+#     reranked = rerank(user_query, deduped, top_k=5)
 
-    if not reranked:
-        return JsonResponse({
-            "answer":    "I could not find any relevant information in the fund documents to answer your query.",
-            "citations": [],
-        })
+#     if not reranked:
+#         return JsonResponse({
+#             "answer":    "I could not find any relevant information in the fund documents to answer your query.",
+#             "citations": [],
+#         })
 
-    # 5. Build context — cap each chunk at 1500 chars to stay within num_ctx=8192
-    context_text = ""
-    citations = []
+#     # 5. Build context — cap each chunk at 1500 chars to stay within num_ctx=8192
+#     context_text = ""
+#     citations = []
 
-    for i, item in enumerate(reranked):
-        metadata = item["result"].get("metadata", {})
-        chunk_text = (metadata.get("text", "") or metadata.get("child_match_text", ""))[:1500]
-        context_text += f"--- Document {i+1} ---\n{chunk_text}\n\n"
-        citations.append({
-            "source": metadata.get("source_url", "Unknown"),
-            "fund": metadata.get("fund_name", "Unknown")
-        })
+#     for i, item in enumerate(reranked):
+#         metadata = item["result"].get("metadata", {})
+#         chunk_text = (metadata.get("text", "") or metadata.get("child_match_text", ""))[:1500]
+#         source_name = metadata.get("source_url", "Unknown")
+#         fund_name = metadata.get("fund_name", "Unknown")
+#         context_text += f"--- Source: {source_name} ({fund_name}) ---\n{chunk_text}\n\n"
+#         citations.append({
+#             "source": source_name,
+#             "fund": fund_name
+#         })
 
-    # print("\n=== RETRIEVED CHUNKS ===")
-    # for i, item in enumerate(reranked):
-    #     metadata = item["result"].get("metadata", {})
-    #     print(f"\nChunk {i+1}  score={item['rerank_score']:.4f}")
-    #     print(metadata.get("text", "")[:500])
-    #     print("=" * 50)
+#     # print("\n=== RETRIEVED CHUNKS ===")
+#     # for i, item in enumerate(reranked):
+#     #     metadata = item["result"].get("metadata", {})
+#     #     print(f"\nChunk {i+1}  score={item['rerank_score']:.4f}")
+#     #     print(metadata.get("text", "")[:500])
+#     #     print("=" * 50)
 
-    # 6. Generate answer
-    system_prompt = f"""
-    You are an expert AI assistant for financial advisors at Triple A Super.
-    Answer the user's query using ONLY the provided document context below.
-    Do not use any outside knowledge — only what appears in the context.
+#     # 6. Generate answer
+#     system_prompt = f"""
+#     You are an expert AI assistant for financial advisors at Triple A Super.
+#     Answer the user's query using ONLY the provided document context below.
+#     Do not use any outside knowledge — only what appears in the context.
 
-    If the context contains relevant information, share ALL of it even if it is brief or partial.
-    Do not refuse to answer just because the information is incomplete — report what is there.
-    Only say "I cannot find information about this in the provided documents" if the context contains
-    absolutely nothing related to the query.
+#     If the context contains relevant information, share ALL of it even if it is brief or partial.
+#     Do not refuse to answer just because the information is incomplete — report what is there.
+#     Only say "I cannot find information about this in the provided documents" if the context contains
+#     absolutely nothing related to the query.
 
-    If the query asks about methods, techniques, strategies, or types:
-    - enumerate ALL methods found in the context
-    - do not omit any
-    - use bullet points
+#     When referencing where information came from, cite the actual source document name shown in the
+#     context (e.g. "SIS Act -1.pdf") and, if a specific section or clause number is visible in the
+#     context, include that too (e.g. "Section 4(2) of SIS Act -1.pdf"). Never refer to a source by a
+#     generic label like "Document 1" or invent a document name or number that isn't shown in the context.
 
-    CONTEXT:
-    {context_text}
-    """
+#     If the query asks about methods, techniques, strategies, or types:
+#     - enumerate ALL methods found in the context
+#     - do not omit any
+#     - use bullet points
 
-    answer = get_chat_response(system_prompt, user_query)
+#     CONTEXT:
+#     {context_text}
+#     """
 
-    result = {"answer": answer, "citations": citations, "context": context_text}
-    return JsonResponse(result)
+#     answer = get_chat_response(system_prompt, user_query)
 
-    
-
-
-
-# print("USING PINECONE VECTOR STORE (BGE + CrossEncoder)")
+#     result = {"answer": answer, "citations": citations, "context": context_text}
+#     return JsonResponse(result)
