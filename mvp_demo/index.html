@@ -138,23 +138,30 @@
     <div class="header"><h2 style="font-size:1.1em;margin:0;">Documents</h2></div>
     <div class="docs-body">
         <div id="docs-locked" style="color:#666;font-size:0.9em;">
-            Select a user to upload and view documents.
+            Select a user to view documents.
         </div>
 
         <div id="docs-active" style="display:none;">
-            <label for="doc-file">PDF file (max 25 MB)</label>
-            <input type="file" id="doc-file" accept="application/pdf">
+            <div id="upload-form" style="display:none;">
+                <label for="doc-file">PDF file (max 25 MB)</label>
+                <input type="file" id="doc-file" accept="application/pdf">
 
-            <label for="doc-fund">Fund</label>
-            <select id="doc-fund"><option value="">No fund (private to you)</option></select>
+                <label for="doc-fund">Fund</label>
+                <select id="doc-fund"><option value="">No fund (private to you)</option></select>
 
-            <label for="doc-kind">Document type</label>
-            <input type="text" id="doc-kind" placeholder="e.g. Trust Deed">
+                <label for="doc-kind">Document type</label>
+                <input type="text" id="doc-kind" placeholder="e.g. Trust Deed">
 
-            <button id="doc-upload-btn" onclick="uploadDocument()">Upload &amp; ingest</button>
-            <div class="upload-msg" id="upload-msg"></div>
+                <button id="doc-upload-btn" onclick="uploadDocument()">Upload &amp; ingest</button>
+                <div class="upload-msg" id="upload-msg"></div>
 
-            <div class="divider"></div>
+                <div class="divider"></div>
+            </div>
+
+            <div id="uploads-disabled" style="display:none;color:#666;font-size:0.9em;margin-bottom:10px;">
+                Uploads are disabled on this server. Documents are added by an
+                administrator.
+            </div>
             <ul class="doc-list" id="doc-list"></ul>
         </div>
     </div>
@@ -196,39 +203,6 @@
         if (dots) dots.remove();
     }
 
-    // Start a bot bubble that fills in as tokens arrive. Sources are rendered
-    // straight away: they come from retrieval and are known before the model
-    // has written a word.
-    function beginStreamedBotMessage(citations) {
-        const chatBox = document.getElementById('chat-box');
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'message bot-msg';
-
-        const answerEl = document.createElement('div');
-        answerEl.className = 'answer-text';
-        msgDiv.appendChild(answerEl);
-
-        if (citations && citations.length > 0) {
-            const unique = Array.from(new Set(citations.map(c => c.source)))
-                                .map(src => citations.find(c => c.source === src));
-            const box = document.createElement('div');
-            box.className = 'citations';
-            let html = '<strong>Sources:</strong><ul>';
-            unique.forEach(function (cit) {
-                const rawName = String(cit.source || '').split('/').pop();
-                html += '<li><a href="../' + encodeURIComponent(rawName)
-                     + '" target="_blank" style="color:#0056b3;">' + escapeHtmlDoc(rawName)
-                     + '</a> (' + escapeHtmlDoc(String(cit.fund || '')) + ')</li>';
-            });
-            box.innerHTML = html + '</ul>';
-            msgDiv.appendChild(box);
-        }
-
-        chatBox.insertBefore(msgDiv, document.getElementById('loading'));
-        chatBox.scrollTop = chatBox.scrollHeight;
-        return answerEl;
-    }
-
     async function sendQuery() {
         const inputField = document.getElementById('query-input');
         const query = inputField.value.trim();
@@ -252,8 +226,7 @@
                 body: JSON.stringify({
                     query: query,
                     funds: selectedFunds,
-                    user: selectedUser,
-                    stream: true
+                    user: selectedUser
                 })
             });
 
@@ -267,54 +240,12 @@
                 return;
             }
 
-            // A cache hit answers as one JSON object rather than a stream, and
-            // the server says which by content type.
-            const contentType = response.headers.get('content-type') || '';
-            if (contentType.indexOf('application/x-ndjson') === -1) {
-                const data = await response.json();
-                if (!response.ok || data.error) {
-                    addMessage("Error: " + (data.error || data.detail || 'Something went wrong'), 'bot-msg');
-                } else {
-                    addBotMessageWithCitations(data.answer, data.citations);
-                }
-                return;
-            }
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            const chatBox = document.getElementById('chat-box');
-            let buffer = '';
-            let answerEl = null;
-            let answer = '';
-
-            // Newline-delimited JSON: a chunk can split a line, so keep the
-            // remainder in the buffer until its newline arrives.
-            for (;;) {
-                const { value, done } = await reader.read();
-                if (done) break;
-                buffer += decoder.decode(value, { stream: true });
-
-                let nl;
-                while ((nl = buffer.indexOf('\n')) !== -1) {
-                    const line = buffer.slice(0, nl).trim();
-                    buffer = buffer.slice(nl + 1);
-                    if (!line) continue;
-
-                    let evt;
-                    try { evt = JSON.parse(line); } catch (e) { continue; }
-
-                    if (evt.type === 'citations') {
-                        settleThinkingMessage(thinking);
-                        answerEl = beginStreamedBotMessage(evt.citations);
-                    } else if (evt.type === 'token') {
-                        if (!answerEl) answerEl = beginStreamedBotMessage([]);
-                        answer += evt.text;
-                        answerEl.innerHTML = escapeHtmlDoc(answer).replace(/\n/g, '<br>');
-                        chatBox.scrollTop = chatBox.scrollHeight;
-                    } else if (evt.type === 'error') {
-                        addMessage("Error: " + evt.error, 'bot-msg');
-                    }
-                }
+            const data = await response.json();
+            if (!response.ok || data.error) {
+                addMessage("Error: " + (data.error || data.detail || 'Something went wrong'), 'bot-msg');
+            } else {
+                settleThinkingMessage(thinking);
+                addBotMessageWithCitations(data.answer, data.citations);
             }
         } catch (error) {
             addMessage("Failed to connect to the server.", 'bot-msg');
@@ -502,6 +433,15 @@
         el.style.color = colour || '#666';
     }
 
+    // The server decides whether ingestion is open; the page only reflects it.
+    let uploadsEnabled = false;
+    function applyUploadAvailability(enabled) {
+        uploadsEnabled = enabled;
+        document.getElementById('upload-form').style.display = enabled ? 'block' : 'none';
+        document.getElementById('uploads-disabled').style.display = enabled ? 'none' : 'block';
+        if (enabled) populateUploadFunds(currentUser());
+    }
+
     // Keep the upload panel in step with whichever user is selected.
     function onUserChangedForDocs() {
         const user = currentUser();
@@ -512,7 +452,6 @@
             if (docsPollTimer) { clearInterval(docsPollTimer); docsPollTimer = null; }
             return;
         }
-        populateUploadFunds(user);
         refreshDocuments();
     }
 
@@ -533,6 +472,10 @@
     }
 
     async function uploadDocument() {
+        if (!uploadsEnabled) {
+            setUploadMessage('Uploads are disabled on this server.', '#c0392b');
+            return;
+        }
         const user = currentUser();
         if (!user) { setUploadMessage('Select a user first.', '#c0392b'); return; }
 
@@ -577,6 +520,7 @@
             const response = await fetch(DOCS_API + '?user=' + encodeURIComponent(user));
             if (!response.ok) return;
             const data = await response.json();
+            applyUploadAvailability(data.uploads_enabled === true);
             renderDocuments(data.documents || []);
         } catch (err) {
             console.error('Error loading documents:', err);

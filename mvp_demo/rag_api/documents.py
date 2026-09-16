@@ -20,6 +20,15 @@ from .models import Advisor, Document, Fund
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 ALLOWED_EXTENSIONS = {".pdf"}
 
+# Ingestion is off unless a deployment explicitly turns it on.
+#
+# The endpoint takes an advisor name from the request body and trusts it, so
+# until authentication lands anyone who can reach the server can write into the
+# shared Pinecone index. Off by default means a host that is exposed to the
+# internet is safe without remembering to configure anything; a developer who
+# wants to ingest locally sets DOCUMENT_UPLOADS_ENABLED=true.
+UPLOADS_ENABLED = os.getenv("DOCUMENT_UPLOADS_ENABLED", "false").lower() in ("1", "true", "yes")
+
 
 def _serialise(doc):
     return {
@@ -47,6 +56,10 @@ def _resolve_advisor(name):
 @api_view(["POST"])
 @parser_classes([MultiPartParser, FormParser])
 def upload_document(request):
+    if not UPLOADS_ENABLED:
+        return JsonResponse(
+            {"error": "Document uploads are disabled on this server."}, status=403)
+
     advisor, err = _resolve_advisor(request.data.get("user"))
     if err:
         return err
@@ -106,7 +119,12 @@ def list_documents(request):
     if err:
         return err
     docs = Document.objects.filter(owner=advisor).select_related("fund")
-    return JsonResponse({"documents": [_serialise(d) for d in docs]})
+    # The flag travels with the listing so the page hides the upload form on a
+    # server that will only reject it. The server still enforces it.
+    return JsonResponse({
+        "documents": [_serialise(d) for d in docs],
+        "uploads_enabled": UPLOADS_ENABLED,
+    })
 
 
 @api_view(["GET"])
