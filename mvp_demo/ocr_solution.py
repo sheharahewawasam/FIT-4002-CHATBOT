@@ -4,10 +4,16 @@ import pymupdf as pymu
 from chonkie import SemanticChunker
 from ollama import generate, chat
 import os
+import io
+
 # from langchain_text_splitters import MarkdownTextSplitter
 
 class OCR():
     TEXT_MIN = 50
+    CONF_SCORE = 0.85
+    LOW_CONF_RATIO = 0.15
+    LAYOUT_CONF_SCORE = 0.85
+    LAYOUT_CONF_THRESHOLD = 0.40
 
     REASONING_PROMPT = (
         "Respond only with the full text of the chosen chunk, exactly as it appears. "
@@ -21,6 +27,7 @@ class OCR():
         "Do NOT return a number or explanation — return the full text of the chosen chunk only. "
         "The chunks are split by '||'. The chunks to analyse are: "
     )
+
 
     CLEANING_PROMPT = """
         You are cleaning up OCR output. The text below may contain scanning artifacts: misrecognized characters, broken words, stray line breaks, extra whitespace, or garbled punctuation.
@@ -37,6 +44,7 @@ class OCR():
         Text:
     """
 
+
     VLM_PROMPT = """
         Extract all content from this document image and format it strictly as JSON.
         Preserve reading order top to bottom. Transcribe exactly what is visible, no need for any calculations;
@@ -44,6 +52,7 @@ class OCR():
         Output ONLY: { "blocks": [...] }
         No explanation, no markdown, no commentary.
     """
+
 
     def __init__(self, output: Path = Path("./ocr_output"), gpu: bool = False):
         """
@@ -55,6 +64,7 @@ class OCR():
         self.output = output
         self.gpu = gpu
 
+
     def initiate_model_v3(self):
         """
         Creates the PPStructureV3 model
@@ -63,6 +73,44 @@ class OCR():
             text_recognition_model_name="en_PP-OCRv4_mobile_rec",
             device = "gpu" if self.gpu else "cpu",
         )
+
+
+    def calc_ocr_confidence(self, res) -> bool:
+        data = res.json.get("res", res.json)
+
+        ocr_res = data.get("overall_ocr_res", {})
+        texts = ocr.get("rec_texts", [])
+        scores = ocr_res.get("rec_scores", [])
+
+        if not scores:
+            return True
+
+        weights = [max(len(t), 1) for t in texts]
+        weighted_avg = sum(s * w for s, w in zip(scores, weights)) / sum(weights)
+        low_conf_ratio = sum(1 for s in scores if s < 0.80) / len(scores)
+
+        if weighted_avg < self.CONF_SCORE:
+            return True
+
+        if low_conf_ratio < self.LOW_CONF_RATIO:
+            return True
+        
+        layout_res = data.get("layout_det_res", {}).get("boxes", [])
+        layout_scores = [box.get("score", 0) for box in layout_res]
+
+        if not layout_scores:
+            return True
+        
+        avg_layout_score = sum(layout_scores) / len(layout_scores)
+
+        if avg_layout_score < self.LAYOUT_CONF_SCORE:
+            return True
+
+        if min(layout_scores) < self.LAYOUT_CONF_THRESHOLD:
+            return True
+
+        return False
+        
 
     def output_document(self, pdf_path: Path, cleanup: bool) -> str:
         """
@@ -76,17 +124,11 @@ class OCR():
         if not os.path.exists(pdf_path):
             raise FileNotFoundError("Could not find file at: {pdf_path}")
 
-        # if not self.determine_if_OCR(pdf_path):
-        #     print("File does not need OCR processing")
-        #     return
-
         res = ""
 
         self.initiate_model_v3()
 
-        # thresh_low = self.predictV3(pdf_path, 0.30)
         thresh_med = self.predictV3(pdf_path, 0.50)
-        # thresh_hi = self.predictV3(pdf_path, 0.70)
 
         chunker = SemanticChunker(
             threshold=0.8,
@@ -94,24 +136,9 @@ class OCR():
             similarity_window=5
         )
 
-        # low_chunks = chunker.chunk(thresh_low)
         med_chunks = chunker.chunk(thresh_med)
-        # hi_chunks = chunker.chunk(thresh_hi)
 
-        # chunk1 = self.safe_pop(low_chunks)
         chunk2 = self.safe_pop(med_chunks)
-        # chunk3 = self.safe_pop(hi_chunks)
-
-        # while chunk1 or chunk2 or chunk3:
-        #     prompt = chunk1+" || "+chunk2+" || "+chunk3
-
-        #     response = self.align_text(prompt)
-
-        #     res += response
-
-        #     # chunk1 = self.safe_pop(low_chunks)
-        #     chunk2 = self.safe_pop(med_chunks)
-        #     # chunk3 = self.safe_pop(hi_chunks)
 
         while chunk2:
             if cleanup:
@@ -132,12 +159,17 @@ class OCR():
 
 
     def predictVLM(self, pdf_path: Path) -> str:
+        """
+        Uses a VLM to extract text from an entire PDF
+
+        :param pdf_path: Path object to PDF        
+        """
         doc = pymu.open(pdf_path)
 
         for page_num in range(len(doc)):
             page = doc[page_num]
 
-            img = page.get_pixmap(dpi=300)
+            img = page.get_pixmap(dpi=150)
             image_bytes = img.tobytes("png")
 
             response = chat(
@@ -162,7 +194,37 @@ class OCR():
 
         doc.close()
 
-        return response
+        return response['message']['content']
+
+
+    def predictImage(self, image) -> str:
+        """
+        Uses a VLM to predict the text in a single image.
+
+        :param image: Image to extract text from.        
+        """
+        img_bytes = io.BytesIO()
+
+        image.save(img_bytes, format="PNG")
+        img_bytes = img_bytes.getvalue()
+
+        response = chat(
+            model='qwen3-vl',
+            messages=[
+                {
+                    'role': 'user',
+                    'content': self.VLM_PROMPT,
+                    'images': [img_bytes]
+                }
+            ],
+            format='json',
+            options={
+                'num_ctx': 16384,
+                'num_predict': -1,
+            }
+        )
+
+        return response['message']['content']
 
 
     def predictV3(self, pdf_path: Path, threshold: int) -> str:
@@ -195,29 +257,41 @@ class OCR():
             use_region_detection=True
         )
 
+        doc = pymu.open(pdf_path)
         markdown_list = []
         markdown_images = []
-
-        for res in output:
-            md_info = res.markdown
-            markdown_list.append(md_info)
-            markdown_images.append(md_info.get("markdown_images", {}))
-
-
-        markdown_texts = self.pipelineV3.concatenate_markdown_pages(markdown_list).get("markdown_texts")
 
         mkd_file_path = self.output / f"{Path(input_file).stem}_{str(threshold)}.md"
         mkd_file_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(mkd_file_path, "w", encoding="utf-8") as f:
-            f.write(markdown_texts)
+        for page_num, res in enumerate(output):
+            if self.calc_ocr_confidence(res):
+                page = doc[page_num]
+                page_text = self.predictVLM(page)
+                markdown_list.append({"markdown_texts": page_text, "markdown_images": {}})
+                markdown_images.append({})
+
+            else:
+                md_info = res.markdown
+                markdown_list.append(md_info)
+                markdown_images.append(md_info.get("markdown_images", {}))
+
+
+        markdown_texts = self.pipelineV3.concatenate_markdown_pages(markdown_list).get("markdown_texts")
 
         for item in markdown_images:
             if item:
                 for path, image in item.items():
-                    file_path = self.output / path
-                    file_path.parent.mkdir(parents=True, exist_ok=True)
-                    image.save(file_path)
+                    # file_path = self.output / path
+                    # file_path.parent.mkdir(parents=True, exist_ok=True)
+                    # image.save(file_path)
+
+                    image_text = self.predictImage(image)
+
+                    markdown_texts += image_text
+
+        with open(mkd_file_path, "w", encoding="utf-8") as f:
+            f.write(markdown_texts)
 
         return markdown_texts
 
@@ -238,6 +312,7 @@ class OCR():
 
         return response.response
 
+
     def clean_text(self, prompt: str) -> str:
         """
         Query an LLM model with a prompt that cleans the returned chunk
@@ -253,6 +328,7 @@ class OCR():
         )
 
         return response.response
+
 
     def determine_if_OCR(self, pdf_path: Path) -> bool:
         """
@@ -278,6 +354,7 @@ class OCR():
 
         return True
 
+
     def safe_pop(self, lst: list) -> str:
         """
         Safely pops the first item from a chunk list or returns an empty string if none
@@ -291,7 +368,42 @@ class OCR():
             return ""
 
 
-    def ocr_test(self, pdf_path: Path, threshold: int) -> str:
+    def ocr_test(
+        self,
+        pdf_path: Path,
+        threshold: float,
+        layout_nms: bool = True,
+        table_rec: bool = True,
+        formula_rec: bool = True,
+        doc_orientation_classify: bool = True,
+        doc_unwarping: bool = True,
+        region_detection: bool = True,
+        textline_orientation: bool = False,
+        layout_unclip_ratio: float = 1.0,
+        layout_merge_bboxes_mode: str | float | None = None,
+    ) -> str:
+        """
+        OCR testing function.
+
+        :param pdf_path: Path object of PDF to process
+        :param threshold: layout detection score threshold (0-1). Higher = stricter,
+            may drop valid regions
+        :param layout_nms: apply Non-Maximum Suppression to layout detection
+        :param table_rec: enable table structure recognition
+        :param formula_rec: enable formula/LaTeX recognition
+        :param doc_orientation_classify: detect and correct whole-page rotation
+        :param doc_unwarping: correct perspective/curvature distortion
+        :param region_detection: enable macro region grouping pass
+        :param textline_orientation: detect rotated individual text lines
+        :param layout_unclip_ratio: expand/shrink detected layout boxes (>0, default 1.0)
+        :param layout_merge_bboxes_mode: overlapping-box merge strategy for layout detection
+        :return: string with prediction result
+        """
+        ocr_model = PPStructureV3(
+            text_recognition_model_name="en_PP-OCRv4_mobile_rec",
+            device = "gpu" if self.gpu else "cpu",
+        )
+
         if not pdf_path.is_file():
             return
 
@@ -303,12 +415,15 @@ class OCR():
         output = self.pipelineV3.predict(
             input=str(input_file),
             layout_threshold=threshold,
-            layout_nms=True,
-            use_table_recognition=True,
-            use_formula_recognition=True,
-            use_doc_orientation_classify=True,
-            use_doc_unwarping=True,
-            use_region_detection=True
+            layout_nms=layout_nms,
+            layout_unclip_ratio=layout_unclip_ratio,
+            layout_merge_bboxes_mode=layout_merge_bboxes_mode,
+            use_table_recognition=table_rec,
+            use_formula_recognition=formula_rec,
+            use_doc_orientation_classify=doc_orientation_classify,
+            use_doc_unwarping=doc_unwarping,
+            use_region_detection=region_detection,
+            use_textline_orientation=textline_orientation,
         )
 
         markdown_list = []
@@ -340,19 +455,12 @@ if __name__ == "__main__":
     # print(ocr_out)
 
     input_file5 = Path("./pdfs/Signed_2023_Annual_Return_NOT_AUDITED[1]_unlocked.pdf")
-    # ocr.predictVLM(input_file5)
-    ocr.output_document(input_file5, False)
+    ocr.predictVLM(input_file5)
+    # ocr.output_document(input_file5, False)
+
+    # input_file6 = Path("./pdfs/Investment Strategy.pdf")
+    # ocr.output_document(input_file6, False)
 
     # ocr.output_document(input_file4)
     # input_file3 = Path("./pdfs/deed.pdf")
     # ocr.predictV3(input_file3)
-
-    # prompt = (
-    #     "The EU AI Act was passed in 2024 and regulates artificial intelligence systems across Europe."
-    #     "||"
-    #     "The EU Al Act was pased in 2024 and reguletes artifical intelligance systems acros Europ."
-    #     "||"
-    #     "The EU AI Act was passed in 2024 and regulates artificial intelligence systems across Europe."
-    # )
-
-    # print(ocr.align_text(prompt))
