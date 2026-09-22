@@ -1,0 +1,71 @@
+
+==========================================================================================
+../pdfs/Project_26.pdf
+==========================================================================================
+Removed TOC blocks: 0
+
+TOC rule matches are a filter consistency check, not independently measured leakage.
+Containment checks local entries, not fetched Pinecone records.
+Extracted text: 1,121 chars
+Detection method: whole-document-fallback (headings found: 0)
+
+Total chunks:            3
+Leaf length avg/min/max: 432 / 334 / 547 chars
+Parent length avg:       1121 chars
+
+Parent-contains-child rate:  100.0%
+Parent == child rate:        0.0%
+Possible mid-sentence cuts:  66.7% (2 chunks, 2 boundaries)
+Retained TOC-rule match rate:       0.0%
+Local parent contains full child: 100.0%
+
+No storage containment failures detected.
+
+------------------------------------------------------------------------------------------
+POSSIBLE CUT POINTS
+------------------------------------------------------------------------------------------
+
+Cut #1 — Chunk 1 (end boundary within its parent)
+
+Text before boundary:
+n:
+● RAG (Retrieval-Augmented Generation) chatbot to answer advisor questions
+● Uses documents stored in S3
+● Provides compliant, consistent, explainable answers
+Requirements:
+Objectives
+● Provide advisors with instant access to policies, procedures,
+
+Text after boundary:
+ guidelines
+● Provide advisors with the current updates or issues with the documents
+● Reduce human dependency and turnaround time
+● Ensure consistent communication
+Architecture Overview (initial reference)
+Include RAG pipeline:
+1. Document ingestion
+
+............................................................
+
+Cut #2 — Chunk 2 (start boundary within its parent)
+
+Text before boundary:
+au
+Client Name: Champ Mendis
+Client: Triple A Super Pty Ltd
+Title: RAG-Based Chatbot for Advisors
+Description:
+● RAG (Retrieval-Augmented Generation) chatbot to answer advisor questions
+● Uses documents stored in S3
+● Provides compliant, consistent, 
+
+Text after boundary:
+explainable answers
+Requirements:
+Objectives
+● Provide advisors with instant access to policies, procedures, guidelines
+● Provide advisors with the current updates or issues with the documents
+● Reduce human dependency and turnaround time
+● Ensure co
+
+............................................................

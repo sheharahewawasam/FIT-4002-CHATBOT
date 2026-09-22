@@ -233,7 +233,7 @@ def chat_with_advisor_bot(request):
 
         for i, item in enumerate(reranked):
             metadata = item["result"].get("metadata", {})
-            chunk_text = (metadata.get("text", "") or metadata.get("child_match_text", ""))[:1500]
+            chunk_text = (metadata.get("text", "") or metadata.get("child_match_text", ""))
             source_name = metadata.get("source_url", "Unknown")
             fund_name = metadata.get("fund_name", "Unknown")
             context_text += f"--- Source: {source_name} ({fund_name}) ---\n{chunk_text}\n\n"
