@@ -3,6 +3,7 @@ import re
 import hashlib
 import pdfplumber
 from dotenv import load_dotenv
+import difflib
 from pinecone import Pinecone, ServerlessSpec
 from pinecone_text.sparse import BM25Encoder
 from sentence_transformers import SentenceTransformer
@@ -305,6 +306,24 @@ def build_section_based_chunks(full_text, base_metadata):
 
     return entries
 
+def combine_text(ocr_string, pdf_string) -> str:
+    """
+    Combines two different strings into one string, removing duplicate words
+    """
+    s = difflib.SequenceMatcher(None, ocr_string, pdf_string)
+    merged_chunks = []
+
+    for tag, i1, i2, j1, j2 in s.get_opcodes():
+        if tag == 'equal':
+            merged_chunks.append(ocr_string[i1:i2])
+        elif tag == 'delete':
+            merged_chunks.append(ocr_string[i1:i2])
+        elif tag in ('insert', 'replace'):
+            merged_chunks.append(pdf_string[j1:j2])
+
+    result = "".join(merged_chunks)
+
+    return result
 
 def main():
     print("Loading OCR model...")
