@@ -63,6 +63,23 @@ def build_access_filter(fund_names, owner_name):
     return {"$or": clauses}
 
 
+def permitted_funds(advisor, requested):
+    """
+    The funds this request may actually read.
+
+    `requested` is whatever the client asked for and carries no authority: it
+    narrows the advisor's own grant and can never widen it. Asking for a fund
+    they do not hold is not an error, it simply does not appear - so a caller
+    cannot probe which funds exist by watching for a different response.
+
+    Returns the advisor's full grant when nothing specific was asked for.
+    """
+    granted = set(advisor.fund_names())
+    if not requested:
+        return sorted(granted)
+    return sorted(granted & {str(f) for f in requested})
+
+
 def build_date_filter(access_filter, date_from, date_to):
     """
     Narrow an access filter to a document date range.
@@ -214,8 +231,17 @@ def get_chat_response(system_prompt, user_query):
 @throttle_classes([ChatbotRateThrottle])
 def chat_with_advisor_bot(request):
     user_query = request.data.get("query")
-    funds = request.data.get("funds", [])
-    acting_user = request.data.get("user")
+
+    # Identity is the signed-in session, never the request body. The body used
+    # to supply both the name and the fund list, so any caller could read any
+    # fund by naming it; the name is now ignored and the list only narrows.
+    advisor = getattr(request.user, "advisor", None)
+    if advisor is None:
+        return JsonResponse(
+            {"error": "This account is not set up as an advisor."}, status=403)
+
+    acting_user = advisor.name
+    funds = permitted_funds(advisor, request.data.get("funds", []))
     date_from = date_string_to_numeric(request.data.get("date_from"))
     date_to = date_string_to_numeric(request.data.get("date_to"))
     if not user_query:
@@ -258,11 +284,12 @@ def chat_with_advisor_bot(request):
         ).tolist()
 
         # 2. Vector search
-        access_filter = build_access_filter(funds, request.data.get("user"))
+        access_filter = build_access_filter(funds, acting_user)
         if access_filter is None:
             return JsonResponse({
                 "answer": "Select a fund, or upload a document, before asking a question.",
                 "citations": [],
+                "session_expired": session_expired,
             })
 
         raw_results = perform_vector_search(query_embedding, user_query, access_filter,

@@ -154,10 +154,36 @@ SESSION_COOKIE_AGE = 1800
 SESSION_SAVE_EVERY_REQUEST = True
 
 REST_FRAMEWORK = {
+    # Closed by default. An endpoint that should be reachable without signing in
+    # has to say so with @permission_classes([AllowAny]) - which is only the
+    # three in rag_api/auth.py. Adding a view no longer means remembering to
+    # protect it; forgetting now denies rather than exposes.
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
     'DEFAULT_THROTTLE_RATES': {
         'chatbot': '10/min',
+        # Sign-in attempts, per IP. Slow enough to make guessing the password
+        # impractical, loose enough to survive someone mistyping it.
+        'login': '10/min',
     }
 }
+
+# The session cookie is the credential once signed in, so keep it away from
+# JavaScript and from cross-site requests.
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+
+# Cookies marked Secure are not sent over plain HTTP, which would lock out the
+# HTTP-only deployment entirely. Turn this on with the TLS certificate, via
+# DJANGO_SECURE_COOKIES=true, and not before.
+_secure_cookies = os.getenv('DJANGO_SECURE_COOKIES', 'false').lower() in ('1', 'true', 'yes')
+SESSION_COOKIE_SECURE = _secure_cookies
+CSRF_COOKIE_SECURE = _secure_cookies
 
 # Uploaded documents are stored here; ingestion reads them from disk.
 MEDIA_URL = 'media/'

@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from django.db import models
 
 
@@ -16,11 +17,18 @@ class Advisor(models.Model):
     """
     An advisor using the chatbot.
 
-    This replaces the hardcoded dict that used to live in users.py. There is
-    deliberately no password here yet - identity is still supplied by the
-    client. When real authentication lands this should become a OneToOne with
-    django.contrib.auth.User rather than an identity of its own.
+    Identity now comes from the linked auth User; this model carries only what
+    is specific to advising, which is the set of funds they may read. Look an
+    advisor up as request.user.advisor and never from anything in the request
+    body - the fund grant below is an access boundary, so the identity it hangs
+    off has to be one the client cannot choose.
+
+    user is nullable only so the column could be added to existing rows. Every
+    advisor gets one in the same migration, and an advisor without a user
+    cannot sign in.
     """
+    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True,
+                                related_name="advisor")
     name = models.CharField(max_length=100, unique=True)
     funds = models.ManyToManyField(Fund, related_name="advisors", blank=True)
 

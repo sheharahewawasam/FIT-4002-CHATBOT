@@ -28,6 +28,52 @@
         @media (prefers-reduced-motion: reduce) {
             .thinking-dots span { animation: none; opacity: 0.6; }
         }
+
+        /* --- Sign-in ------------------------------------------------------ */
+        .login-screen {
+            position: fixed; inset: 0; z-index: 100;
+            display: flex; align-items: center; justify-content: center;
+            background: #2c3e50; padding: 20px;
+        }
+        .login-card {
+            background: white; border-radius: 10px; padding: 28px;
+            width: 100%; max-width: 340px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+        }
+        .login-card h1 { margin: 0; font-size: 1.25em; color: #2c3e50; }
+        .login-sub { margin: 4px 0 20px; color: #777; font-size: 0.85em; }
+        .login-card label {
+            display: block; font-size: 0.8em; color: #555;
+            margin-bottom: 4px; margin-top: 12px;
+        }
+        .login-card input {
+            width: 100%; padding: 9px 10px; font-size: 0.95em;
+            border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box;
+        }
+        .login-card input:focus { outline: 2px solid #3498db; border-color: transparent; }
+        .login-card button {
+            width: 100%; margin-top: 20px; padding: 10px;
+            background: #3498db; color: white; border: none;
+            border-radius: 6px; font-size: 0.95em; cursor: pointer;
+        }
+        .login-card button:hover:not(:disabled) { background: #2980b9; }
+        .login-card button:disabled { background: #9bbfd8; cursor: default; }
+        .login-error {
+            color: #c0392b; font-size: 0.82em; margin-top: 12px; min-height: 1em;
+        }
+
+        .whoami {
+            display: flex; align-items: center; gap: 8px;
+            justify-content: center; font-size: 0.9em;
+        }
+        .whoami span { font-weight: 600; }
+        .whoami button {
+            background: rgba(255,255,255,0.15); color: inherit;
+            border: 1px solid rgba(255,255,255,0.35);
+            border-radius: 5px; padding: 3px 9px; font-size: 0.82em; cursor: pointer;
+        }
+        .whoami button:hover { background: rgba(255,255,255,0.28); }
+
         .selector-group select {
             width: 180px;
             padding: 8px;
@@ -99,18 +145,37 @@
 </head>
 <body>
 
+<!-- Covers the app until /api/auth/me/ says who is signed in. Hidden rather
+     than absent so nothing flashes on a reload with a live session. -->
+<div id="login-screen" class="login-screen" hidden>
+    <form class="login-card" id="login-form" autocomplete="on">
+        <h1>Triple A Super</h1>
+        <p class="login-sub">Advisor sign-in</p>
+
+        <label for="login-username">Username</label>
+        <input type="text" id="login-username" name="username"
+               autocomplete="username" autocapitalize="none" spellcheck="false" required>
+
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" name="password"
+               autocomplete="current-password" required>
+
+        <button type="submit" id="login-btn">Sign in</button>
+        <div class="login-error" id="login-error" role="alert"></div>
+    </form>
+</div>
+
+<div id="app" hidden>
 <div class="chat-container">
     <div class="header">
         <h2>Triple A Super Advisor AI</h2>
         <div class="toolbar">
             <div class="selector-group">
-                <label for="user">User</label>
-                <select id="user">
-                    <option value="">Select user...</option>
-                    <option value="John">John</option>
-                    <option value="Emily">Emily</option>
-                    <option value="Jake">Jake</option>
-                </select>
+                <label>Signed in as</label>
+                <div class="whoami">
+                    <span id="current-user">-</span>
+                    <button type="button" id="logout-btn" onclick="signOut()">Sign out</button>
+                </div>
             </div>
 
             <div class="selector-group">
@@ -179,6 +244,8 @@
     </div>
 </div>
 
+</div><!-- /#app -->
+
 <script>
     // Relative, so the page talks to whichever host served it. Absolute
     // 127.0.0.1 URLs meant a page served from a remote host would call the
@@ -227,8 +294,7 @@
         const query = inputField.value.trim();
         if (!query) return;
 
-        const selectedUser = document.getElementById('user').value;
-        if (!selectedUser) { addMessage("Please select a user first.", 'bot-msg'); return; }
+        if (!signedInAs) { showLogin('Please sign in.'); return; }
 
         const selectedFunds = Array.from(
             document.querySelectorAll('input[name="doc-type"]:checked')
@@ -251,14 +317,15 @@
         askButton.disabled = true;
 
         try {
-            const response = await fetch(API_URL, {
+            // No "user" field: the server takes the advisor from the session.
+            // Sending one would be ignored, and implying otherwise invites a
+            // future caller to think it means something.
+            const response = await api(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
                 body: JSON.stringify({
                     query: query,
                     funds: selectedFunds,
-                    user: selectedUser,
                     date_from: dateFrom || null,
                     date_to: dateTo || null
                 })
@@ -418,97 +485,147 @@
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    const API_BASE = '/users';
+    /* --- Session ---------------------------------------------------------
+       Identity lives in the session cookie, not in this page. signedInAs is
+       only for display and for the places that still label a request; the
+       server derives the advisor from the session and ignores anything we
+       send about who we are.
+    -------------------------------------------------------------------- */
+    let signedInAs = null;
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const userSelect = document.getElementById('user');
-        const checkboxGroup = document.querySelector('.checkbox-group');
+    function csrfToken() {
+        const hit = document.cookie.split('; ').find(c => c.startsWith('csrftoken='));
+        return hit ? decodeURIComponent(hit.split('=')[1]) : '';
+    }
 
-        // 1. Fetch and populate users on page load
-        fetch(API_BASE + '/')
-            .then(response => {
-                if (!response.ok) throw new Error('Failed to fetch users');
-                return response.json();
-            })
-            .then(data => {
-                // Keep the default "Select user..." option, clear any hardcoded ones if necessary
-                userSelect.innerHTML = '<option value="">Select user...</option>';
-                
-                data.users.forEach(username => {
-                    const option = document.createElement('option');
-                    option.value = username;
-                    option.textContent = username;
-                    userSelect.appendChild(option);
-                });
-            })
-            .catch(error => console.error('Error loading users:', error));
+    // Every call to this API goes through here: it carries the session cookie,
+    // adds the CSRF header Django requires on unsafe methods, and turns a
+    // session that has ended into the login screen rather than a stray error.
+    async function api(path, options) {
+        const opts = Object.assign({ credentials: 'same-origin' }, options || {});
+        const method = (opts.method || 'GET').toUpperCase();
+        opts.headers = Object.assign({}, opts.headers);
+        if (method !== 'GET' && method !== 'HEAD') {
+            opts.headers['X-CSRFToken'] = csrfToken();
+        }
+        const response = await fetch(path, opts);
+        if ((response.status === 401 || response.status === 403) && signedInAs) {
+            // Signed in a moment ago, refused now: the session lapsed.
+            showLogin('Your session has ended. Please sign in again.');
+        }
+        return response;
+    }
 
-    // 2. Listen for user selection changes to load their funds
-    userSelect.addEventListener('change', (event) => {
-        const selectedUser = event.target.value;
+    function showLogin(message) {
+        signedInAs = null;
+        document.getElementById('app').hidden = true;
+        const screen = document.getElementById('login-screen');
+        screen.hidden = false;
+        document.getElementById('login-error').textContent = message || '';
+        document.getElementById('login-password').value = '';
+        document.getElementById('login-username').focus();
+    }
 
-        // If they selected the blank placeholder, clear the checkboxes
-        if (!selectedUser) {
-            checkboxGroup.innerHTML = '<p style="color: #666; font-size: 0.9em;">Select a user to view avaliable funds</p>';
+    function showApp(user) {
+        signedInAs = user.advisor;
+        document.getElementById('login-screen').hidden = true;
+        document.getElementById('app').hidden = false;
+        document.getElementById('current-user').textContent = user.advisor;
+        renderFunds(user.funds || []);
+        onUserChangedForDocs();
+    }
+
+    // Funds come from the signed-in session. The checkboxes only narrow that
+    // set - the server intersects whatever is sent with the advisor's own
+    // grant, so ticking a box cannot reach a fund they were not given.
+    function renderFunds(funds) {
+        const group = document.querySelector('.checkbox-group');
+        group.innerHTML = '';
+        if (!funds.length) {
+            group.innerHTML = '<span style="color:#666;font-size:0.9em;">No funds are assigned to this account.</span>';
             return;
         }
+        funds.forEach(fund => {
+            const label = document.createElement('label');
+            label.className = 'checkbox-label';
+            const box = document.createElement('input');
+            box.type = 'checkbox';
+            box.name = 'doc-type';
+            box.value = fund;
+            box.checked = true;
+            label.appendChild(box);
+            label.appendChild(document.createTextNode(' ' + fund));
+            group.appendChild(label);
+        });
+    }
 
-        // Show a brief loading indicator inside the checkbox group
-        checkboxGroup.innerHTML = '<span>Loading funds...</span>';
+    async function signIn(event) {
+        event.preventDefault();
+        const btn = document.getElementById('login-btn');
+        const errorEl = document.getElementById('login-error');
+        btn.disabled = true;
+        errorEl.textContent = '';
 
-        // Force absolute path routing and ensure the trailing slash is strictly present
-        const cleanUrl = `${API_BASE}/${encodeURIComponent(selectedUser)}/`;
-
-        console.log("Fetching funds from:", cleanUrl); // 👈 Check your browser console to see this path!
-
-        fetch(cleanUrl)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Server responded with status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(res => {
-                // Your API returns {"data": [...]}, let's fallback safely if data is missing
-                const funds = res.data || [];
-                
-                // Clear the container
-                checkboxGroup.innerHTML = '';
-
-                if (funds.length === 0) {
-                    checkboxGroup.innerHTML = '<span>No funds found for this user.</span>';
-                    return;
-                }
-
-                // Generate a checkbox for every fund returned by Django
-                funds.forEach(fund => {
-                    const label = document.createElement('label');
-                    label.className = 'checkbox-label';
-
-                    const checkbox = document.createElement('input');
-                    checkbox.type = 'checkbox';
-                    checkbox.name = 'doc-type';
-                    checkbox.value = fund;
-
-                    label.appendChild(checkbox);
-                    label.appendChild(document.createTextNode(` ${fund}`));
-                    
-                    checkboxGroup.appendChild(label);
-                });
-            })
-            .catch(error => {
-                console.error('Error loading funds:', error);
-                checkboxGroup.innerHTML = '<span style="color: red;">Error loading knowledge sources</span>';
+        try {
+            const response = await api('/api/auth/login/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: document.getElementById('login-username').value,
+                    password: document.getElementById('login-password').value
+                })
             });
-    });
-    });
+            const data = await response.json();
+            if (!response.ok) {
+                errorEl.textContent = data.error || 'Sign-in failed.';
+                if (response.status === 429) {
+                    errorEl.textContent = 'Too many attempts. Please wait a minute.';
+                }
+                return;
+            }
+            document.getElementById('login-password').value = '';
+            showApp(data.user);
+        } catch (err) {
+            errorEl.textContent = 'Could not reach the server.';
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    async function signOut() {
+        try {
+            await api('/api/auth/logout/', { method: 'POST' });
+        } catch (err) {
+            // Ending the local session matters more than the server confirming.
+        }
+        document.getElementById('chat-box').querySelectorAll('.message').forEach((m, i) => {
+            if (i > 0) m.remove();   // keep the greeting, drop the transcript
+        });
+        showLogin('');
+    }
+
+    // Decides on load whether this browser already has a session.
+    async function startSession() {
+        try {
+            const response = await api('/api/auth/me/');
+            const data = await response.json();
+            if (data.authenticated) {
+                showApp(data.user);
+            } else {
+                showLogin('');
+            }
+        } catch (err) {
+            showLogin('Could not reach the server.');
+        }
+    }
+
 
     /* --- Documents: upload, status polling, deletion -------------------- */
     const DOCS_API = '/api/documents/';
     let docsPollTimer = null;
 
     function currentUser() {
-        return document.getElementById('user').value;
+        return signedInAs;
     }
 
     function escapeHtmlDoc(str) {
@@ -546,7 +663,7 @@
 
     function populateUploadFunds(user) {
         const select = document.getElementById('doc-fund');
-        fetch(API_BASE + '/' + encodeURIComponent(user) + '/')
+        fetch('/users/' + encodeURIComponent(user) + '/', { credentials: 'same-origin' })
             .then(r => r.ok ? r.json() : Promise.reject(new Error(r.status)))
             .then(res => {
                 select.innerHTML = '<option value="">No fund (private to you)</option>';
@@ -574,7 +691,6 @@
 
         const form = new FormData();
         form.append('file', file);
-        form.append('user', user);
         form.append('fund', document.getElementById('doc-fund').value);
         form.append('doc_type', document.getElementById('doc-kind').value);
 
@@ -585,7 +701,7 @@
         try {
             // The server accepts the file and ingests in the background, so a
             // 202 means queued, not searchable - the list below shows progress.
-            const response = await fetch(DOCS_API + 'upload/', { method: 'POST', body: form });
+            const response = await api(DOCS_API + 'upload/', { method: 'POST', body: form });
             const data = await response.json();
             if (!response.ok) {
                 setUploadMessage(data.error || 'Upload failed.', '#c0392b');
@@ -606,7 +722,7 @@
         const user = currentUser();
         if (!user) return;
         try {
-            const response = await fetch(DOCS_API + '?user=' + encodeURIComponent(user));
+            const response = await api(DOCS_API);
             if (!response.ok) return;
             const data = await response.json();
             applyUploadAvailability(data.uploads_enabled === true);
@@ -658,9 +774,7 @@
         if (!user) return;
         if (!confirm('Delete this document and remove it from the search index?')) return;
         try {
-            const response = await fetch(
-                DOCS_API + id + '/delete/?user=' + encodeURIComponent(user),
-                { method: 'DELETE' });
+            const response = await api(DOCS_API + id + '/delete/', { method: 'DELETE' });
             if (!response.ok) {
                 const data = await response.json();
                 setUploadMessage(data.error || 'Delete failed.', '#c0392b');
@@ -674,8 +788,8 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-        document.getElementById('user').addEventListener('change', onUserChangedForDocs);
-        onUserChangedForDocs();
+        document.getElementById('login-form').addEventListener('submit', signIn);
+        startSession();
     });
 </script>
 

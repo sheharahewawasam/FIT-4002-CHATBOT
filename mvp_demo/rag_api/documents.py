@@ -1,10 +1,11 @@
 """
 Document upload and management endpoints.
 
-Identity is still supplied by the client (an advisor name), matching the
-existing /users/ endpoints. That is spoofable and must be replaced by
-request.user once authentication lands - the checks below are deliberately
-written so that swapping in a real authenticated user touches one line each.
+Identity comes from the signed-in session. It used to be an advisor name in the
+request body, which any caller could set to any value; every endpoint here now
+resolves the advisor from request.user instead, and each one scopes its query by
+that advisor so a document belonging to somebody else cannot be reached by
+guessing its id.
 """
 import os
 import uuid
@@ -15,7 +16,7 @@ from rest_framework.decorators import api_view, parser_classes
 from rest_framework.parsers import MultiPartParser, FormParser
 
 from .ingestion import delete_document_vectors, start_ingestion
-from .models import Advisor, Document, Fund
+from .models import Document, Fund
 
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 ALLOWED_EXTENSIONS = {".pdf"}
@@ -43,14 +44,19 @@ def _serialise(doc):
     }
 
 
-def _resolve_advisor(name):
-    """Look up the acting advisor. Replace with request.user once auth exists."""
-    if not name:
-        return None, JsonResponse({"error": "A user must be selected."}, status=400)
-    try:
-        return Advisor.objects.get(name=name), None
-    except Advisor.DoesNotExist:
-        return None, JsonResponse({"error": f"Unknown user '{name}'."}, status=404)
+def _resolve_advisor(request):
+    """
+    The advisor for the signed-in user.
+
+    IsAuthenticated has already run, so an anonymous caller never arrives here.
+    What remains is an auth user with no advisor record, which has no funds and
+    therefore no documents.
+    """
+    advisor = getattr(request.user, "advisor", None)
+    if advisor is None:
+        return None, JsonResponse(
+            {"error": "This account is not set up as an advisor."}, status=403)
+    return advisor, None
 
 
 @api_view(["POST"])
@@ -60,7 +66,7 @@ def upload_document(request):
         return JsonResponse(
             {"error": "Document uploads are disabled on this server."}, status=403)
 
-    advisor, err = _resolve_advisor(request.data.get("user"))
+    advisor, err = _resolve_advisor(request)
     if err:
         return err
 
@@ -115,7 +121,7 @@ def upload_document(request):
 
 @api_view(["GET"])
 def list_documents(request):
-    advisor, err = _resolve_advisor(request.query_params.get("user"))
+    advisor, err = _resolve_advisor(request)
     if err:
         return err
     docs = Document.objects.filter(owner=advisor).select_related("fund")
@@ -129,8 +135,14 @@ def list_documents(request):
 
 @api_view(["GET"])
 def document_status(request, doc_id):
+    advisor, err = _resolve_advisor(request)
+    if err:
+        return err
     try:
-        doc = Document.objects.select_related("fund", "owner").get(pk=doc_id)
+        # Scoped by owner: this used to fetch on the id alone, so any signed-in
+        # caller could read the filename, fund and progress of anyone's upload
+        # by counting upwards. Not found and not yours are the same answer.
+        doc = Document.objects.select_related("fund", "owner").get(pk=doc_id, owner=advisor)
     except Document.DoesNotExist:
         return JsonResponse({"error": "Document not found."}, status=404)
     return JsonResponse({"document": _serialise(doc)})
@@ -138,7 +150,7 @@ def document_status(request, doc_id):
 
 @api_view(["DELETE"])
 def delete_document(request, doc_id):
-    advisor, err = _resolve_advisor(request.query_params.get("user"))
+    advisor, err = _resolve_advisor(request)
     if err:
         return err
     try:
