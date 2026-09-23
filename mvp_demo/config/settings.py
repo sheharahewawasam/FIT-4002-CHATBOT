@@ -185,6 +185,23 @@ _secure_cookies = os.getenv('DJANGO_SECURE_COOKIES', 'false').lower() in ('1', '
 SESSION_COOKIE_SECURE = _secure_cookies
 CSRF_COOKIE_SECURE = _secure_cookies
 
+# Behind nginx, Django receives a plain HTTP request even when the browser used
+# HTTPS, so request.is_secure() is False and Django believes the site is on
+# HTTP. nginx already sends X-Forwarded-Proto; this is what makes Django trust
+# it. Only safe because nothing but nginx can reach gunicorn - it binds
+# 127.0.0.1 and port 8000 is closed at the security group. If gunicorn were ever
+# exposed directly, a client could set the header itself and claim to be secure.
+if os.getenv('DJANGO_TRUST_PROXY_PROTO', 'false').lower() in ('1', 'true', 'yes'):
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Django compares the browser's Origin header against these, scheme included,
+# on every unsafe request. ALLOWED_HOSTS is not enough: a host listed there is
+# still rejected when the origin says https and Django thinks it is on http.
+# Getting this wrong makes sign-in fail over HTTPS with a CSRF error while
+# working perfectly over HTTP.
+_csrf_origins = os.getenv('DJANGO_CSRF_TRUSTED_ORIGINS', '')
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_origins.split(',') if o.strip()]
+
 # Uploaded documents are stored here; ingestion reads them from disk.
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'

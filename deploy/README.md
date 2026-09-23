@@ -93,3 +93,74 @@ t2.medium: 2 vCPU, 3.8GB RAM, no swap, 8GB disk.
 - A query takes 20-25s, so real throughput is 2-3 per minute while the throttle
   allows 10/min. Concurrent users queue behind each other.
 - `/var/log/chatbot-*.log` and `audit_logs/` have no rotation yet.
+
+## 8. TLS
+
+nginx already terminates TLS on 443 with a self-signed certificate, so traffic
+is encrypted but no browser trusts it. Making it trusted needs a hostname:
+Let's Encrypt will not issue for a bare IP, and `*.amazonaws.com` is on the
+Public Suffix List, so the instance's own DNS name is not usable either.
+
+### 8a. A name that resolves here
+
+Either a subdomain of a domain the client controls (an A record to this
+instance's public IP), or a free DuckDNS subdomain.
+
+For DuckDNS: create the subdomain at https://www.duckdns.org, then keep it
+current, because an EC2 public IP that is not Elastic changes on stop/start and
+a stale record breaks both the site and certificate renewal:
+
+    sudo install -m 700 -o ec2-user -g ec2-user \
+        /opt/chatbot/app/deploy/duckdns-update.sh /opt/chatbot/duckdns-update.sh
+    printf 'DUCKDNS_DOMAIN=yourname\nDUCKDNS_TOKEN=your-token\n' > /opt/chatbot/duckdns.env
+    chmod 600 /opt/chatbot/duckdns.env
+    /opt/chatbot/duckdns-update.sh && echo updated
+    ( crontab -l 2>/dev/null; echo '*/5 * * * * /opt/chatbot/duckdns-update.sh' ) | crontab -
+
+`DUCKDNS_DOMAIN` is the subdomain only - `yourname`, not `yourname.duckdns.org`.
+
+### 8b. The certificate
+
+Wait until the name resolves to this instance, then:
+
+    sudo /opt/chatbot/app/deploy/enable-tls.sh yourname.duckdns.org you@example.com
+
+That installs certbot, names the nginx server blocks (certbot matches on
+`server_name`, and they ship as `_`), requests the certificate, adds the
+80 -> 443 redirect, enables the renewal timer, and sets the four environment
+variables below before restarting the service.
+
+### 8c. Why Django needs changing too
+
+nginx terminates TLS, so Django receives a plain HTTP request even when the
+browser used HTTPS. Left alone, `request.is_secure()` is False and Django
+rejects the browser's `https://` Origin on every POST - sign-in fails with a
+CSRF error over HTTPS while working perfectly over HTTP. Four variables in
+`secrets.env` fix it, all set by the script:
+
+    DJANGO_TRUST_PROXY_PROTO=true              # trust nginx's X-Forwarded-Proto
+    DJANGO_CSRF_TRUSTED_ORIGINS=https://<host> # Origin is compared with scheme
+    DJANGO_SECURE_COOKIES=true                 # session/CSRF cookies HTTPS-only
+    DJANGO_ALLOWED_HOSTS=...,<host>            # the new name
+
+`DJANGO_TRUST_PROXY_PROTO` is only safe because nothing but nginx can reach
+gunicorn: it binds 127.0.0.1 and 8000 is closed at the security group. If
+gunicorn were ever exposed directly, a client could send the header itself and
+claim to be secure.
+
+Leave all four unset for local development - the defaults keep plain HTTP
+working.
+
+### 8d. Verifying
+
+    curl -sS -o /dev/null -w '%{http_code}\n' https://<host>/           # 200, no -k
+    curl -sS -o /dev/null -w '%{http_code} %{redirect_url}\n' http://<host>/   # 301 to https
+    sudo certbot certificates                                           # expiry
+    systemctl list-timers certbot-renew.timer
+
+Then sign in through a real browser: a padlock with no warning, and the login
+POST succeeding, is what confirms 8c is right.
+
+HSTS is deliberately not enabled. Browsers cache it for months, so it is
+painful to unwind if the hostname changes - worth adding once the name is
+final.
