@@ -151,7 +151,17 @@ claim to be secure.
 Leave all four unset for local development - the defaults keep plain HTTP
 working.
 
-### 8d. Verifying
+### 8d. The bare IP
+
+certbot writes its redirect as `if ($host = <name>)`, which only fires when the
+Host header matches the certificate. That same block is also the default server
+for port 80, so a request to `http://<ip>/` fell straight through it and was
+served unencrypted - the whole application, sign-in included. The port 80 block
+here redirects unconditionally instead. Renewal is unaffected: Let's Encrypt
+follows redirects when fetching the HTTP-01 challenge, which `certbot renew
+--dry-run` confirms.
+
+### 8e. Verifying
 
     curl -sS -o /dev/null -w '%{http_code}\n' https://<host>/           # 200, no -k
     curl -sS -o /dev/null -w '%{http_code} %{redirect_url}\n' http://<host>/   # 301 to https
