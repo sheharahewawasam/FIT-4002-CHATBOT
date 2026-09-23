@@ -5,11 +5,12 @@ from chonkie import SemanticChunker
 from ollama import generate, chat
 import os
 import io
+import time
+import json
 
 # from langchain_text_splitters import MarkdownTextSplitter
 
 class OCR():
-    TEXT_MIN = 50
     CONF_SCORE = 0.85
     LOW_CONF_RATIO = 0.15
     LAYOUT_CONF_SCORE = 0.85
@@ -79,7 +80,7 @@ class OCR():
         data = res.json.get("res", res.json)
 
         ocr_res = data.get("overall_ocr_res", {})
-        texts = ocr.get("rec_texts", [])
+        texts = ocr_res.get("rec_texts", [])
         scores = ocr_res.get("rec_scores", [])
 
         if not scores:
@@ -121,6 +122,8 @@ class OCR():
         :param cleanup: Enable or disable LLM cleanup to reduce the time processing
         :return: text processed from the PDF
         """
+        start = time.perf_counter()
+
         if not os.path.exists(pdf_path):
             raise FileNotFoundError("Could not find file at: {pdf_path}")
 
@@ -155,6 +158,9 @@ class OCR():
         with open(mkd_file_path, "w", encoding="utf-8") as f:
             f.write(res)
 
+        end = time.perf_counter()
+        self.print_format(f"Execution time: {end-start} secs")
+
         return res
 
 
@@ -165,34 +171,37 @@ class OCR():
         :param pdf_path: Path object to PDF        
         """
         doc = pymu.open(pdf_path)
+        results = []
 
         for page_num in range(len(doc)):
             page = doc[page_num]
-
-            img = page.get_pixmap(dpi=150)
-            image_bytes = img.tobytes("png")
-
-            response = chat(
-                model='qwen3-vl',
-                messages=[
-                    {
-                        'role': 'user',
-                        'content': self.VLM_PROMPT,
-                        'images': [image_bytes]
-                    }
-                ],
-                format='json',
-                options={
-                    'num_ctx': 16384,
-                    'num_predict': -1,
-                }
-            )
-
-            # content = response['message']['content']
-
-            print(response['message']['content'])
+            page_text = self.predictVLMPage(page)
+            results.append(page_text)
 
         doc.close()
+
+        return "".join(results)
+
+
+    def predictVLMPage(self, page: pymu.Page) -> str:
+        img = page.get_pixmap(dpi=200)
+        image_bytes = img.tobytes("png")
+
+        response = chat(
+            model='qwen3-vl',
+            messages=[
+                {
+                    'role': 'user',
+                    'content': self.VLM_PROMPT,
+                    'images': [image_bytes]
+                }
+            ],
+            format='json',
+            options={
+                'num_ctx': 16384,
+                'num_predict': -1,
+            }
+        )
 
         return response['message']['content']
 
@@ -243,6 +252,8 @@ class OCR():
         if not 0 <= threshold <= 1:
             return
 
+        self.print_format(f"Currently analysing {pdf_path.name}")
+
         input_file = str(pdf_path)
 
         output = self.pipelineV3.predict(
@@ -259,36 +270,63 @@ class OCR():
 
         doc = pymu.open(pdf_path)
         markdown_list = []
-        markdown_images = []
 
         mkd_file_path = self.output / f"{Path(input_file).stem}_{str(threshold)}.md"
         mkd_file_path.parent.mkdir(parents=True, exist_ok=True)
 
         for page_num, res in enumerate(output):
-            if self.calc_ocr_confidence(res):
+            page_json_path = self.output / f"{Path(input_file).stem}_{threshold}_page{page_num}.json"
+            res.save_to_json(str(page_json_path))
+
+            low_conf = self.calc_ocr_confidence(res)
+            self.print_format(f"Page {page_num} low_confidence={low_conf}")
+
+            vlm_success = False
+
+            if low_conf:
                 page = doc[page_num]
-                page_text = self.predictVLM(page)
-                markdown_list.append({"markdown_texts": page_text, "markdown_images": {}})
-                markdown_images.append({})
+                vlm_res = self.predictVLMPage(page)
 
-            else:
+                try:
+                    vlm_data = json.loads(vlm_res)
+                    blocks = vlm_data.get("blocks", [])
+                except (json.JSONDecodeError, TypeError):
+                    self.print_format(f"Failed to parse VLM JSON on page {page_num}, falling back to raw text")
+                    blocks = [vlm_res] if vlm_res else []
+
+                page_text = "\n\n".join(blocks)
+
+                if page_text:
+                    markdown_list.append({
+                        "markdown_texts": page_text,
+                        "markdown_images": {},
+                        "page_continuation_flags": (True, True),
+                    })
+
+                vlm_success = True
+
+            if not vlm_success:
                 md_info = res.markdown
-                markdown_list.append(md_info)
-                markdown_images.append(md_info.get("markdown_images", {}))
+                markdown_images = md_info.get("markdown_images", {})
 
+                if markdown_images:
+                    image_text = ""
+                    for item in markdown_images:
+                        if item:
+                            for path, image in item.items():
+                                file_path = self.output / path
+                                file_path.parent.mkdir(parents=True, exist_ok=True)
+                                image.save(file_path)
+            
+                                image_text += self.predictImage(image)
+            
+                            md_info["markdown_texts"] = md_info.get("markdown_texts", "") + image_text
+
+                markdown_list.append(md_info)
+
+        doc.close()
 
         markdown_texts = self.pipelineV3.concatenate_markdown_pages(markdown_list).get("markdown_texts")
-
-        for item in markdown_images:
-            if item:
-                for path, image in item.items():
-                    # file_path = self.output / path
-                    # file_path.parent.mkdir(parents=True, exist_ok=True)
-                    # image.save(file_path)
-
-                    image_text = self.predictImage(image)
-
-                    markdown_texts += image_text
 
         with open(mkd_file_path, "w", encoding="utf-8") as f:
             f.write(markdown_texts)
@@ -328,31 +366,6 @@ class OCR():
         )
 
         return response.response
-
-
-    def determine_if_OCR(self, pdf_path: Path) -> bool:
-        """
-        Read PDF to check if OCR solution is needed
-        Checks if more than 10% of pages have less words than TEXT_MIN
-
-        :param pdf_path: Path object of PDF to process
-        :return: boolean for if a PDF needs OCR or not
-        """
-        pdf = pymu.open(pdf_path)
-
-        total_pages = len(pdf)
-
-        count = 0
-        for page in pdf:
-            text = page.get_text("text", delimiters = "\n\r")
-            text = " ".join(text.split())
-            if len(text) < self.TEXT_MIN:
-                count += 1
-
-        if count < total_pages/10:
-            return False
-
-        return True
 
 
     def safe_pop(self, lst: list) -> str:
@@ -412,7 +425,7 @@ class OCR():
 
         input_file = str(pdf_path)
 
-        output = self.pipelineV3.predict(
+        output = ocr_model.predict(
             input=str(input_file),
             layout_threshold=threshold,
             layout_nms=layout_nms,
@@ -435,32 +448,29 @@ class OCR():
 
         return markdown_texts
 
+
+    def print_format(self, text: str):
+        print("------------------------------------------------------")
+        print(text)
+        print("------------------------------------------------------")
+
+
 if __name__ == "__main__":
     ocr = OCR(Path("./ocr_output"), False)
 
     # input_file = Path("./pdfs/Proposal Document.pdf")
-    # ocr.output_document(input_file)
 
-    # input_file2 = Path("./pdfs/scansmpl.pdf")
-    # ocr.output_document(input_file2)
+    # input_file = Path("./pdfs/scansmpl.pdf")
 
-    # input_file3 = Path("./pdfs/image-based-pdf-sample_rotated.pdf")
-    # ocr.output_document(input_file3)
+    # input_file = Path("./pdfs/image-based-pdf-sample_rotated.pdf")
 
-    # input_file4 = Path("./pdfs/atoform.pdf")
-    # vlm = ocr.predictVLM(input_file4)
-    # print(vlm)
+    input_file = Path("./pdfs/atoform.pdf")
 
-    # ocr_out = ocr.output_document(input_file4, False)
-    # print(ocr_out)
+    # input_file = Path("./pdfs/Investment Strategy.pdf")
 
-    input_file5 = Path("./pdfs/Signed_2023_Annual_Return_NOT_AUDITED[1]_unlocked.pdf")
-    ocr.predictVLM(input_file5)
-    # ocr.output_document(input_file5, False)
+    # input_file = Path("./pdfs/Signed_2023_Annual_Return_NOT_AUDITED[1]_unlocked.pdf")
 
-    # input_file6 = Path("./pdfs/Investment Strategy.pdf")
-    # ocr.output_document(input_file6, False)
 
-    # ocr.output_document(input_file4)
-    # input_file3 = Path("./pdfs/deed.pdf")
-    # ocr.predictV3(input_file3)
+    ocr.output_document(input_file, False)
+    # ocr.predictVLM(input_file)
+
