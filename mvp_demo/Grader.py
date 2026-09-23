@@ -1,5 +1,6 @@
 import os
 import django
+from contextlib import redirect_stdout
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 
@@ -12,7 +13,8 @@ from rag_api import views
 import json
 import ollama
 import re
-
+from pydantic import BaseModel
+import time
 #Testing pipeline for the RAG chatbot, for this we are using the sample, SUMMERS FAMILY SUPER FUND (deed.pdf in the repo) as the source of truth
 #REMINDER THAT IT RELIES ON A COPY AND PASTE OF THE RAG LOGIC FROM THE VIEWS.PY FILE SINCE THE LOGIC IS COUPLED, SO UPDATES TO THE RAG LOGIC SHOULD BE RECOPY PASTED BEFORE TESTING AGANE
 
@@ -21,8 +23,31 @@ _THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
 def strip_think_tags(text: str) -> str:
     return _THINK_RE.sub("", text).strip()
 
-def get_chat_response(system_prompt, user_query):
-    response = ollama.chat(model="qwen3",messages=[{"role": "system", "content": system_prompt},{"role": "user", "content": user_query}],stream=False ,options={"temperature": 0.0,"num_ctx": 8192},format="json")
+class GradeResult(BaseModel):
+    reasoning: str
+    correct: float
+
+class RelevanceResult(BaseModel):
+    reasoning: str
+    relevant: float
+
+class GroundednessResult(BaseModel):
+    reasoning: str
+    grounded: float
+
+class RetrievalRelevanceResult(BaseModel):
+    reasoning: str
+    retrel: float
+
+def get_chat_response(system_prompt, user_query, schema=None):
+    response = ollama.chat(
+        model="llama3.1:latest",
+        messages=[{"role": "system", "content": system_prompt},
+                  {"role": "user", "content": user_query}],
+        stream=False,
+        options={"temperature": 0.0, "num_ctx": 8192},
+        format=schema.model_json_schema() if schema else "json"
+    )
     return strip_think_tags(response["message"]["content"])
 
 def printRes(question:str,answer:str,grade:str,reasoning:str):
@@ -51,7 +76,7 @@ def correctness(question:str, sample:str):
 
     Explain your reasoning in a step-by-step manner to ensure your reasoning and conclusion are correct. Avoid simply stating the correct answer at the outset.
     Return as valid json with the first field being your reasoning, titled reasoning, and the second field being a number rating on how good the student did, titled correct.
-    so something like { "reasoning" : (Actual reasoning here), "correct" : (1.0-10.0)}
+    so EXACTLY LIKE { "reasoning" : (Actual reasoning here), "correct" : (1.0-10.0)} REMEMBER TO INCLUDE BOTH FIELDS ALWAYS
     """
     returnedAnswer = json.loads(views.rag_logic(question).content)["answer"]
     userPrompt = f"""
@@ -59,9 +84,10 @@ def correctness(question:str, sample:str):
     GROUND TRUTH : {sample}
     STUDENT ANSWERS : {returnedAnswer}
     """
-    grade = json.loads(get_chat_response(prompt,userPrompt))
-    printRes(question,returnedAnswer,grade["correct"],grade["reasoning"])
-    return grade["correct"]
+    raw = get_chat_response(prompt, userPrompt, schema=GradeResult)
+    grade = GradeResult.model_validate_json(raw)
+    printRes(question,returnedAnswer,grade.correct,grade.reasoning)
+    return grade.correct
 
 #Relevance
 def Relevance(question:str):
@@ -76,7 +102,7 @@ def Relevance(question:str):
 
                 Explain your reasoning in a step-by-step manner to ensure your reasoning and conclusion are correct. Avoid simply stating the correct answer at the outset.
                 Return as valid json with the first field being your reasoning, titled reasoning, and the second field being a number rating on how good the student did, titled relevant.
-                so something like { "reasoning" : (Actual reasoning here), "relevant" : (1.0-10.0)}
+                so EXACTLY LIKE { "reasoning" : (Actual reasoning here), "relevant" : (1.0-10.0)} REMEMBER TO INCLUDE BOTH FIELDS ALWAYS
             """
                     
     returnedAnswer = json.loads(views.rag_logic(question).content)["answer"]
@@ -84,9 +110,10 @@ def Relevance(question:str):
     QUESTIONS : {question}
     STUDENT ANSWERS : {returnedAnswer}
     """
-    grade = json.loads(get_chat_response(prompt,userPrompt))
-    printRes(question,returnedAnswer,grade["relevant"],grade["reasoning"])
-    return grade["relevant"]
+    raw = get_chat_response(prompt, userPrompt, schema=RelevanceResult)
+    grade = RelevanceResult.model_validate_json(raw)
+    printRes(question,returnedAnswer,grade.relevant,grade.reasoning)
+    return grade.relevant
     
 
 #Groundedness
@@ -102,7 +129,7 @@ def Groundedness(question:str):
 
     Explain your reasoning in a step-by-step manner to ensure your reasoning and conclusion are correct. Avoid simply stating the correct answer at the outset.
     Return as valid json with the first field being your reasoning, titled reasoning, and the second field being a number rating on how good the student did, titled grounded.
-    so something like { "reasoning" : (Actual reasoning here), "grounded" : (1.0-10.0)}
+    so EXACTLY LIKE { "reasoning" : (Actual reasoning here), "grounded" : (1.0-10.0)} REMEMBER TO INCLUDE BOTH FIELDS ALWAYS
     """
                     
     rag_result = json.loads(views.rag_logic(question).content)
@@ -114,9 +141,10 @@ def Groundedness(question:str):
     FACTS : {facts}
     STUDENT ANSWERS : {returnedAnswer}
     """
-    grade = json.loads(get_chat_response(prompt,userPrompt))
-    printRes(question,returnedAnswer,grade["grounded"],grade["reasoning"])
-    return grade["grounded"]
+    raw = get_chat_response(prompt, userPrompt, schema=GroundednessResult)
+    grade = GroundednessResult.model_validate_json(raw)
+    printRes(question,returnedAnswer,grade.grounded,grade.reasoning)
+    return grade.grounded
     
 #Retrieval relevance
 def retRelevance(question:str):
@@ -132,7 +160,7 @@ def retRelevance(question:str):
 
     Explain your reasoning in a step-by-step manner to ensure your reasoning and conclusion are correct. Avoid simply stating the correct answer at the outset.
     Return as valid json with the first field being your reasoning, titled reasoning, and the second field being a number rating on how good the student did, titled retrel.
-    so something like { "reasoning" : (Actual reasoning here), "retrel" : (1.0-10.0)}
+    so EXACTLY LIKE { "reasoning" : (Actual reasoning here), "retrel" : (1.0-10.0)} REMEMBER TO INCLUDE BOTH FIELDS ALWAYS
 
     """
                     
@@ -141,9 +169,10 @@ def retRelevance(question:str):
     QUESTIONS : {question}
     STUDENT ANSWERS : {returnedAnswer}
     """
-    grade = json.loads(get_chat_response(prompt,userPrompt))
-    printRes(question,returnedAnswer,grade["retrel"],grade["reasoning"])
-    return grade["retrel"]
+    raw = get_chat_response(prompt, userPrompt, schema=RetrievalRelevanceResult)
+    grade = RetrievalRelevanceResult.model_validate_json(raw)
+    printRes(question,returnedAnswer,grade.retrel,grade.reasoning)
+    return grade.retrel
 
 
 def correctnessBatch():
@@ -172,6 +201,8 @@ def correctnessBatch():
         results.append(correctness(questions[i],samples[i]))
     return results
 
+import time
+
 def batchEval():
     questions = [
         "What is the current deed date for this fund, and has it been updated to reflect all legislative changes since that date?",
@@ -182,32 +213,47 @@ def batchEval():
         "Are there any clauses in this deed that conflict with the fund's current pension contribution, or investment strategy arrangements?",
         "Does the binding death benefit nomination on file match what the deed actually permits — is it valid under the deed's rules?"
     ]
-    
+
     print("CORRECTNESS \n ======================================")
+    start = time.perf_counter()
     correctnessrez = correctnessBatch()
-    avgCorrect = sum(correctnessrez)/len(correctnessrez)
+    elapsed = time.perf_counter() - start
+    avgCorrect = sum(correctnessrez) / len(correctnessrez)
     print(f"AVERAGE CORRECTNESS IS {avgCorrect}")
-    
+    print(f"AVERAGE RESPONSE TIME IS {elapsed / len(questions):.2f}s")
+
     print("RELEVANCE \n ======================================")
     results = []
+    start = time.perf_counter()
     for i in questions:
         results.append(Relevance(i))
-    avgGrade = sum(results)/len(results)
+    elapsed = time.perf_counter() - start
+    avgGrade = sum(results) / len(results)
     print(f"AVERAGE RELEVANCE IS {avgGrade}")
-    
+    print(f"AVERAGE RESPONSE TIME IS {elapsed / len(questions):.2f}s")
+
     print("GROUNDEDNESS\n ======================================")
     results = []
+    start = time.perf_counter()
     for i in questions:
         results.append(Groundedness(i))
-    avgGrade = sum(results)/len(results)
+    elapsed = time.perf_counter() - start
+    avgGrade = sum(results) / len(results)
     print(f"AVERAGE GROUNDEDNESS IS {avgGrade}")
-    
+    print(f"AVERAGE RESPONSE TIME IS {elapsed / len(questions):.2f}s")
+
     print("RETRIEVAL RELEVANCE\n ======================================")
     results = []
+    start = time.perf_counter()
     for i in questions:
         results.append(retRelevance(i))
-    avgGrade = sum(results)/len(results)
+    elapsed = time.perf_counter() - start
+    avgGrade = sum(results) / len(results)
     print(f"AVERAGE RETRIEVAL RELEVANCE IS {avgGrade}")
+    print(f"AVERAGE RESPONSE TIME IS {elapsed / len(questions):.2f}s")
     
-batchEval()
+if __name__ == "__main__":
+    with open("currentVersionEval.txt", "w", encoding="utf-8", buffering=1) as log_file:
+        with redirect_stdout(log_file):
+            batchEval()
 

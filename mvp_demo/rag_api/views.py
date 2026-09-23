@@ -9,6 +9,7 @@ import datetime
 import textwrap
 
 from django.http import JsonResponse
+from django.utils import timezone
 from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.throttling import AnonRateThrottle
 
@@ -62,7 +63,29 @@ def build_access_filter(fund_names, owner_name):
     return {"$or": clauses}
 
 
-def perform_vector_search(query_embedding, user_query, access_filter, top_k=40):
+def build_date_filter(access_filter, date_from, date_to):
+    """
+    Narrow an access filter to a document date range.
+
+    Only documents with a known date carry date_numeric, so a range filter
+    excludes undated ones. That is deliberate - see parse_document_date in
+    ingest.py - but it means a range must never be applied unasked.
+    """
+    bounds = {}
+    if date_from is not None:
+        bounds["$gte"] = date_from
+    if date_to is not None:
+        bounds["$lte"] = date_to
+    if not bounds:
+        return access_filter
+    clause = {"date_numeric": bounds}
+    if not access_filter:
+        return clause
+    return {"$and": [access_filter, clause]}
+
+
+def perform_vector_search(query_embedding, user_query, access_filter, top_k=40,
+                          date_from=None, date_to=None):
     """
     Pure vector search against Pinecone.
     Returns Pinecone match dicts: {"id", "score", "metadata": {...}}
@@ -71,15 +94,34 @@ def perform_vector_search(query_embedding, user_query, access_filter, top_k=40):
 
     query_kwargs = {
         "vector": query_embedding,
-        "sparse_vector": sparse_vector,
         "top_k": top_k,
         "include_metadata": True,
     }
-    if access_filter:
-        query_kwargs["filter"] = access_filter
+
+    # Pinecone rejects a sparse vector with no indices, which happens when the
+    # question contains no term the BM25 encoder was fitted on. Dense-only is a
+    # worse search than hybrid, but it is a search rather than a 400.
+    if sparse_vector and sparse_vector.get("indices") and sparse_vector.get("values"):
+        query_kwargs["sparse_vector"] = sparse_vector
+    else:
+        logger.info("Empty BM25 sparse vector; falling back to dense-only search.")
+
+    combined = build_date_filter(access_filter, date_from, date_to)
+    if combined:
+        query_kwargs["filter"] = combined
 
     results = index.query(**query_kwargs)
     return results.get("matches", [])
+
+
+def date_string_to_numeric(date_str):
+    """'2024-07-01' -> 20240701, matching the date_numeric written at ingest."""
+    if not date_str:
+        return None
+    try:
+        return int(str(date_str).replace("-", ""))
+    except ValueError:
+        return None
 
 
 def rerank(query, chunks, top_k=5, score_threshold=0.0):
@@ -173,8 +215,23 @@ def get_chat_response(system_prompt, user_query):
 def chat_with_advisor_bot(request):
     user_query = request.data.get("query")
     funds = request.data.get("funds", [])
+    acting_user = request.data.get("user")
+    date_from = date_string_to_numeric(request.data.get("date_from"))
+    date_to = date_string_to_numeric(request.data.get("date_to"))
     if not user_query:
         return JsonResponse({"error": "Query is required"}, status=400)
+
+    # Session timeout. SESSION_COOKIE_AGE expires the cookie, so a lapsed
+    # session arrives with no "active" flag and is treated as a new one.
+    session_expired = not bool(request.session.get("active"))
+    request.session["active"] = True
+    request.session["last_active"] = timezone.now().isoformat()
+
+    # A new session starts with a clean slate: drop this user's cached answers
+    # so the first question after a timeout is actually re-run.
+    if session_expired and acting_user:
+        for stale in [k for k in _query_cache if f'"user": {json.dumps(acting_user)}' in k]:
+            del _query_cache[stale]
 
     # Cache per asker, not per question.
     #
@@ -185,12 +242,14 @@ def chat_with_advisor_bot(request):
     # else had already asked.
     cache_key = json.dumps({
         "q": user_query.strip().lower(),
-        "user": request.data.get("user"),
+        "user": acting_user,
         "funds": sorted(funds),
+        "date_from": date_from,
+        "date_to": date_to,
     }, sort_keys=True)
     if cache_key in _query_cache:
         print(f"Cache hit for: {cache_key}")
-        return JsonResponse(_query_cache[cache_key])
+        return JsonResponse({**_query_cache[cache_key], "session_expired": session_expired})
 
     try:
         # 1. Embed query with BGE prefix (required for BGE retrieval quality)
@@ -206,7 +265,8 @@ def chat_with_advisor_bot(request):
                 "citations": [],
             })
 
-        raw_results = perform_vector_search(query_embedding, user_query, access_filter, top_k=60)
+        raw_results = perform_vector_search(query_embedding, user_query, access_filter,
+                                            top_k=60, date_from=date_from, date_to=date_to)
 
         # 3. Deduplicate — keep highest-scoring copy of each unique chunk
         best_by_hash = {}
@@ -232,6 +292,7 @@ def chat_with_advisor_bot(request):
             return JsonResponse({
                 "answer":    "I could not find any relevant information in the fund documents to answer your query.",
                 "citations": [],
+                "session_expired": session_expired,
             })
 
         # 5. Build context — cap each chunk at 1500 chars to stay within num_ctx=8192
@@ -292,8 +353,8 @@ def chat_with_advisor_bot(request):
 
         result = {"answer": answer, "citations": citations}
         _query_cache[cache_key] = result
-        write_audit_log(request.data.get("user"), user_query, answer)
-        return JsonResponse(result)
+        write_audit_log(acting_user, user_query, answer)
+        return JsonResponse({**result, "session_expired": session_expired})
 
     except Exception:
         # Pinecone and filesystem errors carry index names and paths, so the

@@ -22,7 +22,8 @@ import traceback
 
 from django.db import connection
 
-from chunking import build_section_based_chunks, extract_text_with_tables, trim_to_sentence_boundary
+from chunking.extraction import extract_text_with_tables
+from chunking.header_chunking import build_section_based_chunks, trim_to_sentence_boundary
 
 from . import resources
 from .models import Document

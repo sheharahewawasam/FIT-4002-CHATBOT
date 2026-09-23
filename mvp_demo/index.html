@@ -114,6 +114,18 @@
             </div>
 
             <div class="selector-group">
+                <label>Document date range (optional)</label>
+                <div style="display:flex; gap:6px; justify-content:center;">
+                    <input type="date" id="date-from" style="padding:6px; border-radius:6px; border:none; font-size:0.85em;">
+                    <input type="date" id="date-to" style="padding:6px; border-radius:6px; border:none; font-size:0.85em;">
+                </div>
+                <div style="font-size:0.72em; opacity:0.75; margin-top:4px;">
+                    Leave blank to search all documents. Most documents have no
+                    recorded date yet and a range will exclude them.
+                </div>
+            </div>
+
+            <div class="selector-group">
                 <label>Knowledge Sources</label>
                 <div class="checkbox-group">
                     <span class="checkbox-label">
@@ -203,7 +215,14 @@
         if (dots) dots.remove();
     }
 
+    // A query takes minutes on the VM. Without a lock an impatient second Enter
+    // starts a parallel request and both answers land out of order.
+    let isSending = false;
+    let rateLimitCountdownActive = false;
+    let hasActiveConversation = false;
+
     async function sendQuery() {
+        if (isSending) return;
         const inputField = document.getElementById('query-input');
         const query = inputField.value.trim();
         if (!query) return;
@@ -215,18 +234,33 @@
             document.querySelectorAll('input[name="doc-type"]:checked')
         ).map(cb => cb.value);
 
+        const dateFrom = document.getElementById('date-from').value;
+        const dateTo = document.getElementById('date-to').value;
+        if (dateFrom && dateTo && dateFrom > dateTo) {
+            addMessage("The start date cannot be later than the end date.", 'bot-msg');
+            return;
+        }
+
         addMessage(query, 'user-msg');
         const thinking = addThinkingMessage();
         inputField.value = '';
+
+        isSending = true;
+        const askButton = document.querySelector('.input-area button');
+        inputField.disabled = true;
+        askButton.disabled = true;
 
         try {
             const response = await fetch(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({
                     query: query,
                     funds: selectedFunds,
-                    user: selectedUser
+                    user: selectedUser,
+                    date_from: dateFrom || null,
+                    date_to: dateTo || null
                 })
             });
 
@@ -245,16 +279,32 @@
                 addMessage("Error: " + (data.error || data.detail || 'Something went wrong'), 'bot-msg');
             } else {
                 settleThinkingMessage(thinking);
+                // Only worth saying if there was a conversation to lose.
+                if (data.session_expired && hasActiveConversation) {
+                    addMessage("Your session had expired due to inactivity. This is a new session.", 'bot-msg');
+                }
+                hasActiveConversation = true;
                 addBotMessageWithCitations(data.answer, data.citations);
             }
         } catch (error) {
             addMessage("Failed to connect to the server.", 'bot-msg');
         } finally {
             settleThinkingMessage(thinking);
+            // The rate-limit countdown re-enables the input itself once it ends.
+            if (!rateLimitCountdownActive) {
+                isSending = false;
+                inputField.disabled = false;
+                document.querySelector('.input-area button').disabled = false;
+            }
         }
     }
 
     function startRateLimitCountdown(seconds) {
+        // Two 429s in flight would otherwise start two tickers, and the first to
+        // finish would re-enable the input while the second was still counting.
+        if (rateLimitCountdownActive) return;
+        rateLimitCountdownActive = true;
+
         const chatBox = document.getElementById('chat-box');
         const msgDiv = document.createElement('div');
         msgDiv.className = 'message bot-msg';
@@ -278,6 +328,8 @@
             if (remaining <= 0) {
                 clearInterval(interval);
                 msgDiv.textContent = "You can send messages again now.";
+                rateLimitCountdownActive = false;
+                isSending = false;
                 inputField.disabled = false;
                 askButton.disabled = false;
                 inputField.focus();
@@ -294,6 +346,32 @@
         msgDiv.textContent = text;
         chatBox.insertBefore(msgDiv, document.getElementById('loading'));
         chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // Render **bold** without handing the model's text to innerHTML. Building
+    // text nodes keeps the XSS fix intact: the answer is assembled from document
+    // text, which is untrusted.
+    function renderBoldMarkdown(container, text) {
+        const lines = String(text ?? '').split('\n');
+        const boldPattern = /\*\*([^*\n]+)\*\*/g;
+
+        lines.forEach((line, lineIndex) => {
+            let lastIndex = 0;
+            let match;
+            boldPattern.lastIndex = 0;
+
+            while ((match = boldPattern.exec(line)) !== null) {
+                container.appendChild(document.createTextNode(line.slice(lastIndex, match.index)));
+                const strong = document.createElement('strong');
+                strong.textContent = match[1];
+                container.appendChild(strong);
+                lastIndex = boldPattern.lastIndex;
+            }
+            container.appendChild(document.createTextNode(line.slice(lastIndex)));
+            if (lineIndex < lines.length - 1) {
+                container.appendChild(document.createElement('br'));
+            }
+        });
     }
 
     function addBotMessageWithCitations(answer, citations) {
@@ -324,7 +402,18 @@
             htmlContent += `</ul></div>`;
         }
         
-        msgDiv.innerHTML = htmlContent;
+        // Answer first, as DOM nodes; then the citation block, which is already
+        // escaped and URL-encoded above.
+        const answerEl = document.createElement('div');
+        answerEl.className = 'answer-text';
+        renderBoldMarkdown(answerEl, answer);
+        msgDiv.appendChild(answerEl);
+        if (htmlContent) {
+            const extra = document.createElement('div');
+            extra.innerHTML = htmlContent;
+            msgDiv.appendChild(extra);
+        }
+
         chatBox.insertBefore(msgDiv, document.getElementById('loading'));
         chatBox.scrollTop = chatBox.scrollHeight;
     }
