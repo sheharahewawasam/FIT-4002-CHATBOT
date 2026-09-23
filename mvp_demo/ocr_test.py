@@ -1,12 +1,12 @@
 import json
 from pathlib import Path
 from ocr_solution import OCR
-import Levenshtein
+import difflib
 
-ocr_tests = Path("./testing/ocr_test_files")
+# ocr_tests = Path("./testing/ocr_test_files")
 
-ocr = OCR(Path("./testing"),False)
-ocr.initiate_model_v3()
+# ocr = OCR(Path("./testing"),False)
+# ocr.initiate_model_v3()
 
 def precision_recall_test(actual: str, predicted: str) -> dict:
     """
@@ -66,44 +66,98 @@ def character_error_rate(actual: str, predicted: str) -> int:
     edit_distance = dp[n][m]
     return edit_distance / n if n > 0 else 0.0
 
-for file in ocr_tests.iterdir():
-    if file.is_file() and file.suffix == '.json':
-        with open(file, encoding='utf-8-sig') as f:
-            data = json.load(f)
+def run_ocr_test():
+    for file in ocr_tests.iterdir():
+        if file.is_file() and file.suffix == '.json':
+            with open(file, encoding='utf-8-sig') as f:
+                data = json.load(f)
 
-        # Get the PNG with the same name
-        image_path = Path(file.with_suffix('.png'))
-        if not image_path.exists():
-            print(f"No image found for {file.name}, skipping...")
-            continue
+            # Get the PNG with the same name
+            image_path = Path(file.with_suffix('.png'))
+            if not image_path.exists():
+                print(f"No image found for {file.name}, skipping...")
+                continue
 
-        words = []
-        for field in data['form']:
-            for word in field['words']:
-                if word['text'].strip():
-                    words.append(word['text'])
+            words = []
+            for field in data['form']:
+                for word in field['words']:
+                    if word['text'].strip():
+                        words.append(word['text'])
 
-        full_text = " ".join(field['text'] for field in data['form'] if field['text'].strip())
+            full_text = " ".join(field['text'] for field in data['form'] if field['text'].strip())
 
-        ocr_prediction = ocr.output_document(image_path)
+            ocr_prediction = ocr.output_document(image_path)
 
-        results = precision_recall_test(full_text, ocr_prediction)
+            results = precision_recall_test(full_text, ocr_prediction)
 
-        cer = character_error_rate(full_text, ocr_prediction)
+            cer = character_error_rate(full_text, ocr_prediction)
 
-        if cer > 0.1:
-            print(f"File: {file.name}")
-            print(f"Precision: {results['precision']:.2%}  (of what OCR returned, how much was correct)")
-            print(f"Recall: {results['recall']:.2%}  (of ground truth, how much OCR found)")
-            print(f"F1 Score: {results['f1']:.2%}  (balance of both)")
-            print(f"Missed words: {results['missed_words']}")
-            print(f"Extra words: {results['extra_words']}")
-            print("-" * 40)
+            if cer > 0.1:
+                print(f"File: {file.name}")
+                print(f"Precision: {results['precision']:.2%}  (of what OCR returned, how much was correct)")
+                print(f"Recall: {results['recall']:.2%}  (of ground truth, how much OCR found)")
+                print(f"F1 Score: {results['f1']:.2%}  (balance of both)")
+                print(f"Missed words: {results['missed_words']}")
+                print(f"Extra words: {results['extra_words']}")
+                print("-" * 40)
 
-            print(f"Character Error Rate: {cer}")
+                print(f"Character Error Rate: {cer}")
 
 
+def test_combine_text():
+    """
+    Tests the function combining texts from OCR and PDF Parsing
 
+    OCR text has an extra leading sentence the PDF text is missing, and the
+    PDF text has clauses inserted/appended that the OCR text is missing.
+    combine_text should keep OCR-only content (delete) and pull in
+    PDF-only content (insert/replace), producing the fuller combined text.
+    """
+    ocr_string = (
+        "By this Deed, the Trustee establishes an indefinitely continuing\n\n"
+        "superannuation fund to be known as THE DARTO SUPER FUND for the purpose of providing superannuation benefits to any\n\n"
+        "person."
+    )
+
+    pdf_string = (
+        "superannuation fund to be known as THE DARTO SUPER FUND (the\n\n"
+        "'Fund') for the purpose of providing superannuation benefits to any\n\n"
+        "person who is a Member of the Fund."
+    )
+
+    expected = (
+        "By this Deed, the Trustee establishes an indefinitely continuing\n\n"
+        "superannuation fund to be known as THE DARTO SUPER FUND (the\n\n"
+        "'Fund') for the purpose of providing superannuation benefits to any\n\n"
+        "person who is a Member of the Fund."
+    )
+
+    result = combine_text(ocr_string, pdf_string)
+
+    print(result == expected)
+
+def combine_text(ocr_string, pdf_string) -> str:
+    """
+    Combines two different strings into one string, removing duplicate words
+    """
+    s = difflib.SequenceMatcher(None, ocr_string, pdf_string)
+    merged_chunks = []
+
+    for tag, i1, i2, j1, j2 in s.get_opcodes():
+        if tag == 'equal':
+            merged_chunks.append(ocr_string[i1:i2])
+        elif tag == 'delete':
+            merged_chunks.append(ocr_string[i1:i2])
+        elif tag in ('insert', 'replace'):
+            merged_chunks.append(pdf_string[j1:j2])
+
+    result = "".join(merged_chunks)
+
+    return result
+
+
+if __name__ == "__main__":
+    test_combine_text()
 
 
     
