@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Advisor RAG Chatbot MVP</title>
     <style>
+        /* The hidden attribute is only `display: none` in the browser's own
+           stylesheet, so any author rule setting display beats it - which is
+           why hiding .login-screen (display: flex) silently did nothing and it
+           stayed over the app after signing in. Restore it as the override the
+           attribute is meant to be. */
+        [hidden] { display: none !important; }
+
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; display: flex; justify-content: center; }
         .chat-container { width: 100%; max-width: 600px; background: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 80vh; }
         .header { background: #0056b3; color: white; padding: 15px; border-radius: 10px 10px 0 0; text-align: center; }
@@ -106,6 +113,14 @@
         }
             /* --- Documents panel ------------------------------------------- */
         body { flex-wrap: wrap; align-items: flex-start; gap: 20px; }
+        /* #app wraps both panels so they can be hidden as one unit while signed
+           out. It therefore has to be the flex container body used to be, or
+           the documents panel drops below the chat. */
+        #app {
+            display: flex; flex-wrap: wrap; align-items: flex-start;
+            justify-content: center; gap: 20px; width: 100%;
+        }
+        #app[hidden] { display: none !important; }
         .docs-panel {
             width: 340px; background: white; border-radius: 10px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex;
