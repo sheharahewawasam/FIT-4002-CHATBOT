@@ -1,7 +1,7 @@
 """
 chunk_structure_metrics.py
 
-Evaluates chunk construction and structural quality
+Check whether chunks are structurally constructed correctly
 
 It evaluates:
 - chunk lengths
@@ -13,10 +13,13 @@ It evaluates:
 """
 
 import sys
+import json
 import re
 
+from pathlib import Path
+from contextlib import redirect_stdout
 from ingest import (
-    extract_text_with_tables,
+    extract_document_text,
     build_section_based_chunks,
     section_toc,
     is_heading_line,
@@ -44,62 +47,129 @@ _LIST_MARKER_START_RE = re.compile(
     r"^\s*(\(([a-z]|[ivxlcdm]{1,5})\)|([a-z]|[ivxlcdm]{1,5})[.)])\s*"
 )
 
-# Used to find 
-# Membership
-# Trustee Powers
-# Death Benefits
-# Part 2 Administration
-_LOOKS_LIKE_HEADING_RE = re.compile(
-    r"^[A-Z][A-Za-z0-9\s\-/,]{0,60}$"
+_MARKDOWN_HEADING_START_RE = re.compile(r"^\s*#{1,6}\s+\S")
+_NUMBERED_ITEM_START_RE = re.compile(
+    r"^\s*(?:\d+[A-Za-z]?(?:\.\d+)*[.)]?|\([A-Za-z0-9ivxlcdm]+\))\s+",
+    re.IGNORECASE,
 )
+_BULLET_START_RE = re.compile(r"^\s*(?:[-*•▪◦]|\u2022)\s+")
+_SAFE_END_CHARS = '.!?":;)]}'
 
-def looks_cut(text, strict=False):
-    """
-    Heuristic for detecting possible mid-sentence / mid-clause cuts.
 
-    This is only an evaluation heuristic. It does NOT change
-    the actual chunking behaviour in ingest.py.
-
-    Checks whether the chunk starts with lowercase or ends without any punctuations
-    """
-
-    if not text:
+def _looks_like_structural_start(text):
+    """Recognise boundaries that may validly begin without sentence prose."""
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    if not lines:
         return False
 
-    t = text.strip()
+    first = lines[0]
+    if _MARKDOWN_HEADING_START_RE.match(first):
+        return True
+    if _NUMBERED_ITEM_START_RE.match(first) or _LIST_MARKER_START_RE.match(first):
+        return True
+    if _BULLET_START_RE.match(first):
+        return True
+    if "|" in first or "<tr" in first.lower() or "<td" in first.lower():
+        return True
+    if first.isupper():
+        return True
 
-    if not t:
-        return False
+    words = first.split()
+    return len(words) <= 8 and first.istitle()
 
-    starts_lower = (
-        t[0].islower()
-        if t[0].isalpha()
-        else False
-    )
 
-    if strict:
-        ends_no_punct = t[-1] not in '.!?":)'
-        return starts_lower or ends_no_punct
+def _boundary_is_safe(parent, position, boundary):
+    """Judge a child's start or end using its exact position in its parent."""
+    if position <= 0 or position >= len(parent):
+        return True
 
-    ends_no_punct = t[-1] not in '.!?":);'
+    before = parent[:position]
+    after = parent[position:]
+    before_trimmed = before.rstrip()
+    if boundary == "start":
+        boundary_space = before[len(before_trimmed):]
+    else:
+        boundary_space = after[: len(after) - len(after.lstrip())]
 
-    # Legal list markers such as:
-    # (a), (b), i., ii., iii)
-    if starts_lower and _LIST_MARKER_START_RE.match(t):
-        starts_lower = False
+    if not before_trimmed or not after.strip():
+        return True
+    if "\n\n" in boundary_space:
+        return True
+    if before_trimmed[-1] in _SAFE_END_CHARS:
+        return True
+    if _looks_like_structural_start(after.lstrip()):
+        return True
 
-    # Short heading-like chunks legitimately do not end
-    # with sentence punctuation.
-    last_line = t.split("\n")[-1].strip()
+    return False
 
-    if (
-        ends_no_punct
-        and len(t) < 60
-        and _LOOKS_LIKE_HEADING_RE.match(last_line)
-    ):
-        ends_no_punct = False
 
-    return starts_lower or ends_no_punct
+def find_boundary_issues(entries):
+    """Find likely cuts using local parent offsets, including overlapping leaves."""
+    issues = []
+    previous_parent_key = None
+    search_from = 0
+
+    for chunk_index, entry in enumerate(entries):
+        child = entry["leaf_text"].strip()
+        parent = entry["parent_text"].strip()
+        parent_key = (entry.get("source_url", ""), parent)
+
+        if parent_key != previous_parent_key:
+            search_from = 0
+
+        start = parent.find(child, search_from)
+        if start < 0:
+            start = parent.find(child)
+        if start < 0:
+            previous_parent_key = parent_key
+            continue
+
+        end = start + len(child)
+        search_from = start + 1
+        previous_parent_key = parent_key
+
+        if not _boundary_is_safe(parent, start, "start"):
+            issues.append({
+                "chunk_index": chunk_index,
+                "boundary": "start",
+                "before": parent[max(0, start - 250):start],
+                "after": parent[start:min(len(parent), start + 250)],
+            })
+
+        if not _boundary_is_safe(parent, end, "end"):
+            issues.append({
+                "chunk_index": chunk_index,
+                "boundary": "end",
+                "before": parent[max(0, end - 250):end],
+                "after": parent[end:min(len(parent), end + 250)],
+            })
+
+    return issues
+
+
+def print_storage_containment_failures(entries):
+    failure_count = 0
+
+    for i, entry in enumerate(entries):
+        child = entry["leaf_text"].strip()
+        stored_parent = entry["parent_text"].strip()
+
+        if child in stored_parent:
+            continue
+
+        failure_count += 1
+
+        print(f"\nStorage containment failure #{failure_count}")
+        print(f"Chunk: {i + 1}")
+
+        print("\nRetrieved child:")
+        print(child[:500])
+
+        print("\nStored parent ending:")
+        print(stored_parent[-500:])
+
+    if failure_count == 0:
+        print("\nNo storage containment failures detected.")
 
 
 def compute_metrics(entries):
@@ -120,11 +190,11 @@ def compute_metrics(entries):
         for entry in entries
     ]
 
-    # Remove whitespace and get 80 characters from the leaf and check whether they exist in parent 
+    # Check the full, nonempty child against its local parent. 
     contained = sum(
         1
         for entry in entries
-        if entry["leaf_text"].strip()[:80]
+        if entry["leaf_text"].strip() and entry["leaf_text"].strip()
         in entry["parent_text"]
     )
 
@@ -136,17 +206,25 @@ def compute_metrics(entries):
         == entry["leaf_text"].strip()
     )
 
-    cut_leaves = sum(
-        1
-        for entry in entries
-        if looks_cut(entry["leaf_text"])
-    )
+    boundary_issues = find_boundary_issues(entries)
+    cut_leaf_indices = {
+        issue["chunk_index"]
+        for issue in boundary_issues
+    }
+    cut_leaves = len(cut_leaf_indices)
 
     # Compare the leaf to check whether there are any that looks like a TOC
     toc_leaves = sum(
         1
         for entry in entries
         if section_toc(entry["leaf_text"])
+    )
+
+    stored_parent_contains_child = sum(
+        1
+        for entry in entries
+        if entry["leaf_text"].strip() and entry["leaf_text"].strip()
+        in entry["parent_text"].strip()
     )
 
     return {
@@ -173,41 +251,41 @@ def compute_metrics(entries):
         "cut_leaf_rate":
             cut_leaves / n,
 
+        "cut_leaf_count":
+            cut_leaves,
+
+        "cut_boundary_count":
+            len(boundary_issues),
+
         "toc_leaf_rate":
             toc_leaves / n,
+
+        "stored_parent_contains_child_rate":
+        stored_parent_contains_child / n,
     }
 
 def print_cut_points(entries):
-    cut_count = 0
+    issues = find_boundary_issues(entries)
 
     print("\n" + "-" * 90)
     print("POSSIBLE CUT POINTS")
     print("-" * 90)
 
-    for i, entry in enumerate(entries):
-        leaf = entry["leaf_text"]
+    for issue_number, issue in enumerate(issues, start=1):
+        print(
+            f"\nCut #{issue_number} — Chunk {issue['chunk_index'] + 1} "
+            f"({issue['boundary']} boundary within its parent)"
+        )
 
-        if not looks_cut(leaf):
-            continue
+        print("\nText before boundary:")
+        print(issue["before"])
 
-        cut_count += 1
-
-        next_leaf = ""
-        if i + 1 < len(entries):
-            next_leaf = entries[i + 1]["leaf_text"]
-
-        print(f"\nCut #{cut_count} — Chunk {i + 1}")
-
-        print("\nCurrent chunk ending:")
-        print(leaf[-250:])
-
-        if next_leaf:
-            print("\nNext chunk beginning:")
-            print(next_leaf[:250])
+        print("\nText after boundary:")
+        print(issue["after"])
 
         print("\n" + "." * 60)
 
-    if cut_count == 0:
+    if not issues:
         print("\nNo possible cut points detected.")
 
 def compute_section_detection_stats(full_text):
@@ -240,26 +318,46 @@ def compute_section_detection_stats(full_text):
 def report_for_document(
     pdf_path,
     fund_name="Test",
-    doc_type="Unknown"
+    doc_type="Unknown",
+    *, full_text=None, entries=None, rejected_chunks=None
 ):
     print("\n" + "=" * 90)
     print(pdf_path)
     print("=" * 90)
 
-    full_text = extract_text_with_tables(pdf_path)
+    if full_text is None:
+        full_text = extract_document_text(pdf_path)
 
-    method, heading_count = (
-        compute_section_detection_stats(full_text)
-    )
+    method, heading_count = compute_section_detection_stats(full_text)
+    if rejected_chunks is None:
+        rejected_chunks = []
+    if entries is None:
+        entries = build_section_based_chunks(
+            full_text,
+            {"source_url": Path(pdf_path).name, "fund_name": fund_name, "doc_type": doc_type},
+            rejected_chunks,
+        )
 
-    entries = build_section_based_chunks(
-        full_text,
-        {
-            "source_url": pdf_path.split("/")[-1],
-            "fund_name": fund_name,
-            "doc_type": doc_type,
-        }
-    )
+    print(f"Removed TOC blocks: {len(rejected_chunks)}")
+    for rejected in rejected_chunks:
+        removed_text = rejected["text"]
+        line_range = ""
+        if rejected.get("line_start") is not None:
+            line_range = (
+                f", source lines {rejected['line_start']}"
+                f"-{rejected.get('line_end', rejected['line_start'])}"
+            )
+        print(
+            f"\nREMOVED [{rejected['stage']}] {rejected['reason']}"
+            f" ({len(removed_text):,} chars{line_range})"
+        )
+        print("Beginning:")
+        print(removed_text[:500])
+        if len(removed_text) > 1000:
+            print("\nEnding:")
+            print(removed_text[-500:])
+    print("\nTOC rule matches are a filter consistency check, not independently measured leakage.")
+    print("Containment checks local entries, not fetched Pinecone records.")
 
     metrics = compute_metrics(entries)
 
@@ -309,83 +407,79 @@ def report_for_document(
 
         print(
             "Possible mid-sentence cuts:  "
-            f"{metrics['cut_leaf_rate'] * 100:.1f}%"
+            f"{metrics['cut_leaf_rate'] * 100:.1f}% "
+            f"({metrics['cut_leaf_count']} chunks, "
+            f"{metrics['cut_boundary_count']} boundaries)"
         )
 
         print(
-            "TOC-noise-leaked rate:       "
+            "Retained TOC-rule match rate:       "
             f"{metrics['toc_leaf_rate'] * 100:.1f}%"
         )
+
+        print(
+            "Local parent contains full child: "
+            f"{metrics['stored_parent_contains_child_rate'] * 100:.1f}%"
+        )
+
+        print_storage_containment_failures(entries)
 
         print_cut_points(entries)
 
     return metrics
 
-
-
-
 def main():
-    if len(sys.argv) < 2:
-        print(
-            "Usage: python3 chunking_metrics.py "
-            "<pdf1> <pdf2> ..."
-        )
+    args = sys.argv[1:]
 
-        sys.exit(1)
+    if not args:
+        print("Usage:")
+        print("  python3 chunk_structure_metrics.py <pdf1> <pdf2> ...")
+        print("  python3 chunk_structure_metrics.py --all")
+        print("  python3 chunk_structure_metrics.py --all-pdfs")
+        print("  python3 chunk_structure_metrics.py --snapshot path/to/document_chunks.json")
+        return
 
-    all_metrics = []
+    snapshot_mode = args[0] in {"--snapshot", "--all"}
+    if args[0] == "--snapshot":
+        if len(args) < 2:
+            raise SystemExit("Provide one or more snapshot JSON paths after --snapshot.")
+        pdf_paths = [Path(arg) for arg in args[1:]]
+    elif args[0] == "--all":
+        snapshot_dir = Path("test_chunking_output") / "snapshots"
+        pdf_paths = sorted(snapshot_dir.glob("*_chunks.json"))
+        if not pdf_paths:
+            raise SystemExit(f"No snapshot files found in {snapshot_dir}.")
+    elif args[0] == "--all-pdfs":
+        pdf_paths = sorted(Path("../pdfs").glob("*.pdf"))
+        if not pdf_paths:
+            raise SystemExit("No PDF files found in ../pdfs.")
+    else:
+        pdf_paths = [Path(arg) for arg in args]
 
-    for pdf_path in sys.argv[1:]:
+    for pdf_path in pdf_paths:
+        output_dir = Path("test_chunking_output") / "reports"
+        output_dir.mkdir(parents=True, exist_ok=True)
 
-        metrics = report_for_document(
-            pdf_path
-        )
+        output_name = output_dir / f"test_{pdf_path.stem}_output.txt"
 
-        all_metrics.append(
-            (pdf_path, metrics)
-        )
+        print(f"Processing: {pdf_path.name}")
 
-    print("\n" + "=" * 90)
-    print("CORPUS SUMMARY")
-    print("=" * 90)
+        try:
+            with open(output_name, "w", encoding="utf-8") as f:
+                with redirect_stdout(f):
+                    if snapshot_mode:
+                        data = json.loads(pdf_path.read_text(encoding="utf-8"))
+                        report_for_document(
+                            data["source_path"], full_text=data["full_text"],
+                            entries=data["entries"], rejected_chunks=data["rejected_chunks"],
+                        )
+                    else:
+                        report_for_document(str(pdf_path))
 
-    total_chunks = sum(
-        metrics["total_chunks"]
-        for _, metrics in all_metrics
-    )
+            print(f"Saved: {output_name}")
 
-    print(
-        f"{'Document':<50} "
-        f"{'Chunks':>8} "
-        f"{'Cut%':>8} "
-        f"{'TOC%':>8} "
-        f"{'Contain%':>10}"
-    )
-
-    for path, metrics in all_metrics:
-
-        name = path.split("/")[-1]
-
-        if metrics["total_chunks"] == 0:
-            print(
-                f"{name:<50} "
-                f"{'0':>8}"
-            )
-            continue
-
-        print(
-            f"{name:<50} "
-            f"{metrics['total_chunks']:>8} "
-            f"{metrics['cut_leaf_rate'] * 100:>7.1f}% "
-            f"{metrics['toc_leaf_rate'] * 100:>7.1f}% "
-            f"{metrics['containment_rate'] * 100:>9.1f}%"
-        )
-
-    print(
-        f"\nTotal chunks across corpus: "
-        f"{total_chunks}"
-    )
-
+        except Exception as e:
+            print(f"ERROR processing {pdf_path.name}: {e}")
 
 if __name__ == "__main__":
     main()

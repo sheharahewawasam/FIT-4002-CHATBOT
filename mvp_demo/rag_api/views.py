@@ -15,19 +15,21 @@ from sentence_transformers import SentenceTransformer, CrossEncoder
 from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.throttling import AnonRateThrottle
 
+"""
+This is the main heart of our program, it basically contains every pipeline and part of the working chatbot except ingestion and OCR
+"""
 load_dotenv("secrets.env")
 
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")
-
-BM25_ENCODER_PATH = os.getenv("BM25_ENCODER_PATH", "bm25_encoder.json")
+BM25_ENCODER_PATH = os.getenv("BM25_ENCODER_PATH","bm25_encoder.json")
 
 pc = Pinecone(api_key=PINECONE_API_KEY)
 index = pc.Index(PINECONE_INDEX_NAME)
-
 _bm25 = BM25Encoder().load(BM25_ENCODER_PATH)
 
 # Both models loaded once at startup — reused across all requests
+#To change the embedding and reranker model, look here
 _embedder = SentenceTransformer("BAAI/bge-base-en-v1.5")
 _embedder.max_seq_length = 512
 _reranker = CrossEncoder("BAAI/bge-reranker-base", max_length=512)
@@ -43,6 +45,9 @@ _THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
 
 
 def strip_think_tags(text: str) -> str:
+    """
+    The Qwen Model has some thinking tags that need stripping sometimes
+    """
     return _THINK_RE.sub("", text).strip()
 
 
@@ -63,13 +68,23 @@ def perform_vector_search(query_embedding, user_query, filters, top_k=40, date_f
     if date_condition:
         query_filter["date_numeric"] = date_condition
 
-    results = index.query(
-        vector=query_embedding,
-        sparse_vector=sparse_vector,
-        top_k=top_k,
-        include_metadata=True,
-        filter=query_filter,
-    )
+    query_args = {
+        "vector": query_embedding,
+        "top_k": top_k,
+        "include_metadata": True,
+        "filter": query_filter,
+    }
+
+    if (sparse_vector and sparse_vector.get("indices") and sparse_vector.get("values")):
+        query_args["sparse_vector"] = sparse_vector
+    else:
+        print(
+            f"[BM25] Empty sparse vector for query {user_query!r}. "
+            f"Falling back to dense-only search."
+        )
+
+    results = index.query(**query_args)
+    
     return results.get("matches", [])
 
 
@@ -91,12 +106,6 @@ def rerank(query, chunks, top_k=5, score_threshold=0.0):
 
     ranked = sorted(zip(scores, chunks), key=lambda x: x[0], reverse=True)
 
-    # print("\n=== RERANKING RESULTS ===")
-    # for i, (score, chunk) in enumerate(ranked[:top_k]):
-    #     meta = chunk.get("metadata", {})
-    #     print(f"\nRank {i+1}  CrossEncoder score: {score:.4f}")
-    #     print((meta.get("child_match_text") or meta.get("text", ""))[:200])
-
     filtered = [(s, c) for s, c in ranked[:top_k] if s >= score_threshold]
 
     if not filtered:
@@ -107,6 +116,10 @@ def rerank(query, chunks, top_k=5, score_threshold=0.0):
     return [{"result": c, "rerank_score": float(s)} for s, c in filtered]
 
 def get_chat_response(system_prompt, user_query):
+    """
+    Makes an API call to the local server Ollama instance, its important that temperature is 0 so the model's responses are as standardized as possible
+    to change what model is used for response creation, look here.
+    """
     url = "http://localhost:11434/api/chat"
     data = {
         "model": "qwen3",
@@ -136,6 +149,16 @@ def date_string_to_numeric(date_str):
 @api_view(["POST"])
 @throttle_classes([ChatbotRateThrottle])
 def chat_with_advisor_bot(request):
+    """
+    This is the actual pipeline of the whole model, it basically receives a user query (a json object currently containing their query, what funds to look for, and the date range to look for)
+    it then makes sure that the user isn't requesting too many things
+    it then performs a vector search on the user's query,
+    deduplicates the results
+    reranks the results by relevancy
+    puts the results into the output context
+    then generates the answer
+    finally it outputs an audit log
+    """
     user_query = request.data.get("query")
     funds = request.data.get("funds", [])
     date_from = date_string_to_numeric(request.data.get("date_from"))
@@ -144,25 +167,30 @@ def chat_with_advisor_bot(request):
         return JsonResponse({"error": "Query is required"}, status=400)
 
     # Session timeout check
-    last_active = request.session.get("last_active")
-    session_expired = False
+    session_expired = not bool(request.session.get("active"))
 
-    if last_active:
-        last_active_time = datetime.datetime.fromisoformat(last_active)
+    last_active_str = request.session.get("last_active")
 
+    if last_active_str:
+        last_active_time = datetime.datetime.fromisoformat(last_active_str)
         if timezone.is_naive(last_active_time):
             last_active_time = timezone.make_aware(last_active_time)
-
         elapsed = (timezone.now() - last_active_time).total_seconds()
+        print(f"[SESSION CHECK] Inactive for {elapsed:.1f}s  (session_expired={session_expired})")
+    else:
+        print(f"[SESSION CHECK] No prior activity recorded  (session_expired={session_expired})")
 
-        if elapsed >= settings.SESSION_COOKIE_AGE:
-            session_expired = True
-
-    # Refresh the user's activity time
+    request.session["active"] = True
     request.session["last_active"] = timezone.now().isoformat()
 
     # Return cached result for repeated identical queries
     selected_user = request.data.get("user")
+
+    if session_expired:
+        keys_to_delete = [key for key in _query_cache if key[0] == selected_user]
+        for key in keys_to_delete:
+            del _query_cache[key]
+        print(f"[CACHE CLEARED] Cleared cache for user: {selected_user}")
 
     cache_key = (selected_user, user_query.strip().lower(), tuple(sorted(funds)), date_from, date_to)
     
@@ -218,7 +246,7 @@ def chat_with_advisor_bot(request):
 
         for i, item in enumerate(reranked):
             metadata = item["result"].get("metadata", {})
-            chunk_text = (metadata.get("text", "") or metadata.get("child_match_text", ""))[:1500]
+            chunk_text = (metadata.get("text", "") or metadata.get("child_match_text", ""))
             source_name = metadata.get("source_url", "Unknown")
             fund_name = metadata.get("fund_name", "Unknown")
             context_text += f"--- Source: {source_name} ({fund_name}) ---\n{chunk_text}\n\n"
@@ -274,6 +302,9 @@ print("USING PINECONE VECTOR STORE (BGE + CrossEncoder)")
 
 
 def write_audit_log(user, message, response):
+    """
+    outputs an audit log of every user resquest + response to the base folder/audit_logs
+    """
     now = datetime.datetime.now()
     currentDate = now.strftime("%Y-%m-%d")
     currentTime = now.strftime("%X")
@@ -304,90 +335,83 @@ def write_audit_log(user, message, response):
     
 #a copy of the rag logic just for testing purposes, kindly change this also when you are making any changes to the chat with advisor bot funciton, or we should seperate logic better
 #but I cba do that 
-# def rag_logic(test_questions:str):
-#     user_query = test_questions
+def rag_logic(test_questions:str):
+    user_query = test_questions
 
-#     # 1. Embed query with BGE prefix (required for BGE retrieval quality)
-#     query_embedding = _embedder.encode(
-#         "Represent this sentence for searching relevant passages: " + user_query
-#     ).tolist()
+    # 1. Embed query with BGE prefix (required for BGE retrieval quality)
+    query_embedding = _embedder.encode(
+        "Represent this sentence for searching relevant passages: " + user_query
+    ).tolist()
 
-#     # 2. Vector search
-#     raw_results = perform_vector_search(query_embedding, user_query, ["Summers Family Super Fund"], top_k=60)
+    # 2. Vector search
+    raw_results = perform_vector_search(query_embedding, user_query, ["Summers Family Super Fund"], top_k=60)
 
-#     # 3. Deduplicate — keep highest-scoring copy of each unique chunk
-#     best_by_hash = {}
-#     for res in raw_results:
-#         metadata = res.get("metadata", {})
-#         content = metadata.get("text", "") or metadata.get("child_match_text", "")
+    # 3. Deduplicate — keep highest-scoring copy of each unique chunk
+    best_by_hash = {}
+    for res in raw_results:
+        metadata = res.get("metadata", {})
+        content = metadata.get("text", "") or metadata.get("child_match_text", "")
 
-#         if ".........." in content or "Table of Contents" in content:
-#             continue
+        if ".........." in content or "Table of Contents" in content:
+            continue
 
-#         text_hash = hashlib.md5(content.encode()).hexdigest()
-#         score = res.get("score", 0)
-#         if text_hash not in best_by_hash or score > best_by_hash[text_hash][0]:
-#             best_by_hash[text_hash] = (score, res)
+        text_hash = hashlib.md5(content.encode()).hexdigest()
+        score = res.get("score", 0)
+        if text_hash not in best_by_hash or score > best_by_hash[text_hash][0]:
+            best_by_hash[text_hash] = (score, res)
 
-#     deduped = [res for _, res in best_by_hash.values()]
+    deduped = [res for _, res in best_by_hash.values()]
 
-#     # 4. Batch-rerank all deduped chunks, keep top 5
-#     reranked = rerank(user_query, deduped, top_k=5)
+    # 4. Batch-rerank all deduped chunks, keep top 5
+    reranked = rerank(user_query, deduped, top_k=5)
 
-#     if not reranked:
-#         return JsonResponse({
-#             "answer":    "I could not find any relevant information in the fund documents to answer your query.",
-#             "citations": [],
-#         })
+    if not reranked:
+        return JsonResponse({
+            "answer":    "I could not find any relevant information in the fund documents to answer your query.",
+            "citations": [],
+        })
 
-#     # 5. Build context — cap each chunk at 1500 chars to stay within num_ctx=8192
-#     context_text = ""
-#     citations = []
+    # 5. Build context — cap each chunk at 1500 chars to stay within num_ctx=8192
+    context_text = ""
+    citations = []
 
-#     for i, item in enumerate(reranked):
-#         metadata = item["result"].get("metadata", {})
-#         chunk_text = (metadata.get("text", "") or metadata.get("child_match_text", ""))[:1500]
-#         source_name = metadata.get("source_url", "Unknown")
-#         fund_name = metadata.get("fund_name", "Unknown")
-#         context_text += f"--- Source: {source_name} ({fund_name}) ---\n{chunk_text}\n\n"
-#         citations.append({
-#             "source": source_name,
-#             "fund": fund_name
-#         })
+    for i, item in enumerate(reranked):
+        metadata = item["result"].get("metadata", {})
+        chunk_text = (metadata.get("text", "") or metadata.get("child_match_text", ""))[:1500]
+        source_name = metadata.get("source_url", "Unknown")
+        fund_name = metadata.get("fund_name", "Unknown")
+        context_text += f"--- Source: {source_name} ({fund_name}) ---\n{chunk_text}\n\n"
+        citations.append({
+            "source": source_name,
+            "fund": fund_name
+        })
 
-#     # print("\n=== RETRIEVED CHUNKS ===")
-#     # for i, item in enumerate(reranked):
-#     #     metadata = item["result"].get("metadata", {})
-#     #     print(f"\nChunk {i+1}  score={item['rerank_score']:.4f}")
-#     #     print(metadata.get("text", "")[:500])
-#     #     print("=" * 50)
+    # 6. Generate answer
+    system_prompt = f"""
+    You are an expert AI assistant for financial advisors at Triple A Super.
+    Answer the user's query using ONLY the provided document context below.
+    Do not use any outside knowledge — only what appears in the context.
 
-#     # 6. Generate answer
-#     system_prompt = f"""
-#     You are an expert AI assistant for financial advisors at Triple A Super.
-#     Answer the user's query using ONLY the provided document context below.
-#     Do not use any outside knowledge — only what appears in the context.
+    If the context contains relevant information, share ALL of it even if it is brief or partial.
+    Do not refuse to answer just because the information is incomplete — report what is there.
+    Only say "I cannot find information about this in the provided documents" if the context contains
+    absolutely nothing related to the query.
 
-#     If the context contains relevant information, share ALL of it even if it is brief or partial.
-#     Do not refuse to answer just because the information is incomplete — report what is there.
-#     Only say "I cannot find information about this in the provided documents" if the context contains
-#     absolutely nothing related to the query.
+    When referencing where information came from, cite the actual source document name shown in the
+    context (e.g. "SIS Act -1.pdf") and, if a specific section or clause number is visible in the
+    context, include that too (e.g. "Section 4(2) of SIS Act -1.pdf"). Never refer to a source by a
+    generic label like "Document 1" or invent a document name or number that isn't shown in the context.
 
-#     When referencing where information came from, cite the actual source document name shown in the
-#     context (e.g. "SIS Act -1.pdf") and, if a specific section or clause number is visible in the
-#     context, include that too (e.g. "Section 4(2) of SIS Act -1.pdf"). Never refer to a source by a
-#     generic label like "Document 1" or invent a document name or number that isn't shown in the context.
+    If the query asks about methods, techniques, strategies, or types:
+    - enumerate ALL methods found in the context
+    - do not omit any
+    - use bullet points
 
-#     If the query asks about methods, techniques, strategies, or types:
-#     - enumerate ALL methods found in the context
-#     - do not omit any
-#     - use bullet points
+    CONTEXT:
+    {context_text}
+    """
 
-#     CONTEXT:
-#     {context_text}
-#     """
+    answer = get_chat_response(system_prompt, user_query)
 
-#     answer = get_chat_response(system_prompt, user_query)
-
-#     result = {"answer": answer, "citations": citations, "context": context_text}
-#     return JsonResponse(result)
+    result = {"answer": answer, "citations": citations, "context": context_text}
+    return JsonResponse(result)

@@ -253,26 +253,78 @@
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
+    function renderBoldMarkdown(container, text) {
+        const lines = String(text ?? '').split('\n');
+        const boldPattern = /\*\*([^*\n]+)\*\*/g;
+
+        lines.forEach((line, lineIndex) => {
+            let lastIndex = 0;
+            let match;
+
+            while ((match = boldPattern.exec(line)) !== null) {
+                container.appendChild(
+                    document.createTextNode(line.slice(lastIndex, match.index))
+                );
+
+                const strong = document.createElement('strong');
+                strong.textContent = match[1];
+                container.appendChild(strong);
+                lastIndex = boldPattern.lastIndex;
+            }
+
+            container.appendChild(
+                document.createTextNode(line.slice(lastIndex))
+            );
+
+            if (lineIndex < lines.length - 1) {
+                container.appendChild(document.createElement('br'));
+            }
+        });
+    }
+
     function addBotMessageWithCitations(answer, citations) {
         const chatBox = document.getElementById('chat-box');
         const msgDiv = document.createElement('div');
         msgDiv.className = 'message bot-msg';
-        
-        let htmlContent = `<div class="answer-text">${answer.replace(/\n/g, '<br>')}</div>`;
-        
+
+        const answerDiv = document.createElement('div');
+        answerDiv.className = 'answer-text';
+        renderBoldMarkdown(answerDiv, answer);
+        msgDiv.appendChild(answerDiv);
+
         if (citations && citations.length > 0) {
             // Deduplicate citations based on source_url
             const uniqueCitations = Array.from(new Set(citations.map(c => c.source)))
                                          .map(src => citations.find(c => c.source === src));
-                                         
-            htmlContent += `<div class="citations"><strong>Sources:</strong><ul>`;
+
+            const citationsDiv = document.createElement('div');
+            citationsDiv.className = 'citations';
+
+            const heading = document.createElement('strong');
+            heading.textContent = 'Sources:';
+            citationsDiv.appendChild(heading);
+
+            const list = document.createElement('ul');
             uniqueCitations.forEach(cit => {
-                htmlContent += `<li><a href="../${cit.source.split('/').pop()}" target="_blank" style="color:#0056b3;">${cit.source.split('/').pop()}</a> (${cit.fund})</li>`;
+                const sourceName = String(cit.source ?? '').split('/').pop();
+                const item = document.createElement('li');
+                const link = document.createElement('a');
+
+                link.href = `../${encodeURIComponent(sourceName)}`;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                link.textContent = sourceName;
+
+                item.appendChild(link);
+                item.appendChild(
+                    document.createTextNode(` (${String(cit.fund ?? 'Unknown')})`)
+                );
+                list.appendChild(item);
             });
-            htmlContent += `</ul></div>`;
+            citationsDiv.appendChild(list);
+            msgDiv.appendChild(citationsDiv);
         }
-        
-        msgDiv.innerHTML = htmlContent;
+
         chatBox.insertBefore(msgDiv, document.getElementById('loading'));
         chatBox.scrollTop = chatBox.scrollHeight;
     }

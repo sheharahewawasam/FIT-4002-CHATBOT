@@ -1,0 +1,257 @@
+
+==========================================================================================
+../pdfs/Proposal Document.pdf
+==========================================================================================
+Removed TOC blocks: 1
+
+REMOVED [pre_chunk] toc_region (3,749 chars, source lines 9-41)
+Beginning:
+Table of Contents
+1.0 Introduction......................................................................................................................3
+2.0 System Use Case Diagram..............................................................................................4
+Fig 2.0.1 System Use Case Diagram.....................................................................4
+3.0 What is Rag? Why is it useful here?..............................................................................5
+
+
+Ending:
+Stories....................................................................................................19
+5.0 Rationale....................................................................................................................20
+2.1 RAG Alternatives......................................................................................................21
+13.0 Conclusion....................................................................................................................22
+
+TOC rule matches are a filter consistency check, not independently measured leakage.
+Containment checks local entries, not fetched Pinecone records.
+Extracted text: 25,401 chars
+Detection method: paragraph-fallback (headings found: 0)
+
+Total chunks:            54
+Leaf length avg/min/max: 424 / 25 / 705 chars
+Parent length avg:       1215 chars
+
+Parent-contains-child rate:  100.0%
+Parent == child rate:        27.8%
+Possible mid-sentence cuts:  16.7% (9 chunks, 11 boundaries)
+Retained TOC-rule match rate:       0.0%
+Local parent contains full child: 100.0%
+
+No storage containment failures detected.
+
+------------------------------------------------------------------------------------------
+POSSIBLE CUT POINTS
+------------------------------------------------------------------------------------------
+
+Cut #1 — Chunk 23 (end boundary within its parent)
+
+Text before boundary:
+oud-based OCR service by - Higher accuracy - Paid service
+Textract AWS that can extract text and - Able to extract tables - Potential data privacy risks
+structured information such as and forms - Dependant on AWS
+tables and forms - Scalable and fully
+
+Text after boundary:
+ infrastructure
+managed
+Google An advanced document - Very high accuracy - Paid service
+Document AI understanding platform that - Able to extract tables - Requires Google Cloud
+combines OCR with AI models and forms setup
+to extract structured and - A
+
+............................................................
+
+Cut #2 — Chunk 24 (start boundary within its parent)
+
+Text before boundary:
+uments into machine forms
+readable text - Requires manual tuning
+and setup
+Amazon A cloud-based OCR service by - Higher accuracy - Paid service
+Textract AWS that can extract text and - Able to extract tables - Potential data privacy risks
+structured 
+
+Text after boundary:
+information such as and forms - Dependant on AWS
+tables and forms - Scalable and fully infrastructure
+managed
+Google An advanced document - Very high accuracy - Paid service
+Document AI understanding platform that - Able to extract tables - Requires 
+
+............................................................
+
+Cut #3 — Chunk 26 (end boundary within its parent)
+
+Text before boundary:
+he system summaries are time to generate
+shorter summaries
+- Helps for queries
+that use different
+wording than the
+document
+Hierarchical Indexing This approach involves - Efficient retrieval by - More complex system
+creating multiple narrowing search
+
+Text after boundary:
+ design
+hierarchies of documents from summary to - Requires maintaining
+into various levels of detail, detailed chunks multiple index layers
+with lower levels containing - Scales well for very - Errors in higher-level
+more detailed documents large do
+
+............................................................
+
+Cut #4 — Chunk 27 (start boundary within its parent)
+
+Text before boundary:
+ same document important details
+the actual thing being - Faster retrieval as - Extra preprocessing
+returned by the system summaries are time to generate
+shorter summaries
+- Helps for queries
+that use different
+wording than the
+document
+Hierarchical 
+
+Text after boundary:
+Indexing This approach involves - Efficient retrieval by - More complex system
+creating multiple narrowing search design
+hierarchies of documents from summary to - Requires maintaining
+into various levels of detail, detailed chunks multiple index lay
+
+............................................................
+
+Cut #5 — Chunk 27 (end boundary within its parent)
+
+Text before boundary:
+ing than the
+document
+Hierarchical Indexing This approach involves - Efficient retrieval by - More complex system
+creating multiple narrowing search design
+hierarchies of documents from summary to - Requires maintaining
+into various levels of detail,
+
+Text after boundary:
+ detailed chunks multiple index layers
+with lower levels containing - Scales well for very - Errors in higher-level
+more detailed documents large document summaries can cause
+whereas higher levels collections relevant documents to
+contain summaries -
+
+............................................................
+
+Cut #6 — Chunk 28 (start boundary within its parent)
+
+Text before boundary:
+are time to generate
+shorter summaries
+- Helps for queries
+that use different
+wording than the
+document
+Hierarchical Indexing This approach involves - Efficient retrieval by - More complex system
+creating multiple narrowing search design
+hierarchies 
+
+Text after boundary:
+of documents from summary to - Requires maintaining
+into various levels of detail, detailed chunks multiple index layers
+with lower levels containing - Scales well for very - Errors in higher-level
+more detailed documents large document summaries can
+
+............................................................
+
+Cut #7 — Chunk 28 (end boundary within its parent)
+
+Text before boundary:
+filtering irrelevant
+sections early
+Time-Based Indexing This approach involves - Ensures recent and - Older documents may
+embedding each piece of therefore more still contain useful
+document with a date relevant information information but get
+label,
+
+Text after boundary:
+ this way the AI is prioritized ignored
+knows which document is - Useful for domains - Requires accurate
+the most recent and with frequently timestamp metadata
+therefore the most relevant changing data (such - Adds complexity to
+as our use case in ra
+
+............................................................
+
+Cut #8 — Chunk 29 (start boundary within its parent)
+
+Text before boundary:
+iltering irrelevant
+sections early
+Time-Based Indexing This approach involves - Ensures recent and - Older documents may
+embedding each piece of therefore more still contain useful
+document with a date relevant information information but get
+label, 
+
+Text after boundary:
+this way the AI is prioritized ignored
+knows which document is - Useful for domains - Requires accurate
+the most recent and with frequently timestamp metadata
+therefore the most relevant changing data (such - Adds complexity to
+as our use case in ran
+
+............................................................
+
+Cut #9 — Chunk 51 (end boundary within its parent)
+
+Text before boundary:
+ outdated or
+wrong information
+Keyword-Based A retrieval method - Simple and easy to - Does not understand meaning or
+Search where the system implement context
+matches the exact - Fast retrieval - Poor performance on questions
+keywords in the query -
+
+Text after boundary:
+ Works well with exact terms asked in natural language
+with the words in the - May miss relevant results
+documents because of the way of wording
+Hybrid Search A retrieval method that - Higher accuracy and - Requires ranking and merging
+combines both 
+
+............................................................
+
+Cut #10 — Chunk 52 (start boundary within its parent)
+
+Text before boundary:
+time-consuming to
+domain knowledge into - Simpler runtime pipeline retrain
+the model - Have a risk of having outdated or
+wrong information
+Keyword-Based A retrieval method - Simple and easy to - Does not understand meaning or
+Search where the system 
+
+Text after boundary:
+implement context
+matches the exact - Fast retrieval - Poor performance on questions
+keywords in the query - Works well with exact terms asked in natural language
+with the words in the - May miss relevant results
+documents because of the way of wordi
+
+............................................................
+
+Cut #11 — Chunk 53 (start boundary within its parent)
+
+Text before boundary:
+n natural language
+with the words in the - May miss relevant results
+documents because of the way of wording
+Hybrid Search A retrieval method that - Higher accuracy and - Requires ranking and merging
+combines both coverage strategies which increases 
+
+Text after boundary:
+the
+keyword-based search - Able to handle both exact complexity to implement
+and vector search. The term matching and natural
+results are retrieved, language queries
+ranked and then
+merged to produce a
+more accurate result
+Agent-Based An extension of
+
+............................................................
