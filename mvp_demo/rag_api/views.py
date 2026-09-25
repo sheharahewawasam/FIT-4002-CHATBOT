@@ -11,7 +11,7 @@ import textwrap
 from django.http import JsonResponse
 from django.utils import timezone
 from rest_framework.decorators import api_view, throttle_classes
-from rest_framework.throttling import AnonRateThrottle
+from rest_framework.throttling import UserRateThrottle
 
 from . import resources
 from .models import Advisor
@@ -25,7 +25,16 @@ _bm25 = resources.bm25
 _embedder = resources.embedder
 _reranker = resources.reranker
 
-class ChatbotRateThrottle(AnonRateThrottle):
+class ChatbotRateThrottle(UserRateThrottle):
+    """
+    Per-advisor rate limit on the chat endpoint.
+
+    This was AnonRateThrottle, which returns no cache key for an authenticated
+    request - DRF reads that as "do not throttle". It was correct while the API
+    was open, and became a no-op the moment sign-in was required, because every
+    caller is now authenticated. UserRateThrottle keys on the user instead, and
+    still falls back to the IP for an anonymous caller.
+    """
     scope = "chatbot"
 
 # Simple in-memory cache — repeated identical queries return instantly

@@ -14,6 +14,7 @@ from django.test import TestCase
 
 from rag_api import views
 from django.contrib.auth.models import User
+from django.core.cache import cache
 
 from rag_api.models import Advisor, Document, Fund
 
@@ -280,3 +281,32 @@ class DocumentOwnershipTests(TestCase):
         self.client.force_login(self.other.user)
         response = self.client.get("/api/documents/")
         self.assertEqual(response.json()["documents"], [])
+
+
+class ChatThrottleTests(TestCase):
+    """
+    The chat rate limit must apply to signed-in advisors.
+
+    It was AnonRateThrottle, whose get_cache_key returns None for an
+    authenticated request - DRF reads that as "do not throttle". Correct while
+    the API was open; a silent no-op once sign-in became mandatory, because
+    every caller is authenticated from then on. Nothing failed, the limit simply
+    stopped existing.
+    """
+
+    def setUp(self):
+        cache.clear()   # throttle history is cache state and leaks between tests
+        self.addCleanup(cache.clear)
+        advisor = Advisor.objects.create(
+            name="ThrottleTest",
+            user=User.objects.create_user("throttletest", password="pw"))
+        self.client.force_login(advisor.user)
+
+    def test_a_signed_in_advisor_is_throttled(self):
+        # Throttling runs before the handler, so a 400 for a missing query still
+        # counts against the limit and keeps this test off the network.
+        codes = [self.client.post("/api/chat/", {}, content_type="application/json").status_code
+                 for _ in range(14)]
+        self.assertIn(429, codes, f"no request was throttled: {codes}")
+        # 10/min, so the first ten are let through and the rest refused.
+        self.assertEqual(codes.count(400), 10)
