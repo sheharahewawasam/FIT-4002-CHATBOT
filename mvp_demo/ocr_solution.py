@@ -48,10 +48,28 @@ class OCR():
 
     VLM_PROMPT = """
         Extract all content from this document image and format it strictly as JSON.
-        Preserve reading order top to bottom. Transcribe exactly what is visible, no need for any calculations;
+
+        Preserve the exact reading order of the document, top to bottom, left to right,
+        exactly as a human would read it. Do not reorder, merge, or skip any words,
+        lines, or sections.
+
+        Transcribe exactly what is visible, character-for-character, including any
+        checkboxes, symbols, or placeholder characters (e.g. □). Do not perform any
+        calculations, corrections, or inferences — transcribe only.
+
+        If the image contains a table, reconstruct it as a single Markdown table
+        (using | pipes and a header separator row) inside its block, preserving all
+        rows, columns, and cell values exactly as shown, including empty cells.
+        If a table is too complex for Markdown (e.g. merged/spanning cells), use a
+        minimal HTML <table> instead. Do not flatten table rows into plain text or
+        pipe-separated sentences.
+
+        Each element of "blocks" should be one logical unit of content in reading
+        order: a heading, a paragraph, a list, or one full table (as a single
+        Markdown/HTML string).
 
         Output ONLY: { "blocks": [...] }
-        No explanation, no markdown, no commentary.
+        No explanation, no markdown fencing, no commentary.
     """
 
 
@@ -77,6 +95,12 @@ class OCR():
 
 
     def calc_ocr_confidence(self, res) -> bool:
+        """
+        Calculates the OCR confidence model for a page
+        
+        :param res: OCR res from page input
+        :return: bool for if the OCR requires an extra VLM processing step
+        """
         data = res.json.get("res", res.json)
 
         ocr_res = data.get("overall_ocr_res", {})
