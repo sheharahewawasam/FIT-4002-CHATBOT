@@ -57,7 +57,12 @@ class OCR():
         <table> only if merged/spanning cells make Markdown impossible. Never
         flatten a table into plain or pipe-separated text.
 
-        Each block = one logical unit (heading, paragraph, list, or table).
+        Each block = one logical unit (heading, paragraph, list, or table),
+        represented as a single plain JSON string — NOT an object, NOT
+        {"text": ...}. "blocks" is an array of strings only.
+
+        Example of the required shape:
+        {"blocks": ["Heading text", "Paragraph text here.", "| Col1 | Col2 |\\n|---|---|\\n| a | b |"]}
 
         Output ONLY: {"blocks": [...]}
         No commentary, no markdown fencing.
@@ -329,7 +334,8 @@ class OCR():
 
                 try:
                     vlm_data = json.loads(vlm_res)
-                    blocks = vlm_data.get("blocks", [])
+                    raw_blocks = vlm_data.get("blocks", [])
+                    blocks = [self.clean_json(b) for b in raw_blocks]
                 except (json.JSONDecodeError, TypeError):
                     self.print_format(f"Failed to parse VLM JSON on page {page_num}, falling back to raw text")
                     blocks = [vlm_res] if vlm_res else []
@@ -338,7 +344,7 @@ class OCR():
 
                 if page_text:
                     markdown_list.append({
-                        "markdown_texts": page_text + f"Page: {page_num}",
+                        "markdown_texts": page_text + f"\n\nPage: {page_num}",
                         "markdown_images": {},
                         "page_continuation_flags": (True, True),
                     })
@@ -362,7 +368,7 @@ class OCR():
             
                             md_info["markdown_texts"] = md_info.get("markdown_texts", "") + image_text
 
-                md_info["markdown_texts"] = md_info.get("markdown_texts", "") + f"Page: {page_num}"
+                md_info["markdown_texts"] = md_info.get("markdown_texts", "") + f"\n\nPage: {page_num}"
                 markdown_list.append(md_info)
 
         doc.close()
@@ -420,6 +426,18 @@ class OCR():
             return lst.pop(0).text
         except IndexError:
             return ""
+
+
+    def clean_json(self, block) -> str:
+        if isinstance(block, str):
+            return block
+        if isinstance(block, dict):
+            # common alternate keys models might use
+            for key in ("text", "content", "value"):
+                if key in block and isinstance(block[key], str):
+                    return block[key]
+            return str(block)  # last resort, avoid crashing
+        return str(block)
 
 
     def ocr_test(
