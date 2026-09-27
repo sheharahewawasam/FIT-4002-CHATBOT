@@ -47,29 +47,20 @@ class OCR():
 
 
     VLM_PROMPT = """
-        Extract all content from this document image and format it strictly as JSON.
+        Transcribe this document image to JSON, preserving exact reading order
+        (top-to-bottom, left-to-right) and exact content — every word, symbol,
+        and placeholder character (e.g. □), with no reordering, skipping, merging,
+        or calculation.
 
-        Preserve the exact reading order of the document, top to bottom, left to right,
-        exactly as a human would read it. Do not reorder, merge, or skip any words,
-        lines, or sections.
+        Tables: reconstruct as one Markdown table per block (pipes + header
+        separator, all rows/columns/empty cells preserved). Use minimal HTML
+        <table> only if merged/spanning cells make Markdown impossible. Never
+        flatten a table into plain or pipe-separated text.
 
-        Transcribe exactly what is visible, character-for-character, including any
-        checkboxes, symbols, or placeholder characters (e.g. □). Do not perform any
-        calculations, corrections, or inferences — transcribe only.
+        Each block = one logical unit (heading, paragraph, list, or table).
 
-        If the image contains a table, reconstruct it as a single Markdown table
-        (using | pipes and a header separator row) inside its block, preserving all
-        rows, columns, and cell values exactly as shown, including empty cells.
-        If a table is too complex for Markdown (e.g. merged/spanning cells), use a
-        minimal HTML <table> instead. Do not flatten table rows into plain text or
-        pipe-separated sentences.
-
-        Each element of "blocks" should be one logical unit of content in reading
-        order: a heading, a paragraph, a list, or one full table (as a single
-        Markdown/HTML string).
-
-        Output ONLY: { "blocks": [...] }
-        No explanation, no markdown fencing, no commentary.
+        Output ONLY: {"blocks": [...]}
+        No commentary, no markdown fencing.
     """
 
 
@@ -117,7 +108,7 @@ class OCR():
         if weighted_avg < self.CONF_SCORE:
             return True
 
-        if low_conf_ratio < self.LOW_CONF_RATIO:
+        if low_conf_ratio > self.LOW_CONF_RATIO:
             return True
         
         layout_res = data.get("layout_det_res", {}).get("boxes", [])
@@ -211,22 +202,47 @@ class OCR():
         img = page.get_pixmap(dpi=200)
         image_bytes = img.tobytes("png")
 
-        response = chat(
-            model='qwen3-vl',
-            messages=[
-                {
-                    'role': 'user',
-                    'content': self.VLM_PROMPT,
-                    'images': [image_bytes]
-                }
-            ],
-            format='json',
-            options={
-                'num_ctx': 16384,
-                'num_predict': -1,
-            }
-        )
+        tries = 2
+        response = None
 
+        while tries > 0:
+            try:
+                response = chat(
+                    model='qwen3-vl',
+                    messages=[
+                        {
+                            'role': 'user',
+                            'content': self.VLM_PROMPT,
+                            'images': [image_bytes]
+                        }
+                    ],
+                    format='json',
+                    think=False,
+                    options={
+                        'num_ctx': 16384,
+                        'num_predict': -1,
+                    }
+                )
+
+                if response.get('done_reason') != 'stop':
+                    self.print_format(
+                        f"VLM finished with done_reason={response.get('done_reason')!r}, "
+                        f"output may be truncated"
+                    )
+
+                break  # success - stop retrying
+
+            except Exception as e:
+                tries -= 1
+                self.print_format(f"Ollama error: {e}. Retrying ({tries} attempt(s) left)")
+                if tries > 0:
+                    time.sleep(2)
+
+        if response is None:
+            self.print_format("VLM failed after all retries, returning empty blocks")
+            return '{"blocks": []}'
+
+        print(response)
         return response['message']['content']
 
 
@@ -303,7 +319,7 @@ class OCR():
             res.save_to_json(str(page_json_path))
 
             low_conf = self.calc_ocr_confidence(res)
-            self.print_format(f"Page {page_num} low_confidence={low_conf}")
+            self.print_format(f"Page {page_num} Low Confidence: {low_conf}")
 
             vlm_success = False
 
@@ -322,16 +338,16 @@ class OCR():
 
                 if page_text:
                     markdown_list.append({
-                        "markdown_texts": page_text,
+                        "markdown_texts": page_text + f"Page: {page_num}",
                         "markdown_images": {},
                         "page_continuation_flags": (True, True),
                     })
 
-                vlm_success = True
+                    vlm_success = True
 
             if not vlm_success:
                 md_info = res.markdown
-                markdown_images = md_info.get("markdown_images", {})
+                markdown_images = [md_info.get("markdown_images", {})]
 
                 if markdown_images:
                     image_text = ""
@@ -346,6 +362,7 @@ class OCR():
             
                             md_info["markdown_texts"] = md_info.get("markdown_texts", "") + image_text
 
+                md_info["markdown_texts"] = md_info.get("markdown_texts", "") + f"Page: {page_num}"
                 markdown_list.append(md_info)
 
         doc.close()
@@ -488,11 +505,11 @@ if __name__ == "__main__":
 
     # input_file = Path("./pdfs/image-based-pdf-sample_rotated.pdf")
 
-    input_file = Path("./pdfs/atoform.pdf")
+    # input_file = Path("./pdfs/atoform.pdf")
 
     # input_file = Path("./pdfs/Investment Strategy.pdf")
 
-    # input_file = Path("./pdfs/Signed_2023_Annual_Return_NOT_AUDITED[1]_unlocked.pdf")
+    input_file = Path("./pdfs/Signed_2023_Annual_Return_NOT_AUDITED[1]_unlocked.pdf")
 
 
     ocr.output_document(input_file, False)

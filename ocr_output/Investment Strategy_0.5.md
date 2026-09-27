@@ -48,7 +48,7 @@ The trustee recognises that should the fund invest heavily in one asset or asset
 
 Should the trustee decide to invest in one asset or asset class, the fund's objectives, required rate of return and cash-flow requirements will be taken into account.
 
-
+Page: 0
 
 The Trustee seeks an overall investment return for the fund in the 7-10 year term (medium term) of 3-5%above the average rate of inflation over that period.
 
@@ -96,7 +96,7 @@ These include listed and unlisted securities including shares, warrants, derivat
 
 
 
-## Fixed Interest (2-50%)
+## Fixed Interest (2-50%)Page: 1
 
 This includes deposits in Australian and overseas banks, building societies, lending institutions, cash.
 
@@ -132,7 +132,7 @@ Angus (Apr 19, 2022 12:51 GMT+10)
 
 
 
-Claire (Apr 20, 2022 12:16 GMT+10)Apr 20, 2022 Claire Taylor 
+Claire (Apr 20, 2022 12:16 GMT+10)Apr 20, 2022 Claire Taylor Page: 2
 
 
 <div style="text-align: center;"><html><body><table border="1"><thead><tr><td>Created:</td><td>2022-04-19</td></tr></thead><tbody><tr><td>By:</td><td>Alphington Private Wealth (contact@alphingtonprivate.com.au)</td></tr><tr><td>Status:</td><td> Signed</td></tr><tr><td>Transaction ID:e</td><td>CBJCHBCAABAASwZRqrG4Xgj04eOFF4mfPstwoznOERpR</td></tr></tbody></table></body></html></div>
@@ -169,25 +169,6 @@ Signature Date: 2022-04-20 - 2:16:03 AM GMT - Time Source: server- IP address: 8
 
 Agreement completed.
 
-2022-04-20-2:16:03AMGMT 
+2022-04-20-2:16:03AMGMT {"blocks": ["| Label | Value |\n| :----- | :----- |\n| Created: | 2022-04-19 |\n| By: | Alphington Private Wealth (contact@alphingtonprivate.com.au) |\n| Status: | Signed |\n| Transaction ID: | CBJCHBCAABAASwZRqrG4Xgj04eOFF4mfPstwoznOERpR |"]}{"blocks": [{"text": "D E"}]}Page: 3
 
-{
-  "blocks": [
-    "Created: 2022-04-19",
-    "By: Alphington Private Wealth (contact@alphingtonprivate.com.au)",
-    "Status: Signed",
-    "Transaction ID: CBJCHBCAABAASwZRqrG4Xgj04eOFF4mfPstwoznOERpR"
-  ]
-}{
-
-  "blocks": [
-    {
-      "text": "D",
-      "bbox": [0, 0, 500, 500]
-    },
-    {
-      "text": "E",
-      "bbox": [500, 0, 1000, 500]
-    }
-  ]
-}
+Page: 4
