@@ -1,17 +1,3 @@
-from mvp_demo.chunking.toc_filter import (
-    _TOC_ENTRY_RE,
-    _TOC_DOTTED_LINE_RE,
-    _TOC_TRAILING_PAGE_RE,
-    _TOC_TITLE_RE,
-    _TOC_PAGE_RE,
-    _body_block_start,
-    _find_toc_region_end,
-    _has_body_text_after,
-    _normalise_toc_label,
-    _toc_entry_label,
-    looks_like_toc_line,
-    remove_toc_regions
-)
 import os
 import re
 import hashlib
@@ -28,15 +14,14 @@ from datetime import datetime
 
 from ocr_solution import OCR
 from pathlib import Path
-from mvp_demo.chunking.header_chunking import (
-    build_header_based_chunks, build_section_based_chunks,
-    split_into_sections, is_heading_line, trim_to_sentence_boundary,
-    _MIN_HEADINGS_FOR_STRUCTURE, _MIN_PARAGRAPHS_FOR_FALLBACK,
+from chunking.toc_filter import (
+    remove_toc_regions
 )
-from mvp_demo.chunking.toc_filter import section_toc
-from mvp_demo.chunking.layout_chunking import (
-    is_layout_output, normalise_ocr_output, build_layout_snapshot,
-    build_layout_aware_chunks,
+from chunking.header_chunking import (
+    build_header_based_chunks
+)
+from chunking.layout_chunking import (
+    is_layout_output, normalise_ocr_output, build_layout_snapshot, has_table_markup,
 )
 
 load_dotenv("secrets.env")
@@ -80,6 +65,7 @@ pdfs_to_process = [
     {"filepath": "../pdfs/Unsigned 2024 Annual Return.pdf",                                                                                  "fund_name": "Darto Super Fund",                   "doc_type": "SMSF Annual Return",                    "date": "21 January 2012"},
     {"filepath": "../pdfs/Powell - SMSF Investment Strategy 2020.pdf",                                                                       "fund_name": "Powell Superannuation Fund",         "doc_type": "Investment Strategy",                   "date": "21 January 2012"},
     {"filepath": "../pdfs/Powell SF - Amended Trust Deed 27.04.2020.pdf",                                                                    "fund_name": "Powell Superannuation Fund",         "doc_type": "Trust Deed",                            "date": "21 January 2012"},
+    {"filepath": "../pdfs/atoform.pdf",                                                                                                      "fund_name": "General",                            "doc_type": "ATO Form",                              "date": "21 January 2012",}
 ]
 
 # Cleans extracted PDF text without destroying the document structure
@@ -146,7 +132,7 @@ def extract_document_content(pdf_path, ocr=None):
     try:
         if ocr is None:
             ocr = OCR()
-        result = ocr.output_document(Path(pdf_path))
+        result = ocr.output_document(Path(pdf_path), cleanup=False)
     except Exception as exc:
         warnings.warn(f"OCR failed for {pdf_path}: {exc}; trying PDF text extraction.")
         return extract_text_with_tables(pdf_path)
@@ -248,7 +234,9 @@ def main():
         print(f"  {pdf_info['filepath']}...", end=" ", flush=True)
         try:
             # Optional sidecar lets you test/use saved OCR without changing OCR().
-            if pdf_info.get("ocr_json_path"):
+            if pdf_info.get("selected_text_path"):
+                document_content = Path(pdf_info["selected_text_path"]).read_text(encoding="utf-8-sig")
+            elif pdf_info.get("ocr_json_path"):
                 document_content = json.loads(Path(pdf_info["ocr_json_path"]).read_text(encoding="utf-8-sig"))
             else:
                 document_content = extract_document_content(pdf_info["filepath"], ocr=ocr)
@@ -271,7 +259,7 @@ def main():
         rejected_chunks = []
         layout_snapshot = None
         try:
-            if is_layout_output(document_content):
+            if is_layout_output(document_content) or has_table_markup(document_content):
                 layout_snapshot = build_layout_snapshot(
                     document_content, base_metadata,
                     toc_filter=remove_toc_regions,
@@ -311,7 +299,7 @@ def main():
 
         # Layout IDs include block occurrence: identical answers on different pages
         # must not overwrite each other. Retain legacy IDs for existing text chunks.
-        if entry.get("chunking_method") == "layout_aware":
+        if entry.get("chunking_method") in {"layout_aware", "markdown_structure"}:
             doc_id = hashlib.sha256(
                 (entry["source_url"] + "::" + entry["chunk_id"]).encode("utf-8")
             ).hexdigest()
@@ -331,20 +319,21 @@ def main():
             "date": entry["date"],
             "date_numeric": entry["date_numeric"],
         })
-        if entry.get("chunking_method") == "layout_aware":
+        if entry.get("chunking_method") in {"layout_aware", "markdown_structure"}:
             # Keep only scalar/list-of-string metadata in Pinecone. Full bbox
             # objects remain in snapshots; they are not embedding input.
             for key in ("chunking_method", "section_title", "parent_id", "chunk_id",
                         "page_start", "page_end", "parent_page_start", "parent_page_end",
                         "block_ids", "oversized_child"):
-                metadatas[-1][key] = entry[key]
+                if key in entry and entry[key] is not None:
+                    metadatas[-1][key] = entry[key]
             metadatas[-1]["layout_sources_json"] = json.dumps(entry["layout_sources"])
 
 
     # Atomic form/table units can exceed the soft character budget. Fail explicitly
     # instead of letting the embedding model silently truncate important values.
     for entry in all_entries:
-        if entry.get("chunking_method") == "layout_aware":
+        if entry.get("chunking_method") in {"layout_aware", "markdown_structure"}:
             token_ids = embedder.tokenizer(entry["leaf_text"], truncation=False)["input_ids"]
             if len(token_ids) > embedder.max_seq_length:
                 raise ValueError(

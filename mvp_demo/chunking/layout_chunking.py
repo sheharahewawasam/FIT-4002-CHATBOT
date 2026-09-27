@@ -1,6 +1,6 @@
 """Offline layout chunking for OCR page dictionaries. Python 3.9+, stdlib only.
 
-Input: a page dictionary, a list of pages, or {"pages": [...]}.
+Input: OCR page JSON, or selected OCR/VLM Markdown/HTML text.
 Output: parent/leaf entries compatible with the existing structural snapshot format.
 Labels/coordinates are predictions, not ground truth. Unknown blocks are retained.
 Character budgets are explicit; they are NOT token counts.
@@ -14,7 +14,10 @@ import hashlib
 import json
 import math
 import re
-from mvp_demo.chunking.toc_filter import remove_toc_regions
+if __package__:
+    from .toc_filter import remove_toc_regions
+else:  # Also support running this file directly for offline tests.
+    from toc_filter import remove_toc_regions
 
 
 @dataclass
@@ -220,6 +223,8 @@ class _HTMLTable(HTMLParser):
 def table_units(block, diagnostics):
     """Serialize table rows with known headers; never invent column meanings."""
     text = block.text
+    if len(re.findall(r'<table\b', text, re.I)) > 1:
+        raise ValueError('Nested tables require review before chunking')
     if '<table' in text.lower():
         parser = _HTMLTable()
         try:
@@ -258,6 +263,8 @@ def table_units(block, diagnostics):
                 break
             header_count += 1
         width = max(map(len, grid))
+        if any(len(row) != width for row in grid):
+            raise ValueError('HTML table has inconsistent column counts; preserve explicit blank cells')
         labels = []
         for c in range(width):
             parts = [row[c] for row in grid[:header_count] if c < len(row) and row[c]]
@@ -271,9 +278,11 @@ def table_units(block, diagnostics):
         lines = [line.strip() for line in text.splitlines() if line.strip()]
         if len(lines) < 2 or not all('|' in line for line in lines):
             return [text]
-        grid = [[v.strip() for v in line.strip('|').split('|')] for line in lines]
+        grid = [_markdown_cells(line) for line in lines]
         if len(grid) > 1 and all(re.fullmatch(r':?-{3,}:?', cell) for cell in grid[1]):
             labels, rows = grid[0], grid[2:]
+            if any(len(row) != len(labels) for row in grid[1:]):
+                raise ValueError('Markdown table has inconsistent column counts; preserve explicit blank cells')
         else:
             labels, rows = ['Column %s' % (i + 1) for i in range(max(map(len, grid)))], grid
             diagnostics.append('Pipe table without explicit header separator; using positional column labels')
@@ -283,7 +292,7 @@ def table_units(block, diagnostics):
         values = []
         for c in range(count):
             label = labels[c] if c < len(labels) else 'Column %s' % (c + 1)
-            value = row[c] if c < len(row) else ''
+            value = row[c] if c < len(row) else '[unclear: missing cell]'
             values.append('%s: %s' % (label, value if value else '[blank]'))
         result.append('Table row %s | %s' % (n, ' | '.join(values)))
     return result or [text]
@@ -331,133 +340,421 @@ def _split_prose(text, limit):
     return pieces
 
 
-def build_layout_snapshot(payload, base_metadata=None, *, parent_max_chars=1500,
-                          child_max_chars=550, allow_partial=False, toc_filter=None):
-    """No model/network calls. Atomic rows/fields may exceed child budget (flagged).
+MAX_ATOMIC_CHARS = 8000
+FORM_BLOCKS = LABELS | VALUES | {'form_item', 'form_field', 'checkbox'}
+HEADING_CONNECTORS = {'of', 'the', 'and', 'on', 'for', 'to', 'in', 'a'}
 
-    Very large atomic units are kept intact up to 8000 chars, then split with an
-    explicit warning; never silently truncate data. Parent size is a soft budget
-    for atomic units. A TOC callback may be the existing remove_toc_regions.
-    """
+
+def _check_chunk_sizes(parent_max_chars, child_max_chars):
+    """Fail early when the requested parent/child sizes cannot work together."""
     if child_max_chars < 80 or parent_max_chars < child_max_chars + 100:
         raise ValueError('Require child_max_chars >= 80 and parent_max_chars >= child_max_chars + 100')
-    if toc_filter is None:
-        toc_filter = remove_toc_regions
-    meta = dict(base_metadata or {})
-    notes, rejected = [], []
-    original = normalise_ocr_output(payload, notes, allow_partial)
-    full_text = '\n\n'.join(b.text for b in original)
-    blocks = filter_repeated_margins(original, rejected, notes)
-    blocks = order_blocks(blocks, notes)
+
+
+def _remove_toc_blocks(blocks, toc_filter, source_name, rejected, notes):
+    """Remove only OCR blocks that sit completely inside a detected TOC region."""
+    if toc_filter is None or not blocks:
+        return blocks
+
     # Apply the existing TOC detector only to complete block ranges; preserve partial blocks.
-    if toc_filter is not None and blocks:
-        text, spans, cursor = '', [], 0
-        for b in blocks:
-            spans.append((cursor, cursor + len(b.text), b))
-            text += b.text + '\n\n'
-            cursor = len(text)
-        toc_rejected = []
-        toc_filter(text.rstrip(), toc_rejected, meta.get('source_url', ''))
-        line_offsets, offset = [], 0
-        for line in text.splitlines(keepends=True):
-            line_offsets.append(offset)
-            offset += len(line)
+    text, spans, cursor = '', [], 0
+    for block in blocks:
+        spans.append((cursor, cursor + len(block.text), block))
+        text += block.text + '\n\n'
+        cursor = len(text)
+
+    toc_rejected = []
+    toc_filter(text.rstrip(), toc_rejected, source_name)
+
+    line_offsets, offset = [], 0
+    for line in text.splitlines(keepends=True):
         line_offsets.append(offset)
-        drop = set()
-        for event in toc_rejected:
-            if event.get('reason') != 'toc_region':
-                continue
-            lo = line_offsets[event['line_start'] - 1]
-            hi = line_offsets[event['line_end']]
-            for start, end, b in spans:
-                if start >= lo and end <= hi:
-                    drop.add(b.block_id)
-                    rejected.append({'stage':'layout', 'reason':'toc_region', 'text':b.text, 'block_id':b.block_id, 'page':b.page})
-                elif start < hi and end > lo:
-                    notes.append('TOC boundary crosses %s; retained block for review' % b.block_id)
-        blocks = [b for b in blocks if b.block_id not in drop]
-    pairs = _pair_fields(blocks, notes)
-    paired_values = {b.block_id for b in pairs.values()}
-    sections, units, title = [], [], ''
-    for i, b in enumerate(blocks):
-        if b.block_id in paired_values:
+        offset += len(line)
+    line_offsets.append(offset)
+
+    dropped_ids = set()
+    for event in toc_rejected:
+        if event.get('reason') != 'toc_region':
             continue
-        heading = b.kind in HEADINGS
-        # Recover a short, nonrepeated bottom heading only with a next-page body continuation.
-        if b.kind == 'footer' and len(b.text.split()) <= 8 and all(w[:1].isupper() or w.lower() in {'of','the','and','on','for','to','in','a'} for w in b.text.split()) and i+1 < len(blocks):
-            following = blocks[i+1]
-            if _edge(b) == 'bottom' and following.page == b.page + 1 and following.kind == 'text':
-                heading = True
-                notes.append('Treated retained margin block %s as a possible cross-page heading' % b.block_id)
-        if heading:
-            if units:
-                sections.append((title, units))
-            title = b.text
-            units = [(b.text, [b], False)]   # preserve heading text even for heading-only sections
-            continue
-        sources = [b]
-        if b.block_id in pairs:
-            value = pairs[b.block_id]
-            sources.append(value)
-            texts = [b.text + ': ' + (value.text or '[blank]')]
-            atomic = True
-        elif b.kind in {'table', 'table_body'}:
-            texts = table_units(b, notes)
-            atomic = True
+        start_of_toc = line_offsets[event['line_start'] - 1]
+        end_of_toc = line_offsets[event['line_end']]
+        for start, end, block in spans:
+            if start >= start_of_toc and end <= end_of_toc:
+                dropped_ids.add(block.block_id)
+                rejected.append({
+                    'stage': 'layout',
+                    'reason': 'toc_region',
+                    'text': block.text,
+                    'block_id': block.block_id,
+                    'page': block.page,
+                })
+            elif start < end_of_toc and end > start_of_toc:
+                notes.append('TOC boundary crosses %s; retained block for review' % block.block_id)
+
+    return [block for block in blocks if block.block_id not in dropped_ids]
+
+
+def _looks_like_cross_page_heading(block, next_block):
+    """Recognise a short footer that is really a heading continued on the next page."""
+    words = block.text.split()
+    title_like = all(
+        word[:1].isupper() or word.lower() in HEADING_CONNECTORS
+        for word in words
+    )
+    return (
+        block.kind == 'footer'
+        and len(words) <= 8
+        and title_like
+        and next_block is not None
+        and _edge(block) == 'bottom'
+        and next_block.page == block.page + 1
+        and next_block.kind == 'text'
+    )
+
+
+def _block_units(block, field_pairs, child_max_chars, notes):
+    """Turn one OCR block into one or more chunkable text units."""
+    sources = [block]
+    if block.block_id in field_pairs:
+        value = field_pairs[block.block_id]
+        sources.append(value)
+        texts = [block.text + ': ' + (value.text or '[blank]')]
+        atomic = True
+    elif block.kind in {'table', 'table_body'}:
+        texts = table_units(block, notes)
+        atomic = True
+    else:
+        texts = [block.text or '[blank]']
+        atomic = block.kind in FORM_BLOCKS
+
+    units = []
+    for text in texts:
+        if atomic and len(text) <= MAX_ATOMIC_CHARS:
+            pieces = [text]
+            if len(text) > child_max_chars:
+                notes.append(
+                    'Atomic unit %s exceeds child character budget; retained intact'
+                    % block.block_id
+                )
         else:
-            texts = [b.text or '[blank]']
-            atomic = b.kind in LABELS | VALUES | {'form_item', 'form_field', 'checkbox'}
-        for text in texts:
-            if atomic and len(text) <= 8000:
-                pieces = [text]
-                if len(text) > child_max_chars:
-                    notes.append('Atomic unit %s exceeds child character budget; retained intact' % b.block_id)
-            else:
-                if atomic:
-                    notes.append('Atomic unit %s exceeds 8000 chars; split for storage, review required' % b.block_id)
-                pieces = _split_prose(text, child_max_chars)
-            units.extend((piece, sources, atomic) for piece in pieces)
-    if units:
-        sections.append((title, units))
+            if atomic:
+                raise ValueError('Atomic table row/field exceeds 8000 characters; review before ingestion')
+            pieces = _split_prose(text, child_max_chars)
+        units.extend((piece, sources, atomic) for piece in pieces)
+    return units
+
+
+def _build_sections(blocks, child_max_chars, notes):
+    """Group ordered blocks beneath their nearest recognised heading."""
+    pairs = _pair_fields(blocks, notes)
+    paired_value_ids = {block.block_id for block in pairs.values()}
+    sections = []
+    current_units = []
+    current_title = ''
+
+    for index, block in enumerate(blocks):
+        if block.block_id in paired_value_ids:
+            continue
+
+        next_block = blocks[index + 1] if index + 1 < len(blocks) else None
+        is_heading = block.kind in HEADINGS
+        if _looks_like_cross_page_heading(block, next_block):
+            is_heading = True
+            notes.append(
+                'Treated retained margin block %s as a possible cross-page heading'
+                % block.block_id
+            )
+
+        if is_heading:
+            if current_units:
+                sections.append((current_title, current_units))
+            current_title = block.text
+            # Keep the heading inside its own section text, including heading-only sections.
+            current_units = [(block.text, [block], False)]
+            continue
+
+        current_units.extend(_block_units(block, pairs, child_max_chars, notes))
+
+    if current_units:
+        sections.append((current_title, current_units))
+    return sections
+
+
+def _group_units(units, character_limit):
+    """Pack adjacent units together without passing the requested character limit."""
+    groups, current_group, current_length = [], [], 0
+    for unit in units:
+        separator_size = 2 if current_group else 0
+        new_size = len(unit[0]) + separator_size
+        if current_group and current_length + new_size > character_limit:
+            groups.append(current_group)
+            current_group, current_length = [], 0
+        current_group.append(unit)
+        current_length += len(unit[0]) + (2 if len(current_group) > 1 else 0)
+    if current_group:
+        groups.append(current_group)
+    return groups
+
+
+def _unique_sources(units):
+    """Return each source block once, while preserving its document order."""
+    return {block.block_id: block for unit in units for block in unit[1]}
+
+
+def _build_entries(sections, metadata, parent_max_chars, child_max_chars):
+    """Build the existing parent/child entry dictionaries from section units."""
     entries = []
-    for title, section in sections:
-        groups, group, length = [], [], 0
-        for unit in section:
-            extra = len(unit[0]) + (2 if group else 0)
-            if group and length + extra > parent_max_chars:
-                groups.append(group)
-                group, length = [], 0
-            group.append(unit)
-            length += len(unit[0]) + (2 if len(group) > 1 else 0)
-        if group:
-            groups.append(group)
-        for parent_units in groups:
+    for section_title, section_units in sections:
+        parent_groups = _group_units(section_units, parent_max_chars)
+        for parent_units in parent_groups:
             parent = '\n\n'.join(u[0] for u in parent_units)
-            sources = {b.block_id:b for u in parent_units for b in u[1]}
-            parent_id = hashlib.sha256((meta.get('source_url','') + str(len(entries)) + parent).encode()).hexdigest()[:24]
-            # Pack adjacent small units, never split an atomic row just to meet a soft budget.
-            leaves, leaf, length = [], [], 0
-            for unit in parent_units:
-                if leaf and length + 2 + len(unit[0]) > child_max_chars:
-                    leaves.append(leaf)
-                    leaf, length = [], 0
-                leaf.append(unit)
-                length += len(unit[0]) + (2 if len(leaf) > 1 else 0)
-            if leaf:
-                leaves.append(leaf)
-            for leaf in leaves:
-                leaf_text = '\n\n'.join(u[0] for u in leaf)
-                child_sources = {b.block_id:b for u in leaf for b in u[1]}
-                entries.append({**meta, 'leaf_text':leaf_text, 'parent_text':parent,
+            parent_sources = _unique_sources(parent_units)
+            parent_id = hashlib.sha256(
+                (metadata.get('source_url', '') + str(len(entries)) + parent).encode()
+            ).hexdigest()[:24]
+
+            # Atomic table rows and form fields remain whole, even if they pass this soft limit.
+            child_groups = _group_units(parent_units, child_max_chars)
+            for child_units in child_groups:
+                leaf_text = '\n\n'.join(unit[0] for unit in child_units)
+                child_sources = _unique_sources(child_units)
+                entries.append({**metadata, 'leaf_text':leaf_text, 'parent_text':parent,
                     'parent_id':parent_id, 'chunk_id':parent_id + ':' + str(len(entries)),
-                    'section_title':title, 'chunking_method':'layout_aware',
+                    'section_title':section_title, 'chunking_method':'layout_aware',
                     'page_start':min(b.page for b in child_sources.values()),
                     'page_end':max(b.page for b in child_sources.values()),
-                    'parent_page_start':min(b.page for b in sources.values()),
-                    'parent_page_end':max(b.page for b in sources.values()),
+                    'parent_page_start':min(b.page for b in parent_sources.values()),
+                    'parent_page_end':max(b.page for b in parent_sources.values()),
                     'block_ids':list(child_sources),
                     'layout_sources':[{'page':b.page, 'block_id':b.block_id, 'block_type':b.kind, 'bbox':b.bbox} for b in child_sources.values()],
                     'oversized_child':len(leaf_text)>child_max_chars})
+    return entries
+
+
+
+def _markdown_cells(line):
+    """Split pipe cells, retaining empty cells and escaped literal pipes."""
+    line = line.strip()
+    if line.startswith('|'):
+        line = line[1:]
+    if line.endswith('|') and not line.endswith('\\|'):
+        line = line[:-1]
+    cells, cell, escaped = [], [], False
+    for char in line:
+        if escaped:
+            cell.append(char if char in '|\\' else '\\' + char)
+            escaped = False
+        elif char == '\\':
+            escaped = True
+        elif char == '|':
+            cells.append(''.join(cell).strip())
+            cell = []
+        else:
+            cell.append(char)
+    if escaped:
+        cell.append('\\')
+    cells.append(''.join(cell).strip())
+    return cells
+
+
+def _markdown_separator(line):
+    cells = _markdown_cells(line)
+    return '|' in line and bool(cells) and all(
+        re.fullmatch(r':?-{3,}:?', cell) for cell in cells)
+
+
+class _HTMLProse(HTMLParser):
+    """Convert surrounding HTML prose/headings to text; tables are parsed separately."""
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.parts = []
+    def handle_starttag(self, tag, attrs):
+        if re.fullmatch(r'h[1-6]', tag):
+            self.parts.append('\n\n' + '#' * int(tag[1]) + ' ')
+        elif tag in {'p', 'div', 'section', 'li', 'br', 'caption'}:
+            self.parts.append('\n')
+    def handle_endtag(self, tag):
+        if tag in {'p', 'div', 'section', 'li', 'caption'} or re.fullmatch(r'h[1-6]', tag):
+            self.parts.append('\n\n')
+    def handle_data(self, data):
+        self.parts.append(data)
+
+
+def _html_text(text):
+    parser = _HTMLProse()
+    parser.feed(text)
+    parser.close()
+    return ''.join(parser.parts).strip()
+
+
+def has_table_markup(text):
+    """Detect explicit tables only. Flattened OCR lines are not recoverable tables."""
+    return isinstance(text, str) and (
+        bool(re.search(r'<table\b', text, re.I))
+        or any(_markdown_separator(line) for line in text.splitlines())
+    )
+
+
+def _selected_text_blocks(text, notes):
+    """Read headings, prose and complete tables in their supplied order.
+
+    Page 0 is an internal ordering placeholder only. It is removed from output;
+    Markdown without page metadata cannot tell us the original PDF page number.
+    """
+    blocks, headers = [], {}
+    table_number = 0
+
+    def add(content, kind):
+        if content.strip():
+            blocks.append(LayoutBlock(content.strip(), kind, 0,
+                                      'text:b%s' % len(blocks)))
+
+    def add_table(content):
+        nonlocal table_number
+        table_number += 1
+        context = ' > '.join(headers[level] for level in sorted(headers))
+        caption_match = re.search(r'<caption\b[^>]*>(.*?)</caption\s*>', content, re.I | re.S)
+        caption = _html_text(caption_match[1]) if caption_match else ''
+        prefix = '\n'.join(part for part in (
+            '[Section: %s]' % context if context else '',
+            '[Table %s%s]' % (table_number, ': ' + caption if caption else ''),
+        ) if part)
+        block = LayoutBlock(content, 'table', 0, 'text:table%s' % table_number)
+        for row in table_units(block, notes):
+            # Already serialized: use an atomic field so it cannot be split again.
+            add(prefix + '\n' + row, 'form_item')
+
+    def add_markdown(prose):
+        lines, paragraph = prose.splitlines(), []
+        def flush():
+            if paragraph:
+                add('\n'.join(paragraph), 'text')
+                paragraph.clear()
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+            fence = re.match(r'^\s*(`{3,}|~{3,})', line)
+            if fence:
+                flush()
+                marker = fence[1]
+                code = [line]
+                i += 1
+                while i < len(lines):
+                    code.append(lines[i])
+                    closed = re.fullmatch(r'\s*' + re.escape(marker[0]) + '{' + str(len(marker)) + r',}\s*', lines[i])
+                    i += 1
+                    if closed:
+                        break
+                add('\n'.join(code), 'text')
+                continue
+            heading = re.match(r'^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$', line)
+            if heading:
+                flush()
+                level = len(heading[1])
+                for depth in list(headers):
+                    if depth >= level:
+                        del headers[depth]
+                headers[level] = heading[2]
+                add(' > '.join(headers[d] for d in sorted(headers)), 'heading')
+                i += 1
+            elif i + 1 < len(lines) and '|' in line and _markdown_separator(lines[i + 1]):
+                flush()
+                table = [line, lines[i + 1]]
+                i += 2
+                while i < len(lines) and lines[i].strip() and '|' in lines[i]:
+                    table.append(lines[i])
+                    i += 1
+                add_table('\n'.join(table))
+            elif not line.strip():
+                flush()
+                i += 1
+            else:
+                paragraph.append(line)
+                i += 1
+        flush()
+
+    # HTML table boundaries are explicit; do not turn their cells into paragraphs.
+    cursor = 0
+    for match in re.finditer(r'<table\b[^>]*>.*?</table\s*>', text, re.I | re.S):
+        before = text[cursor:match.start()]
+        add_markdown(_html_text(before) if re.search(r'</?(?:h[1-6]|p|div)\b', before, re.I) else before)
+        add_table(match[0])
+        cursor = match.end()
+    tail = text[cursor:]
+    if re.search(r'<table\b', tail, re.I):
+        raise ValueError('Unclosed HTML table; fix selected extraction before ingestion')
+    add_markdown(_html_text(tail) if re.search(r'</?(?:h[1-6]|p|div)\b', tail, re.I) else tail)
+    return blocks
+
+
+def build_markup_snapshot(text, base_metadata=None, *, parent_max_chars=1500,
+                          child_max_chars=550, toc_filter=None):
+    """Chunk final selected Markdown/HTML, preserving each table row and its headers.
+
+    This is structure-aware text handling, with no invented spatial coordinates.
+    Ordinary prose keeps its paragraph/sentence splitting. Formatted table rows
+    are atomic; oversized rows are flagged for the ingest token-limit check.
+    """
+    if not isinstance(text, str):
+        raise TypeError('Expected selected Markdown/HTML text')
+    _check_chunk_sizes(parent_max_chars, child_max_chars)
+    notes, rejected = [], []
+    blocks = _selected_text_blocks(text, notes)
+    # Tables are deliberately not passed through the TOC heuristic: numbers in
+    # table cells must not be confused with contents-page references.
+    entries = _build_entries(_build_sections(blocks, child_max_chars, notes),
+                             dict(base_metadata or {}), parent_max_chars, child_max_chars)
+    for entry in entries:
+        entry['chunking_method'] = 'markdown_structure'
+        for key in ('page_start', 'page_end', 'parent_page_start', 'parent_page_end'):
+            entry.pop(key, None)
+        for source in entry['layout_sources']:
+            source['page'] = None
+    notes.append('Selected text has no verified page coordinates; page metadata omitted')
+    return {'schema_version': 2, 'full_text': text, 'entries': entries,
+            'rejected_chunks': rejected, 'layout_diagnostics': list(dict.fromkeys(notes)),
+            'chunking_method': 'markdown_structure',
+            'chunking_config': {'parent_max_chars': parent_max_chars,
+                                'child_max_chars': child_max_chars}}
+
+
+def build_layout_snapshot(payload, base_metadata=None, *, parent_max_chars=1500,
+                          child_max_chars=550, allow_partial=False, toc_filter=None):
+    """Convert OCR JSON or selected Markdown/HTML into a chunking snapshot.
+
+    This function is intentionally a short overview of the pipeline. The helper
+    functions above contain the details for each individual step.
+    """
+    if isinstance(payload, str):
+        return build_markup_snapshot(payload, base_metadata, parent_max_chars=parent_max_chars,
+                                     child_max_chars=child_max_chars, toc_filter=toc_filter)
+    _check_chunk_sizes(parent_max_chars, child_max_chars)
+
+    metadata = dict(base_metadata or {})
+    notes, rejected = [], []
+    selected_toc_filter = remove_toc_regions if toc_filter is None else toc_filter
+
+    original_blocks = normalise_ocr_output(payload, notes, allow_partial)
+    full_text = '\n\n'.join(block.text for block in original_blocks)
+
+    blocks = filter_repeated_margins(original_blocks, rejected, notes)
+    blocks = order_blocks(blocks, notes)
+    blocks = _remove_toc_blocks(
+        blocks,
+        selected_toc_filter,
+        metadata.get('source_url', ''),
+        rejected,
+        notes,
+    )
+
+    sections = _build_sections(blocks, child_max_chars, notes)
+    entries = _build_entries(
+        sections,
+        metadata,
+        parent_max_chars,
+        child_max_chars,
+    )
+
     return {'schema_version':2, 'full_text':full_text, 'entries':entries,
             'rejected_chunks':rejected, 'layout_diagnostics':list(dict.fromkeys(notes)),
             'chunking_method':'layout_aware', 'partial_input_allowed':allow_partial,
@@ -473,16 +770,17 @@ def build_layout_aware_chunks(payload, base_metadata, rejected_chunks=None, **kw
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('ocr_json', type=Path)
+    parser.add_argument('ocr_json', type=Path, help='Selected .md/.html/.txt, or structured OCR .json')
     parser.add_argument('--out-dir', type=Path, default=Path('test_chunking_output/layout_snapshots'))
     parser.add_argument('--allow-partial', action='store_true', help='Permit incomplete page inventory for offline tests only')
     parser.add_argument('--source-name', help='Original PDF filename for snapshot metadata')
     args = parser.parse_args()
     try:
-        payload = json.loads(args.ocr_json.read_text(encoding='utf-8-sig'))
+        content = args.ocr_json.read_text(encoding='utf-8-sig')
+        payload = json.loads(content) if args.ocr_json.suffix.lower() == '.json' else content
         snapshot = build_layout_snapshot(payload, {'source_url':args.source_name or args.ocr_json.stem}, allow_partial=args.allow_partial)
     except (ValueError, OSError, TypeError) as exc:
-        parser.exit(2, 'Cannot chunk OCR JSON: %s\n' % exc)
+        parser.exit(2, 'Cannot chunk input: %s\n' % exc)
     snapshot['source_path'] = str(args.ocr_json)
     args.out_dir.mkdir(parents=True, exist_ok=True)
     suffix = hashlib.sha256(str(args.ocr_json.resolve()).encode()).hexdigest()[:10]

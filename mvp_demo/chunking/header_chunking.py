@@ -1,6 +1,6 @@
 import re
 from llama_index.core.node_parser import SentenceSplitter
-from mvp_demo.chunking.toc_filter import looks_like_toc_line, remove_toc_regions, section_toc
+from .toc_filter import looks_like_toc_line, remove_toc_regions, section_toc
 # Heading patterns and fallback settings stay with the text chunker.
 _HEADING_STATUTE_RE = re.compile(r"^\s*(\d{1,4}[A-Z]{0,3})\s+([A-Z][A-Za-z0-9,'\-\u2013\u2014\s]{2,90})$")
 _HEADING_CLAUSE_RE = re.compile(r"^\s*\d{1,3}\.\s+[A-Z][A-Za-z0-9,'\-\u2013\u2014\s]{2,90}:\s*$")
