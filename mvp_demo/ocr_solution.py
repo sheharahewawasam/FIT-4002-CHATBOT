@@ -1,9 +1,14 @@
 from pathlib import Path
+
 from paddleocr import PPStructureV3
 import pymupdf as pymu
-from chonkie import SemanticChunker
-from ollama import generate
-from langchain_text_splitters import MarkdownTextSplitter
+
+# chonkie, ollama and langchain-text-splitters were imported here too, which
+# made all five a hard requirement for `import ocr_solution` - and so made OCR
+# unavailable whenever any one of them was missing. Only paddleocr and pymupdf
+# are used by the live path: the ensemble that needed the other three is
+# commented out in output_document below. align_text imports ollama itself, so
+# that path can be revived without the other two becoming mandatory again.
 
 class OCR():
     TEXT_MIN = 50
@@ -60,19 +65,18 @@ class OCR():
         thresh_med = self.predictV3(pdf_path, 0.50)
         # thresh_hi = self.predictV3(pdf_path, 0.70)
 
-        chunker = SemanticChunker(
-            threshold=0.8,
-            chunk_size=4096,
-            similarity_window=5
-        )
-
-        # low_chunks = chunker.chunk(thresh_low)
-        med_chunks = chunker.chunk(thresh_med)
-        # hi_chunks = chunker.chunk(thresh_hi)
-        
-        # chunk1 = self.safe_pop(low_chunks)
-        chunk2 = self.safe_pop(med_chunks)
-        # chunk3 = self.safe_pop(hi_chunks)
+        # The ensemble below is disabled, so the chunking that fed it has been
+        # removed rather than left running: SemanticChunker loads a
+        # sentence-transformers model of its own and its output was assigned and
+        # then discarded, since res is set to thresh_med regardless. Restoring
+        # the ensemble means restoring this alongside it:
+        #
+        #     chunker = SemanticChunker(threshold=0.8, chunk_size=4096,
+        #                               similarity_window=5)
+        #     low_chunks, med_chunks, hi_chunks = (chunker.chunk(t) for t in
+        #                                          (thresh_low, thresh_med, thresh_hi))
+        #     chunk1, chunk2, chunk3 = (self.safe_pop(c) for c in
+        #                               (low_chunks, med_chunks, hi_chunks))
 
         # while chunk1 or chunk2 or chunk3:
         #     prompt = chunk1+" || "+chunk2+" || "+chunk3
@@ -158,6 +162,11 @@ class OCR():
         :param prompt: prompt containing the chunks to analyse
         :return: chunk chosen by LLM with the best meaning
         """
+        # Imported here, not at module level: this method belongs to the
+        # ensemble path that is currently disabled, and requiring ollama for an
+        # import would take OCR down with it.
+        from ollama import generate
+
         response = generate(
             model="qwen3",
             prompt=self.REASONING_PROMPT + prompt,

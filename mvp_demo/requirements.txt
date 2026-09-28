@@ -37,7 +37,25 @@ torch>=2.12
 # chromadb was removed: nothing has imported it since the move to Pinecone,
 # and it pulls in onnxruntime, which matters on a small disk.
 #
-# OCR extras (paddleocr, pymupdf, chonkie, ollama, langchain-text-splitters)
-# are intentionally absent. ocr_solution.py imports them, but ingestion falls
-# back to pdfplumber when they are missing, so they are optional. Install them
-# separately if you need OCR for scanned PDFs.
+# OCR for scanned PDFs. Optional: ingestion falls back to pdfplumber when these
+# are missing, which is correct for a document that already has a text layer and
+# useless for one that does not.
+#
+# Only these two are needed. ocr_solution.py also imported chonkie, ollama and
+# langchain-text-splitters, which made all five mandatory for the module to
+# import at all - so a single missing package took OCR down silently. The
+# ensemble that used them is commented out there.
+#
+# paddleocr does not depend on paddlepaddle, so the engine must be named
+# separately. On a headless host opencv also needs the system GL library:
+#
+#     sudo dnf install -y mesa-libGL        # Amazon Linux 2023
+#     pip install paddleocr paddlepaddle pymupdf
+#
+# Roughly 1.3GB installed, plus the PP-StructureV3 models fetched on first use.
+# Note it downgrades numpy (2.5 -> 2.3) and adds pandas; torch and
+# sentence-transformers were verified working afterwards.
+#
+# paddleocr>=3.7
+# paddlepaddle>=3.3
+# pymupdf>=1.28
