@@ -1,0 +1,930 @@
+{
+    "input_path": "..\\pdfs\\sample-smsf-trust-deed.pdf",
+    "page_index": 52,
+    "page_count": 53,
+    "width": 1191,
+    "height": 1684,
+    "model_settings": {
+        "use_doc_preprocessor": true,
+        "use_seal_recognition": false,
+        "use_table_recognition": true,
+        "use_formula_recognition": true,
+        "use_chart_recognition": false,
+        "use_region_detection": true,
+        "format_block_content": false,
+        "markdown_ignore_labels": [
+            "number",
+            "footnote",
+            "header",
+            "header_image",
+            "footer",
+            "footer_image",
+            "aside_text"
+        ]
+    },
+    "parsing_res_list": [
+        {
+            "block_label": "paragraph_title",
+            "block_content": "Signed sealed and delivered ",
+            "block_bbox": [
+                107,
+                113,
+                416,
+                136
+            ],
+            "block_id": 0,
+            "block_order": 1
+        },
+        {
+            "block_label": "text",
+            "block_content": "by James Parker in the capacity of principal in the presence of:.\n",
+            "block_bbox": [
+                107,
+                162,
+                569,
+                219
+            ],
+            "block_id": 1,
+            "block_order": 2
+        },
+        {
+            "block_label": "image",
+            "block_content": "Signature of witness.Name of witness (please print)Signature of individual E \nSigned sealed and delivered by Peter Parker,\nin the capacity of member, in the presence of:\nSignature of witness Signature of individual \nName of witness (please print)\n\nSigned sealed and delivered by Sue Parker,\nin the capacity of member, in the presence of:\nSignature of witness Signature of individual \n",
+            "block_bbox": [
+                107,
+                431,
+                1122,
+                1345
+            ],
+            "block_id": 2,
+            "block_order": null
+        },
+        {
+            "block_label": "text",
+            "block_content": "Name of witness (please print)",
+            "block_bbox": [
+                107,
+                1465,
+                415,
+                1491
+            ],
+            "block_id": 3,
+            "block_order": 3
+        }
+    ],
+    "doc_preprocessor_res": {
+        "input_path": null,
+        "page_index": null,
+        "model_settings": {
+            "use_doc_orientation_classify": true,
+            "use_doc_unwarping": true
+        },
+        "angle": 0
+    },
+    "layout_det_res": {
+        "input_path": null,
+        "page_index": null,
+        "boxes": [
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.6869153380393982,
+                "coordinate": [
+                    107.1014404296875,
+                    162.40682983398438,
+                    569.37890625,
+                    219.23373413085938
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.6009401082992554,
+                "coordinate": [
+                    107.76947021484375,
+                    1465.537841796875,
+                    415.79461669921875,
+                    1491.399169921875
+                ]
+            },
+            {
+                "cls_id": 0,
+                "label": "paragraph_title",
+                "score": 0.5965322852134705,
+                "coordinate": [
+                    107.97303771972656,
+                    113.00675964355469,
+                    416.008544921875,
+                    136.8901824951172
+                ]
+            },
+            {
+                "cls_id": 1,
+                "label": "image",
+                "score": 0.5200995206832886,
+                "coordinate": [
+                    107.37631225585938,
+                    431.462158203125,
+                    1122.6041259765625,
+                    1345.7476806640625
+                ]
+            }
+        ]
+    },
+    "overall_ocr_res": {
+        "input_path": null,
+        "page_index": null,
+        "model_settings": {
+            "use_doc_preprocessor": false,
+            "use_textline_orientation": true
+        },
+        "dt_polys": [
+            [
+                [
+                    110,
+                    111
+                ],
+                [
+                    417,
+                    114
+                ],
+                [
+                    416,
+                    141
+                ],
+                [
+                    110,
+                    138
+                ]
+            ],
+            [
+                [
+                    110,
+                    160
+                ],
+                [
+                    571,
+                    165
+                ],
+                [
+                    571,
+                    192
+                ],
+                [
+                    110,
+                    187
+                ]
+            ],
+            [
+                [
+                    108,
+                    194
+                ],
+                [
+                    276,
+                    196
+                ],
+                [
+                    275,
+                    223
+                ],
+                [
+                    108,
+                    220
+                ]
+            ],
+            [
+                [
+                    109,
+                    437
+                ],
+                [
+                    318,
+                    443
+                ],
+                [
+                    317,
+                    474
+                ],
+                [
+                    108,
+                    467
+                ]
+            ],
+            [
+                [
+                    901,
+                    433
+                ],
+                [
+                    1069,
+                    600
+                ],
+                [
+                    949,
+                    718
+                ],
+                [
+                    781,
+                    552
+                ]
+            ],
+            [
+                [
+                    649,
+                    443
+                ],
+                [
+                    883,
+                    447
+                ],
+                [
+                    883,
+                    477
+                ],
+                [
+                    649,
+                    472
+                ]
+            ],
+            [
+                [
+                    110,
+                    625
+                ],
+                [
+                    420,
+                    634
+                ],
+                [
+                    419,
+                    662
+                ],
+                [
+                    109,
+                    653
+                ]
+            ],
+            [
+                [
+                    112,
+                    762
+                ],
+                [
+                    568,
+                    764
+                ],
+                [
+                    568,
+                    790
+                ],
+                [
+                    112,
+                    788
+                ]
+            ],
+            [
+                [
+                    111,
+                    796
+                ],
+                [
+                    573,
+                    796
+                ],
+                [
+                    573,
+                    823
+                ],
+                [
+                    111,
+                    823
+                ]
+            ],
+            [
+                [
+                    113,
+                    892
+                ],
+                [
+                    319,
+                    890
+                ],
+                [
+                    319,
+                    917
+                ],
+                [
+                    113,
+                    920
+                ]
+            ],
+            [
+                [
+                    579,
+                    890
+                ],
+                [
+                    809,
+                    890
+                ],
+                [
+                    809,
+                    919
+                ],
+                [
+                    579,
+                    919
+                ]
+            ],
+            [
+                [
+                    112,
+                    1030
+                ],
+                [
+                    421,
+                    1030
+                ],
+                [
+                    421,
+                    1056
+                ],
+                [
+                    112,
+                    1056
+                ]
+            ],
+            [
+                [
+                    111,
+                    1196
+                ],
+                [
+                    554,
+                    1195
+                ],
+                [
+                    554,
+                    1222
+                ],
+                [
+                    111,
+                    1223
+                ]
+            ],
+            [
+                [
+                    109,
+                    1229
+                ],
+                [
+                    571,
+                    1227
+                ],
+                [
+                    571,
+                    1254
+                ],
+                [
+                    109,
+                    1256
+                ]
+            ],
+            [
+                [
+                    111,
+                    1321
+                ],
+                [
+                    317,
+                    1325
+                ],
+                [
+                    317,
+                    1353
+                ],
+                [
+                    111,
+                    1349
+                ]
+            ],
+            [
+                [
+                    578,
+                    1322
+                ],
+                [
+                    809,
+                    1322
+                ],
+                [
+                    809,
+                    1348
+                ],
+                [
+                    578,
+                    1348
+                ]
+            ],
+            [
+                [
+                    109,
+                    1461
+                ],
+                [
+                    417,
+                    1468
+                ],
+                [
+                    416,
+                    1496
+                ],
+                [
+                    108,
+                    1489
+                ]
+            ]
+        ],
+        "text_det_params": {
+            "limit_side_len": 736,
+            "limit_type": "min",
+            "thresh": 0.3,
+            "max_side_limit": 4000,
+            "box_thresh": 0.6,
+            "unclip_ratio": 1.5
+        },
+        "text_type": "general",
+        "textline_orientation_angles": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        "text_rec_score_thresh": 0.0,
+        "return_word_box": false,
+        "rec_texts": [
+            "Signed sealed and delivered",
+            "by James Parker in the capacity of principal in",
+            "the presence of:.",
+            "Signature of witness.",
+            "E",
+            "Signature of individual",
+            "Name of witness (please print)",
+            "Signed sealed and delivered by Peter Parker,",
+            "in the capacity of member, in the presence of:",
+            "Signature of witness",
+            "Signature of individual",
+            "Name of witness (please print)",
+            "Signed sealed and delivered by Sue Parker,",
+            "in the capacity of member, in the presence of:",
+            "Signature of witness",
+            "Signature of individual",
+            "Name of witness (please print)"
+        ],
+        "rec_scores": [
+            0.9842605590820312,
+            0.9967846274375916,
+            0.9666517972946167,
+            0.9636833667755127,
+            0.4999573230743408,
+            0.9996700882911682,
+            0.9701311588287354,
+            0.9982032775878906,
+            0.9986826181411743,
+            0.9998418688774109,
+            0.9997990727424622,
+            0.9997872114181519,
+            0.9859009981155396,
+            0.9958879947662354,
+            0.9998346567153931,
+            0.9985334873199463,
+            0.983416736125946
+        ],
+        "rec_polys": [
+            [
+                [
+                    110,
+                    111
+                ],
+                [
+                    417,
+                    114
+                ],
+                [
+                    416,
+                    141
+                ],
+                [
+                    110,
+                    138
+                ]
+            ],
+            [
+                [
+                    110,
+                    160
+                ],
+                [
+                    571,
+                    165
+                ],
+                [
+                    571,
+                    192
+                ],
+                [
+                    110,
+                    187
+                ]
+            ],
+            [
+                [
+                    108,
+                    194
+                ],
+                [
+                    276,
+                    196
+                ],
+                [
+                    275,
+                    223
+                ],
+                [
+                    108,
+                    220
+                ]
+            ],
+            [
+                [
+                    109,
+                    437
+                ],
+                [
+                    318,
+                    443
+                ],
+                [
+                    317,
+                    474
+                ],
+                [
+                    108,
+                    467
+                ]
+            ],
+            [
+                [
+                    901,
+                    433
+                ],
+                [
+                    1069,
+                    600
+                ],
+                [
+                    949,
+                    718
+                ],
+                [
+                    781,
+                    552
+                ]
+            ],
+            [
+                [
+                    649,
+                    443
+                ],
+                [
+                    883,
+                    447
+                ],
+                [
+                    883,
+                    477
+                ],
+                [
+                    649,
+                    472
+                ]
+            ],
+            [
+                [
+                    110,
+                    625
+                ],
+                [
+                    420,
+                    634
+                ],
+                [
+                    419,
+                    662
+                ],
+                [
+                    109,
+                    653
+                ]
+            ],
+            [
+                [
+                    112,
+                    762
+                ],
+                [
+                    568,
+                    764
+                ],
+                [
+                    568,
+                    790
+                ],
+                [
+                    112,
+                    788
+                ]
+            ],
+            [
+                [
+                    111,
+                    796
+                ],
+                [
+                    573,
+                    796
+                ],
+                [
+                    573,
+                    823
+                ],
+                [
+                    111,
+                    823
+                ]
+            ],
+            [
+                [
+                    113,
+                    892
+                ],
+                [
+                    319,
+                    890
+                ],
+                [
+                    319,
+                    917
+                ],
+                [
+                    113,
+                    920
+                ]
+            ],
+            [
+                [
+                    579,
+                    890
+                ],
+                [
+                    809,
+                    890
+                ],
+                [
+                    809,
+                    919
+                ],
+                [
+                    579,
+                    919
+                ]
+            ],
+            [
+                [
+                    112,
+                    1030
+                ],
+                [
+                    421,
+                    1030
+                ],
+                [
+                    421,
+                    1056
+                ],
+                [
+                    112,
+                    1056
+                ]
+            ],
+            [
+                [
+                    111,
+                    1196
+                ],
+                [
+                    554,
+                    1195
+                ],
+                [
+                    554,
+                    1222
+                ],
+                [
+                    111,
+                    1223
+                ]
+            ],
+            [
+                [
+                    109,
+                    1229
+                ],
+                [
+                    571,
+                    1227
+                ],
+                [
+                    571,
+                    1254
+                ],
+                [
+                    109,
+                    1256
+                ]
+            ],
+            [
+                [
+                    111,
+                    1321
+                ],
+                [
+                    317,
+                    1325
+                ],
+                [
+                    317,
+                    1353
+                ],
+                [
+                    111,
+                    1349
+                ]
+            ],
+            [
+                [
+                    578,
+                    1322
+                ],
+                [
+                    809,
+                    1322
+                ],
+                [
+                    809,
+                    1348
+                ],
+                [
+                    578,
+                    1348
+                ]
+            ],
+            [
+                [
+                    109,
+                    1461
+                ],
+                [
+                    417,
+                    1468
+                ],
+                [
+                    416,
+                    1496
+                ],
+                [
+                    108,
+                    1489
+                ]
+            ]
+        ],
+        "rec_boxes": [
+            [
+                110,
+                111,
+                417,
+                141
+            ],
+            [
+                110,
+                160,
+                571,
+                192
+            ],
+            [
+                108,
+                194,
+                276,
+                223
+            ],
+            [
+                108,
+                437,
+                318,
+                474
+            ],
+            [
+                781,
+                433,
+                1069,
+                718
+            ],
+            [
+                649,
+                443,
+                883,
+                477
+            ],
+            [
+                109,
+                625,
+                420,
+                662
+            ],
+            [
+                112,
+                762,
+                568,
+                790
+            ],
+            [
+                111,
+                796,
+                573,
+                823
+            ],
+            [
+                113,
+                890,
+                319,
+                920
+            ],
+            [
+                579,
+                890,
+                809,
+                919
+            ],
+            [
+                112,
+                1030,
+                421,
+                1056
+            ],
+            [
+                111,
+                1195,
+                554,
+                1223
+            ],
+            [
+                109,
+                1227,
+                571,
+                1256
+            ],
+            [
+                111,
+                1321,
+                317,
+                1353
+            ],
+            [
+                578,
+                1322,
+                809,
+                1348
+            ],
+            [
+                108,
+                1461,
+                417,
+                1496
+            ]
+        ]
+    }
+}

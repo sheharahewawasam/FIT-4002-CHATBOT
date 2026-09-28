@@ -1,0 +1,434 @@
+{
+    "input_path": "..\\pdfs\\Proposal Document.pdf",
+    "page_index": 0,
+    "page_count": 22,
+    "width": 1192,
+    "height": 1684,
+    "model_settings": {
+        "use_doc_preprocessor": true,
+        "use_seal_recognition": false,
+        "use_table_recognition": true,
+        "use_formula_recognition": true,
+        "use_chart_recognition": false,
+        "use_region_detection": true,
+        "format_block_content": false,
+        "markdown_ignore_labels": [
+            "number",
+            "footnote",
+            "header",
+            "header_image",
+            "footer",
+            "footer_image",
+            "aside_text"
+        ]
+    },
+    "parsing_res_list": [
+        {
+            "block_label": "doc_title",
+            "block_content": "Project 26: RAG-based Chatbot for  Advisors ",
+            "block_bbox": [
+                112,
+                59,
+                1055,
+                185
+            ],
+            "block_id": 0,
+            "block_order": 1
+        },
+        {
+            "block_label": "text",
+            "block_content": "Mark Shim \nShehara Hewawasam Yiyou (Fred) Xu Weihom Tan Jun Ng \n",
+            "block_bbox": [
+                83,
+                1272,
+                456,
+                1484
+            ],
+            "block_id": 1,
+            "block_order": 2
+        }
+    ],
+    "doc_preprocessor_res": {
+        "input_path": null,
+        "page_index": null,
+        "model_settings": {
+            "use_doc_orientation_classify": true,
+            "use_doc_unwarping": true
+        },
+        "angle": 0
+    },
+    "layout_det_res": {
+        "input_path": null,
+        "page_index": null,
+        "boxes": [
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.9434062838554382,
+                "coordinate": [
+                    83.4996337890625,
+                    1272.008056640625,
+                    456.1903076171875,
+                    1484.525390625
+                ]
+            },
+            {
+                "cls_id": 10,
+                "label": "doc_title",
+                "score": 0.7393687963485718,
+                "coordinate": [
+                    112.83407592773438,
+                    59.70323181152344,
+                    1055.593994140625,
+                    185.162841796875
+                ]
+            }
+        ]
+    },
+    "overall_ocr_res": {
+        "input_path": null,
+        "page_index": null,
+        "model_settings": {
+            "use_doc_preprocessor": false,
+            "use_textline_orientation": true
+        },
+        "dt_polys": [
+            [
+                [
+                    109,
+                    49
+                ],
+                [
+                    1067,
+                    59
+                ],
+                [
+                    1067,
+                    125
+                ],
+                [
+                    109,
+                    116
+                ]
+            ],
+            [
+                [
+                    476,
+                    138
+                ],
+                [
+                    719,
+                    140
+                ],
+                [
+                    718,
+                    192
+                ],
+                [
+                    475,
+                    190
+                ]
+            ],
+            [
+                [
+                    83,
+                    1268
+                ],
+                [
+                    267,
+                    1268
+                ],
+                [
+                    267,
+                    1306
+                ],
+                [
+                    83,
+                    1306
+                ]
+            ],
+            [
+                [
+                    84,
+                    1314
+                ],
+                [
+                    458,
+                    1317
+                ],
+                [
+                    458,
+                    1353
+                ],
+                [
+                    83,
+                    1350
+                ]
+            ],
+            [
+                [
+                    85,
+                    1359
+                ],
+                [
+                    351,
+                    1359
+                ],
+                [
+                    351,
+                    1397
+                ],
+                [
+                    85,
+                    1397
+                ]
+            ],
+            [
+                [
+                    87,
+                    1405
+                ],
+                [
+                    301,
+                    1405
+                ],
+                [
+                    301,
+                    1440
+                ],
+                [
+                    87,
+                    1440
+                ]
+            ],
+            [
+                [
+                    87,
+                    1447
+                ],
+                [
+                    218,
+                    1447
+                ],
+                [
+                    218,
+                    1492
+                ],
+                [
+                    87,
+                    1492
+                ]
+            ]
+        ],
+        "text_det_params": {
+            "limit_side_len": 736,
+            "limit_type": "min",
+            "thresh": 0.3,
+            "max_side_limit": 4000,
+            "box_thresh": 0.6,
+            "unclip_ratio": 1.5
+        },
+        "text_type": "general",
+        "textline_orientation_angles": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        "text_rec_score_thresh": 0.0,
+        "return_word_box": false,
+        "rec_texts": [
+            "Project 26: RAG-based Chatbot for",
+            "Advisors",
+            "Mark Shim",
+            "Shehara Hewawasam",
+            "Yiyou (Fred) Xu",
+            "Weihom Tan",
+            "Jun Ng"
+        ],
+        "rec_scores": [
+            0.9843538403511047,
+            0.9998561143875122,
+            0.9999040961265564,
+            0.999871551990509,
+            0.9970101118087769,
+            0.9995530247688293,
+            0.9996790885925293
+        ],
+        "rec_polys": [
+            [
+                [
+                    109,
+                    49
+                ],
+                [
+                    1067,
+                    59
+                ],
+                [
+                    1067,
+                    125
+                ],
+                [
+                    109,
+                    116
+                ]
+            ],
+            [
+                [
+                    476,
+                    138
+                ],
+                [
+                    719,
+                    140
+                ],
+                [
+                    718,
+                    192
+                ],
+                [
+                    475,
+                    190
+                ]
+            ],
+            [
+                [
+                    83,
+                    1268
+                ],
+                [
+                    267,
+                    1268
+                ],
+                [
+                    267,
+                    1306
+                ],
+                [
+                    83,
+                    1306
+                ]
+            ],
+            [
+                [
+                    84,
+                    1314
+                ],
+                [
+                    458,
+                    1317
+                ],
+                [
+                    458,
+                    1353
+                ],
+                [
+                    83,
+                    1350
+                ]
+            ],
+            [
+                [
+                    85,
+                    1359
+                ],
+                [
+                    351,
+                    1359
+                ],
+                [
+                    351,
+                    1397
+                ],
+                [
+                    85,
+                    1397
+                ]
+            ],
+            [
+                [
+                    87,
+                    1405
+                ],
+                [
+                    301,
+                    1405
+                ],
+                [
+                    301,
+                    1440
+                ],
+                [
+                    87,
+                    1440
+                ]
+            ],
+            [
+                [
+                    87,
+                    1447
+                ],
+                [
+                    218,
+                    1447
+                ],
+                [
+                    218,
+                    1492
+                ],
+                [
+                    87,
+                    1492
+                ]
+            ]
+        ],
+        "rec_boxes": [
+            [
+                109,
+                49,
+                1067,
+                125
+            ],
+            [
+                475,
+                138,
+                719,
+                192
+            ],
+            [
+                83,
+                1268,
+                267,
+                1306
+            ],
+            [
+                83,
+                1314,
+                458,
+                1353
+            ],
+            [
+                85,
+                1359,
+                351,
+                1397
+            ],
+            [
+                87,
+                1405,
+                301,
+                1440
+            ],
+            [
+                87,
+                1447,
+                218,
+                1492
+            ]
+        ]
+    }
+}

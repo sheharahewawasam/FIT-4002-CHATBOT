@@ -1,0 +1,617 @@
+{
+    "input_path": "..\\pdfs\\Proposal Document.pdf",
+    "page_index": 13,
+    "page_count": 22,
+    "width": 1192,
+    "height": 1684,
+    "model_settings": {
+        "use_doc_preprocessor": true,
+        "use_seal_recognition": false,
+        "use_table_recognition": true,
+        "use_formula_recognition": true,
+        "use_chart_recognition": false,
+        "use_region_detection": true,
+        "format_block_content": false,
+        "markdown_ignore_labels": [
+            "number",
+            "footnote",
+            "header",
+            "header_image",
+            "footer",
+            "footer_image",
+            "aside_text"
+        ]
+    },
+    "parsing_res_list": [
+        {
+            "block_label": "table",
+            "block_content": "<html><body><table><tr><td></td><td></td><td>generation step before retrieval.</td><td></td></tr></table></body></html>",
+            "block_bbox": [
+                0,
+                8,
+                1190,
+                98
+            ],
+            "block_id": 0,
+            "block_order": null
+        },
+        {
+            "block_label": "text",
+            "block_content": "I recommend we go with some combination of these strategies. However, these strategies. may not be needed depending on how flexible the user prompts are allowed to be; as having. a set list of questions that the user is allowed to ask would allow us to fine tune each prompt to become good queries. Failing that, I would recommend some combination of RAG fusion,.Query decomposition if the user asks multi step questions, and Step-Back prompting. HyDE may generate false documents with inaccurate information, and must therefore be thoroughly tested if used.\n",
+            "block_bbox": [
+                104,
+                124,
+                1052,
+                336
+            ],
+            "block_id": 1,
+            "block_order": 1
+        }
+    ],
+    "doc_preprocessor_res": {
+        "input_path": null,
+        "page_index": null,
+        "model_settings": {
+            "use_doc_orientation_classify": true,
+            "use_doc_unwarping": true
+        },
+        "angle": 0
+    },
+    "layout_det_res": {
+        "input_path": null,
+        "page_index": null,
+        "boxes": [
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.976493775844574,
+                "coordinate": [
+                    104.30935668945312,
+                    124.7415771484375,
+                    1052.11962890625,
+                    336.95489501953125
+                ]
+            },
+            {
+                "cls_id": 8,
+                "label": "table",
+                "score": 0.5581526160240173,
+                "coordinate": [
+                    0.9847412109375,
+                    8.24786376953125,
+                    1190.2652587890625,
+                    98.1108169555664
+                ]
+            }
+        ]
+    },
+    "overall_ocr_res": {
+        "input_path": null,
+        "page_index": null,
+        "model_settings": {
+            "use_doc_preprocessor": false,
+            "use_textline_orientation": true
+        },
+        "dt_polys": [
+            [
+                [
+                    963,
+                    35
+                ],
+                [
+                    1136,
+                    33
+                ],
+                [
+                    1137,
+                    63
+                ],
+                [
+                    964,
+                    66
+                ]
+            ],
+            [
+                [
+                    964,
+                    63
+                ],
+                [
+                    1136,
+                    60
+                ],
+                [
+                    1137,
+                    87
+                ],
+                [
+                    965,
+                    89
+                ]
+            ],
+            [
+                [
+                    112,
+                    113
+                ],
+                [
+                    1029,
+                    130
+                ],
+                [
+                    1028,
+                    168
+                ],
+                [
+                    112,
+                    151
+                ]
+            ],
+            [
+                [
+                    110,
+                    145
+                ],
+                [
+                    1058,
+                    162
+                ],
+                [
+                    1058,
+                    199
+                ],
+                [
+                    110,
+                    181
+                ]
+            ],
+            [
+                [
+                    109,
+                    178
+                ],
+                [
+                    1054,
+                    194
+                ],
+                [
+                    1054,
+                    228
+                ],
+                [
+                    109,
+                    211
+                ]
+            ],
+            [
+                [
+                    107,
+                    207
+                ],
+                [
+                    1056,
+                    223
+                ],
+                [
+                    1056,
+                    259
+                ],
+                [
+                    107,
+                    244
+                ]
+            ],
+            [
+                [
+                    107,
+                    240
+                ],
+                [
+                    1055,
+                    253
+                ],
+                [
+                    1055,
+                    287
+                ],
+                [
+                    107,
+                    274
+                ]
+            ],
+            [
+                [
+                    105,
+                    275
+                ],
+                [
+                    954,
+                    283
+                ],
+                [
+                    953,
+                    314
+                ],
+                [
+                    105,
+                    306
+                ]
+            ],
+            [
+                [
+                    104,
+                    306
+                ],
+                [
+                    383,
+                    313
+                ],
+                [
+                    382,
+                    343
+                ],
+                [
+                    103,
+                    335
+                ]
+            ]
+        ],
+        "text_det_params": {
+            "limit_side_len": 736,
+            "limit_type": "min",
+            "thresh": 0.3,
+            "max_side_limit": 4000,
+            "box_thresh": 0.6,
+            "unclip_ratio": 1.5
+        },
+        "text_type": "general",
+        "textline_orientation_angles": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        "text_rec_score_thresh": 0.0,
+        "return_word_box": false,
+        "rec_texts": [
+            "generation step",
+            "before retrieval.",
+            "I recommend we go with some combination of these strategies. However, these strategies.",
+            " may not be needed depending on how flexible the user prompts are allowed to be; as having.",
+            " a set list of questions that the user is allowed to ask would allow us to fine tune each prompt",
+            "to become good queries. Failing that, I would recommend some combination of RAG fusion,.",
+            "Query decomposition if the user asks multi step questions, and Step-Back prompting. HyDE",
+            "may generate false documents with inaccurate information, and must therefore be",
+            "thoroughly tested if used."
+        ],
+        "rec_scores": [
+            0.9535675644874573,
+            0.9889638423919678,
+            0.9859745502471924,
+            0.9807204604148865,
+            0.9881022572517395,
+            0.9826505780220032,
+            0.9889135956764221,
+            0.9938061833381653,
+            0.9731106162071228
+        ],
+        "rec_polys": [
+            [
+                [
+                    963,
+                    35
+                ],
+                [
+                    1136,
+                    33
+                ],
+                [
+                    1137,
+                    63
+                ],
+                [
+                    964,
+                    66
+                ]
+            ],
+            [
+                [
+                    964,
+                    63
+                ],
+                [
+                    1136,
+                    60
+                ],
+                [
+                    1137,
+                    87
+                ],
+                [
+                    965,
+                    89
+                ]
+            ],
+            [
+                [
+                    112,
+                    113
+                ],
+                [
+                    1029,
+                    130
+                ],
+                [
+                    1028,
+                    168
+                ],
+                [
+                    112,
+                    151
+                ]
+            ],
+            [
+                [
+                    110,
+                    145
+                ],
+                [
+                    1058,
+                    162
+                ],
+                [
+                    1058,
+                    199
+                ],
+                [
+                    110,
+                    181
+                ]
+            ],
+            [
+                [
+                    109,
+                    178
+                ],
+                [
+                    1054,
+                    194
+                ],
+                [
+                    1054,
+                    228
+                ],
+                [
+                    109,
+                    211
+                ]
+            ],
+            [
+                [
+                    107,
+                    207
+                ],
+                [
+                    1056,
+                    223
+                ],
+                [
+                    1056,
+                    259
+                ],
+                [
+                    107,
+                    244
+                ]
+            ],
+            [
+                [
+                    107,
+                    240
+                ],
+                [
+                    1055,
+                    253
+                ],
+                [
+                    1055,
+                    287
+                ],
+                [
+                    107,
+                    274
+                ]
+            ],
+            [
+                [
+                    105,
+                    275
+                ],
+                [
+                    954,
+                    283
+                ],
+                [
+                    953,
+                    314
+                ],
+                [
+                    105,
+                    306
+                ]
+            ],
+            [
+                [
+                    104,
+                    306
+                ],
+                [
+                    383,
+                    313
+                ],
+                [
+                    382,
+                    343
+                ],
+                [
+                    103,
+                    335
+                ]
+            ]
+        ],
+        "rec_boxes": [
+            [
+                963,
+                33,
+                1137,
+                66
+            ],
+            [
+                964,
+                60,
+                1137,
+                89
+            ],
+            [
+                112,
+                113,
+                1029,
+                168
+            ],
+            [
+                110,
+                145,
+                1058,
+                199
+            ],
+            [
+                109,
+                178,
+                1054,
+                228
+            ],
+            [
+                107,
+                207,
+                1056,
+                259
+            ],
+            [
+                107,
+                240,
+                1055,
+                287
+            ],
+            [
+                105,
+                275,
+                954,
+                314
+            ],
+            [
+                103,
+                306,
+                383,
+                343
+            ]
+        ]
+    },
+    "table_res_list": [
+        {
+            "cell_box_list": [
+                [
+                    0.9847412109375,
+                    8.396721005439758,
+                    279.62652587890625,
+                    89.62223052978516
+                ],
+                [
+                    277.8285827636719,
+                    11.6364164352417,
+                    574.7288818359375,
+                    97.7696762084961
+                ],
+                [
+                    882.9933471679688,
+                    14.674474239349365,
+                    1190.9847412109375,
+                    98.15916442871094
+                ],
+                [
+                    572.8145751953125,
+                    21.39146614074707,
+                    884.0016479492188,
+                    98.24786376953125
+                ]
+            ],
+            "pred_html": "<html><body><table><tr><td></td><td></td><td>generation step before retrieval.</td><td></td></tr></table></body></html>",
+            "table_ocr_pred": {
+                "rec_polys": [
+                    [
+                        [
+                            963,
+                            35
+                        ],
+                        [
+                            1136,
+                            33
+                        ],
+                        [
+                            1137,
+                            63
+                        ],
+                        [
+                            964,
+                            66
+                        ]
+                    ],
+                    [
+                        [
+                            964,
+                            63
+                        ],
+                        [
+                            1136,
+                            60
+                        ],
+                        [
+                            1137,
+                            87
+                        ],
+                        [
+                            965,
+                            89
+                        ]
+                    ]
+                ],
+                "rec_texts": [
+                    "generation step",
+                    "before retrieval."
+                ],
+                "rec_scores": [
+                    0.9535675644874573,
+                    0.9889638423919678
+                ],
+                "rec_boxes": [
+                    [
+                        963,
+                        33,
+                        1137,
+                        66
+                    ],
+                    [
+                        964,
+                        60,
+                        1137,
+                        89
+                    ]
+                ]
+            }
+        }
+    ]
+}

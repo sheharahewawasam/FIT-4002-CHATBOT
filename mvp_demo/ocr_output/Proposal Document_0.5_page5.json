@@ -1,0 +1,1994 @@
+{
+    "input_path": "..\\pdfs\\Proposal Document.pdf",
+    "page_index": 5,
+    "page_count": 22,
+    "width": 1192,
+    "height": 1684,
+    "model_settings": {
+        "use_doc_preprocessor": true,
+        "use_seal_recognition": false,
+        "use_table_recognition": true,
+        "use_formula_recognition": true,
+        "use_chart_recognition": false,
+        "use_region_detection": true,
+        "format_block_content": false,
+        "markdown_ignore_labels": [
+            "number",
+            "footnote",
+            "header",
+            "header_image",
+            "footer",
+            "footer_image",
+            "aside_text"
+        ]
+    },
+    "parsing_res_list": [
+        {
+            "block_label": "text",
+            "block_content": "where the information came from (e.g., \"According to Section 4.2 of the Employee Handbook...\").\n",
+            "block_bbox": [
+                93,
+                88,
+                980,
+                152
+            ],
+            "block_id": 0,
+            "block_order": 1
+        },
+        {
+            "block_label": "paragraph_title",
+            "block_content": "5. Easy Data Management ",
+            "block_bbox": [
+                99,
+                183,
+                456,
+                214
+            ],
+            "block_id": 1,
+            "block_order": 2
+        },
+        {
+            "block_label": "text",
+            "block_content": "If a policy changes, you don't need to retrain the Al. You simply update the text file in your  database. The next time the RAG system performs a search, it will find the new document and provide the updated information immediately.\n",
+            "block_bbox": [
+                99,
+                235,
+                1065,
+                331
+            ],
+            "block_id": 2,
+            "block_order": 3
+        },
+        {
+            "block_label": "paragraph_title",
+            "block_content": "Developer Frameworks (For building custom solutions)",
+            "block_bbox": [
+                102,
+                387,
+                856,
+                415
+            ],
+            "block_id": 3,
+            "block_order": 4
+        },
+        {
+            "block_label": "text",
+            "block_content": "If you have engineering resources and want full control over the pipeline, these are the industry standards:",
+            "block_bbox": [
+                102,
+                432,
+                1030,
+                489
+            ],
+            "block_id": 4,
+            "block_order": 5
+        },
+        {
+            "block_label": "text",
+            "block_content": "Llamalndex: Widely considered the best orchestration framework for RAG. It excels at \"data ingestion\"-it has over 160 connectors to pull FAQs from PDFs, Notion,Slack, or SQL databases. It is highly optimized for document Q&A.",
+            "block_bbox": [
+                143,
+                521,
+                1085,
+                610
+            ],
+            "block_id": 5,
+            "block_order": 6
+        },
+        {
+            "block_label": "text",
+            "block_content": "LangChain: The most popular framework for building LLM applications. It is very  modular, allowing you to swap out different vector databases (like Pinecone or Weaviate) and LLMs (like GPT-4 or Claude) easily.\n",
+            "block_bbox": [
+                145,
+                619,
+                1054,
+                711
+            ],
+            "block_id": 6,
+            "block_order": 7
+        },
+        {
+            "block_label": "text",
+            "block_content": "Haystack: An open-source framework by Deepset specifically designed for building production-ready search and Q&A systems. It is often cited as being more streamlined for \"search-centric\" RAG than LangChain.\n",
+            "block_bbox": [
+                148,
+                719,
+                1082,
+                811
+            ],
+            "block_id": 7,
+            "block_order": 8
+        },
+        {
+            "block_label": "paragraph_title",
+            "block_content": "Managed & \"No-Code\" Platforms (For fast deployment)",
+            "block_bbox": [
+                110,
+                847,
+                854,
+                877
+            ],
+            "block_id": 8,
+            "block_order": 9
+        },
+        {
+            "block_label": "text",
+            "block_content": "If you want to upload a document and have a functioning FAQ bot in minutes without managing infrastructure:",
+            "block_bbox": [
+                109,
+                890,
+                1011,
+                951
+            ],
+            "block_id": 9,
+            "block_order": 10
+        },
+        {
+            "block_label": "text",
+            "block_content": "Wonderchat / Chatbase: These are \"RAG-as-a-Service\" platforms. You provide a URL or upload a PDF of your FAQs, and they provide an embeddable chat widget.They handle the embedding, storage, and retrieval layers internally.",
+            "block_bbox": [
+                148,
+                981,
+                1068,
+                1074
+            ],
+            "block_id": 10,
+            "block_order": 11
+        },
+        {
+            "block_label": "text",
+            "block_content": "Docsie: Specifically designed for documentation and internal knowledge bases. It  features \"version awareness,\" which is useful if your FAQs change based on different product versions.\n",
+            "block_bbox": [
+                147,
+                1079,
+                1098,
+                1173
+            ],
+            "block_id": 11,
+            "block_order": 12
+        },
+        {
+            "block_label": "text",
+            "block_content": "Danswer: An open-source enterprise search engine that you can self-host. It connects to your company's tools (Google Drive, Confluence, etc.) and provides a ChatGPT-like interface for asking questions across all those sources.",
+            "block_bbox": [
+                147,
+                1178,
+                1062,
+                1267
+            ],
+            "block_id": 12,
+            "block_order": 13
+        },
+        {
+            "block_label": "text",
+            "block_content": "Similar existing software, with RAG functions:",
+            "block_bbox": [
+                106,
+                1332,
+                588,
+                1355
+            ],
+            "block_id": 13,
+            "block_order": 14
+        },
+        {
+            "block_label": "text",
+            "block_content": "Make.com ",
+            "block_bbox": [
+                145,
+                1366,
+                299,
+                1388
+            ],
+            "block_id": 14,
+            "block_order": 15
+        },
+        {
+            "block_label": "text",
+            "block_content": " n8n.io ",
+            "block_bbox": [
+                145,
+                1398,
+                254,
+                1420
+            ],
+            "block_id": 15,
+            "block_order": 16
+        },
+        {
+            "block_label": "text",
+            "block_content": "These are automation softwares with additional features centered around Al automation ",
+            "block_bbox": [
+                105,
+                1430,
+                1051,
+                1454
+            ],
+            "block_id": 16,
+            "block_order": 17
+        }
+    ],
+    "doc_preprocessor_res": {
+        "input_path": null,
+        "page_index": null,
+        "model_settings": {
+            "use_doc_orientation_classify": true,
+            "use_doc_unwarping": true
+        },
+        "angle": 0
+    },
+    "layout_det_res": {
+        "input_path": null,
+        "page_index": null,
+        "boxes": [
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.9801086187362671,
+                "coordinate": [
+                    99.259521484375,
+                    235.41676330566406,
+                    1065.82666015625,
+                    331.1021728515625
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.9763913750648499,
+                "coordinate": [
+                    143.83154296875,
+                    521.6450805664062,
+                    1085.8779296875,
+                    610.7633666992188
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.9760715365409851,
+                "coordinate": [
+                    148.10760498046875,
+                    719.4356689453125,
+                    1082.535400390625,
+                    811.681396484375
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.9753090739250183,
+                "coordinate": [
+                    148.60800170898438,
+                    981.6659545898438,
+                    1068.3843994140625,
+                    1074.31005859375
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.9738348126411438,
+                "coordinate": [
+                    145.74444580078125,
+                    619.8401489257812,
+                    1054.0087890625,
+                    711.4703979492188
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.9728888273239136,
+                "coordinate": [
+                    147.23324584960938,
+                    1079.79345703125,
+                    1098.939453125,
+                    1173.87890625
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.9716069102287292,
+                "coordinate": [
+                    147.289306640625,
+                    1178.990478515625,
+                    1062.93896484375,
+                    1267.110595703125
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.9669990539550781,
+                "coordinate": [
+                    102.3673095703125,
+                    432.97906494140625,
+                    1030.4549560546875,
+                    489.8834228515625
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.96403568983078,
+                "coordinate": [
+                    93.93695068359375,
+                    88.38589477539062,
+                    980.7278442382812,
+                    152.96243286132812
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.9627882242202759,
+                "coordinate": [
+                    109.82736206054688,
+                    890.8721923828125,
+                    1011.156005859375,
+                    951.3060302734375
+                ]
+            },
+            {
+                "cls_id": 0,
+                "label": "paragraph_title",
+                "score": 0.9490571022033691,
+                "coordinate": [
+                    102.98825073242188,
+                    387.88311767578125,
+                    856.617431640625,
+                    415.91400146484375
+                ]
+            },
+            {
+                "cls_id": 0,
+                "label": "paragraph_title",
+                "score": 0.9484801888465881,
+                "coordinate": [
+                    99.24510192871094,
+                    183.7125244140625,
+                    456.397216796875,
+                    214.79266357421875
+                ]
+            },
+            {
+                "cls_id": 0,
+                "label": "paragraph_title",
+                "score": 0.9468618035316467,
+                "coordinate": [
+                    110.85049438476562,
+                    847.3760986328125,
+                    854.0345458984375,
+                    877.1197509765625
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.91603684425354,
+                "coordinate": [
+                    105.82455444335938,
+                    1430.0693359375,
+                    1051.19970703125,
+                    1454.9189453125
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.9044029116630554,
+                "coordinate": [
+                    145.07052612304688,
+                    1366.8515625,
+                    299.77984619140625,
+                    1388.2578125
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.9029218554496765,
+                "coordinate": [
+                    145.362060546875,
+                    1398.4385986328125,
+                    254.36029052734375,
+                    1420.1361083984375
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.6469796895980835,
+                "coordinate": [
+                    106.319091796875,
+                    1332.714599609375,
+                    588.5723266601562,
+                    1355.968505859375
+                ]
+            }
+        ]
+    },
+    "overall_ocr_res": {
+        "input_path": null,
+        "page_index": null,
+        "model_settings": {
+            "use_doc_preprocessor": false,
+            "use_textline_orientation": true
+        },
+        "dt_polys": [
+            [
+                [
+                    97,
+                    88
+                ],
+                [
+                    983,
+                    88
+                ],
+                [
+                    983,
+                    118
+                ],
+                [
+                    97,
+                    118
+                ]
+            ],
+            [
+                [
+                    97,
+                    122
+                ],
+                [
+                    260,
+                    127
+                ],
+                [
+                    259,
+                    158
+                ],
+                [
+                    96,
+                    153
+                ]
+            ],
+            [
+                [
+                    99,
+                    179
+                ],
+                [
+                    459,
+                    183
+                ],
+                [
+                    459,
+                    221
+                ],
+                [
+                    99,
+                    216
+                ]
+            ],
+            [
+                [
+                    99,
+                    233
+                ],
+                [
+                    1069,
+                    227
+                ],
+                [
+                    1069,
+                    265
+                ],
+                [
+                    99,
+                    271
+                ]
+            ],
+            [
+                [
+                    101,
+                    269
+                ],
+                [
+                    1069,
+                    262
+                ],
+                [
+                    1069,
+                    296
+                ],
+                [
+                    101,
+                    303
+                ]
+            ],
+            [
+                [
+                    103,
+                    304
+                ],
+                [
+                    633,
+                    303
+                ],
+                [
+                    633,
+                    334
+                ],
+                [
+                    103,
+                    335
+                ]
+            ],
+            [
+                [
+                    104,
+                    385
+                ],
+                [
+                    859,
+                    383
+                ],
+                [
+                    859,
+                    420
+                ],
+                [
+                    104,
+                    422
+                ]
+            ],
+            [
+                [
+                    104,
+                    434
+                ],
+                [
+                    1033,
+                    429
+                ],
+                [
+                    1033,
+                    459
+                ],
+                [
+                    104,
+                    464
+                ]
+            ],
+            [
+                [
+                    106,
+                    466
+                ],
+                [
+                    312,
+                    466
+                ],
+                [
+                    312,
+                    492
+                ],
+                [
+                    106,
+                    492
+                ]
+            ],
+            [
+                [
+                    181,
+                    521
+                ],
+                [
+                    1088,
+                    517
+                ],
+                [
+                    1088,
+                    548
+                ],
+                [
+                    181,
+                    552
+                ]
+            ],
+            [
+                [
+                    182,
+                    554
+                ],
+                [
+                    1041,
+                    550
+                ],
+                [
+                    1041,
+                    581
+                ],
+                [
+                    182,
+                    585
+                ]
+            ],
+            [
+                [
+                    182,
+                    585
+                ],
+                [
+                    898,
+                    581
+                ],
+                [
+                    898,
+                    615
+                ],
+                [
+                    182,
+                    619
+                ]
+            ],
+            [
+                [
+                    182,
+                    618
+                ],
+                [
+                    1053,
+                    614
+                ],
+                [
+                    1053,
+                    648
+                ],
+                [
+                    182,
+                    652
+                ]
+            ],
+            [
+                [
+                    184,
+                    653
+                ],
+                [
+                    1027,
+                    649
+                ],
+                [
+                    1027,
+                    682
+                ],
+                [
+                    184,
+                    686
+                ]
+            ],
+            [
+                [
+                    184,
+                    685
+                ],
+                [
+                    729,
+                    683
+                ],
+                [
+                    729,
+                    717
+                ],
+                [
+                    184,
+                    719
+                ]
+            ],
+            [
+                [
+                    185,
+                    720
+                ],
+                [
+                    1084,
+                    712
+                ],
+                [
+                    1084,
+                    746
+                ],
+                [
+                    185,
+                    754
+                ]
+            ],
+            [
+                [
+                    186,
+                    753
+                ],
+                [
+                    979,
+                    746
+                ],
+                [
+                    980,
+                    780
+                ],
+                [
+                    186,
+                    787
+                ]
+            ],
+            [
+                [
+                    187,
+                    787
+                ],
+                [
+                    765,
+                    782
+                ],
+                [
+                    765,
+                    813
+                ],
+                [
+                    187,
+                    818
+                ]
+            ],
+            [
+                [
+                    111,
+                    848
+                ],
+                [
+                    855,
+                    840
+                ],
+                [
+                    856,
+                    877
+                ],
+                [
+                    111,
+                    885
+                ]
+            ],
+            [
+                [
+                    111,
+                    895
+                ],
+                [
+                    1013,
+                    887
+                ],
+                [
+                    1013,
+                    916
+                ],
+                [
+                    111,
+                    925
+                ]
+            ],
+            [
+                [
+                    113,
+                    929
+                ],
+                [
+                    368,
+                    924
+                ],
+                [
+                    369,
+                    951
+                ],
+                [
+                    113,
+                    955
+                ]
+            ],
+            [
+                [
+                    172,
+                    984
+                ],
+                [
+                    1068,
+                    977
+                ],
+                [
+                    1068,
+                    1007
+                ],
+                [
+                    172,
+                    1014
+                ]
+            ],
+            [
+                [
+                    186,
+                    1018
+                ],
+                [
+                    1067,
+                    1010
+                ],
+                [
+                    1067,
+                    1040
+                ],
+                [
+                    186,
+                    1048
+                ]
+            ],
+            [
+                [
+                    185,
+                    1051
+                ],
+                [
+                    905,
+                    1044
+                ],
+                [
+                    905,
+                    1074
+                ],
+                [
+                    185,
+                    1080
+                ]
+            ],
+            [
+                [
+                    184,
+                    1083
+                ],
+                [
+                    1064,
+                    1073
+                ],
+                [
+                    1064,
+                    1104
+                ],
+                [
+                    184,
+                    1114
+                ]
+            ],
+            [
+                [
+                    183,
+                    1116
+                ],
+                [
+                    1099,
+                    1105
+                ],
+                [
+                    1100,
+                    1136
+                ],
+                [
+                    183,
+                    1147
+                ]
+            ],
+            [
+                [
+                    184,
+                    1151
+                ],
+                [
+                    370,
+                    1148
+                ],
+                [
+                    371,
+                    1177
+                ],
+                [
+                    185,
+                    1181
+                ]
+            ],
+            [
+                [
+                    185,
+                    1183
+                ],
+                [
+                    1014,
+                    1175
+                ],
+                [
+                    1014,
+                    1202
+                ],
+                [
+                    185,
+                    1210
+                ]
+            ],
+            [
+                [
+                    185,
+                    1213
+                ],
+                [
+                    1065,
+                    1204
+                ],
+                [
+                    1065,
+                    1234
+                ],
+                [
+                    185,
+                    1243
+                ]
+            ],
+            [
+                [
+                    187,
+                    1245
+                ],
+                [
+                    926,
+                    1239
+                ],
+                [
+                    926,
+                    1266
+                ],
+                [
+                    187,
+                    1272
+                ]
+            ],
+            [
+                [
+                    109,
+                    1329
+                ],
+                [
+                    590,
+                    1332
+                ],
+                [
+                    590,
+                    1361
+                ],
+                [
+                    109,
+                    1359
+                ]
+            ],
+            [
+                [
+                    184,
+                    1360
+                ],
+                [
+                    301,
+                    1364
+                ],
+                [
+                    300,
+                    1394
+                ],
+                [
+                    183,
+                    1391
+                ]
+            ],
+            [
+                [
+                    182,
+                    1392
+                ],
+                [
+                    258,
+                    1394
+                ],
+                [
+                    257,
+                    1427
+                ],
+                [
+                    181,
+                    1425
+                ]
+            ],
+            [
+                [
+                    104,
+                    1423
+                ],
+                [
+                    1055,
+                    1427
+                ],
+                [
+                    1055,
+                    1461
+                ],
+                [
+                    104,
+                    1457
+                ]
+            ]
+        ],
+        "text_det_params": {
+            "limit_side_len": 736,
+            "limit_type": "min",
+            "thresh": 0.3,
+            "max_side_limit": 4000,
+            "box_thresh": 0.6,
+            "unclip_ratio": 1.5
+        },
+        "text_type": "general",
+        "textline_orientation_angles": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        "text_rec_score_thresh": 0.0,
+        "return_word_box": false,
+        "rec_texts": [
+            "where the information came from (e.g., \"According to Section 4.2 of the Employee",
+            "Handbook...\").",
+            "5. Easy Data Management",
+            "If a policy changes, you don't need to retrain the Al. You simply update the text file in your",
+            " database. The next time the RAG system performs a search, it will find the new document",
+            "and provide the updated information immediately.",
+            "Developer Frameworks (For building custom solutions)",
+            "If you have engineering resources and want full control over the pipeline, these are the",
+            "industry standards:",
+            "Llamalndex: Widely considered the best orchestration framework for RAG. It excels",
+            "at \"data ingestion\"-it has over 160 connectors to pull FAQs from PDFs, Notion,",
+            "Slack, or SQL databases. It is highly optimized for document Q&A.",
+            "LangChain: The most popular framework for building LLM applications. It is very",
+            " modular, allowing you to swap out different vector databases (like Pinecone or",
+            "Weaviate) and LLMs (like GPT-4 or Claude) easily.",
+            "Haystack: An open-source framework by Deepset specifically designed for building",
+            "production-ready search and Q&A systems. It is often cited as being more",
+            "streamlined for \"search-centric\" RAG than LangChain.",
+            "Managed & \"No-Code\" Platforms (For fast deployment)",
+            "If you want to upload a document and have a functioning FAQ bot in minutes without",
+            "managing infrastructure:",
+            "Wonderchat / Chatbase: These are \"RAG-as-a-Service\" platforms. You provide a",
+            "URL or upload a PDF of your FAQs, and they provide an embeddable chat widget.",
+            "They handle the embedding, storage, and retrieval layers internally.",
+            "Docsie: Specifically designed for documentation and internal knowledge bases. It",
+            " features \"version awareness,\" which is useful if your FAQs change based on different",
+            "product versions.",
+            "Danswer: An open-source enterprise search engine that you can self-host. It",
+            "connects to your company's tools (Google Drive, Confluence, etc.) and provides a",
+            "ChatGPT-like interface for asking questions across all those sources.",
+            "Similar existing software, with RAG functions:",
+            "Make.com",
+            " n8n.io",
+            "These are automation softwares with additional features centered around Al automation"
+        ],
+        "rec_scores": [
+            0.9983606338500977,
+            0.9282650947570801,
+            0.9972531795501709,
+            0.9968496561050415,
+            0.9877609014511108,
+            0.9991021752357483,
+            0.9925186634063721,
+            0.9982410073280334,
+            0.9977748990058899,
+            0.9967269897460938,
+            0.9903524518013,
+            0.9988754391670227,
+            0.9887741804122925,
+            0.9905748963356018,
+            0.9927749633789062,
+            0.9959901571273804,
+            0.9938602447509766,
+            0.9990330338478088,
+            0.9934344291687012,
+            0.9864869713783264,
+            0.9998390078544617,
+            0.9932029247283936,
+            0.9954414963722229,
+            0.9968693852424622,
+            0.988987922668457,
+            0.9879854917526245,
+            0.9999279975891113,
+            0.98788982629776,
+            0.9913849830627441,
+            0.9930737018585205,
+            0.9952449202537537,
+            0.9992870688438416,
+            0.8958371877670288,
+            0.9988174438476562
+        ],
+        "rec_polys": [
+            [
+                [
+                    97,
+                    88
+                ],
+                [
+                    983,
+                    88
+                ],
+                [
+                    983,
+                    118
+                ],
+                [
+                    97,
+                    118
+                ]
+            ],
+            [
+                [
+                    97,
+                    122
+                ],
+                [
+                    260,
+                    127
+                ],
+                [
+                    259,
+                    158
+                ],
+                [
+                    96,
+                    153
+                ]
+            ],
+            [
+                [
+                    99,
+                    179
+                ],
+                [
+                    459,
+                    183
+                ],
+                [
+                    459,
+                    221
+                ],
+                [
+                    99,
+                    216
+                ]
+            ],
+            [
+                [
+                    99,
+                    233
+                ],
+                [
+                    1069,
+                    227
+                ],
+                [
+                    1069,
+                    265
+                ],
+                [
+                    99,
+                    271
+                ]
+            ],
+            [
+                [
+                    101,
+                    269
+                ],
+                [
+                    1069,
+                    262
+                ],
+                [
+                    1069,
+                    296
+                ],
+                [
+                    101,
+                    303
+                ]
+            ],
+            [
+                [
+                    103,
+                    304
+                ],
+                [
+                    633,
+                    303
+                ],
+                [
+                    633,
+                    334
+                ],
+                [
+                    103,
+                    335
+                ]
+            ],
+            [
+                [
+                    104,
+                    385
+                ],
+                [
+                    859,
+                    383
+                ],
+                [
+                    859,
+                    420
+                ],
+                [
+                    104,
+                    422
+                ]
+            ],
+            [
+                [
+                    104,
+                    434
+                ],
+                [
+                    1033,
+                    429
+                ],
+                [
+                    1033,
+                    459
+                ],
+                [
+                    104,
+                    464
+                ]
+            ],
+            [
+                [
+                    106,
+                    466
+                ],
+                [
+                    312,
+                    466
+                ],
+                [
+                    312,
+                    492
+                ],
+                [
+                    106,
+                    492
+                ]
+            ],
+            [
+                [
+                    181,
+                    521
+                ],
+                [
+                    1088,
+                    517
+                ],
+                [
+                    1088,
+                    548
+                ],
+                [
+                    181,
+                    552
+                ]
+            ],
+            [
+                [
+                    182,
+                    554
+                ],
+                [
+                    1041,
+                    550
+                ],
+                [
+                    1041,
+                    581
+                ],
+                [
+                    182,
+                    585
+                ]
+            ],
+            [
+                [
+                    182,
+                    585
+                ],
+                [
+                    898,
+                    581
+                ],
+                [
+                    898,
+                    615
+                ],
+                [
+                    182,
+                    619
+                ]
+            ],
+            [
+                [
+                    182,
+                    618
+                ],
+                [
+                    1053,
+                    614
+                ],
+                [
+                    1053,
+                    648
+                ],
+                [
+                    182,
+                    652
+                ]
+            ],
+            [
+                [
+                    184,
+                    653
+                ],
+                [
+                    1027,
+                    649
+                ],
+                [
+                    1027,
+                    682
+                ],
+                [
+                    184,
+                    686
+                ]
+            ],
+            [
+                [
+                    184,
+                    685
+                ],
+                [
+                    729,
+                    683
+                ],
+                [
+                    729,
+                    717
+                ],
+                [
+                    184,
+                    719
+                ]
+            ],
+            [
+                [
+                    185,
+                    720
+                ],
+                [
+                    1084,
+                    712
+                ],
+                [
+                    1084,
+                    746
+                ],
+                [
+                    185,
+                    754
+                ]
+            ],
+            [
+                [
+                    186,
+                    753
+                ],
+                [
+                    979,
+                    746
+                ],
+                [
+                    980,
+                    780
+                ],
+                [
+                    186,
+                    787
+                ]
+            ],
+            [
+                [
+                    187,
+                    787
+                ],
+                [
+                    765,
+                    782
+                ],
+                [
+                    765,
+                    813
+                ],
+                [
+                    187,
+                    818
+                ]
+            ],
+            [
+                [
+                    111,
+                    848
+                ],
+                [
+                    855,
+                    840
+                ],
+                [
+                    856,
+                    877
+                ],
+                [
+                    111,
+                    885
+                ]
+            ],
+            [
+                [
+                    111,
+                    895
+                ],
+                [
+                    1013,
+                    887
+                ],
+                [
+                    1013,
+                    916
+                ],
+                [
+                    111,
+                    925
+                ]
+            ],
+            [
+                [
+                    113,
+                    929
+                ],
+                [
+                    368,
+                    924
+                ],
+                [
+                    369,
+                    951
+                ],
+                [
+                    113,
+                    955
+                ]
+            ],
+            [
+                [
+                    172,
+                    984
+                ],
+                [
+                    1068,
+                    977
+                ],
+                [
+                    1068,
+                    1007
+                ],
+                [
+                    172,
+                    1014
+                ]
+            ],
+            [
+                [
+                    186,
+                    1018
+                ],
+                [
+                    1067,
+                    1010
+                ],
+                [
+                    1067,
+                    1040
+                ],
+                [
+                    186,
+                    1048
+                ]
+            ],
+            [
+                [
+                    185,
+                    1051
+                ],
+                [
+                    905,
+                    1044
+                ],
+                [
+                    905,
+                    1074
+                ],
+                [
+                    185,
+                    1080
+                ]
+            ],
+            [
+                [
+                    184,
+                    1083
+                ],
+                [
+                    1064,
+                    1073
+                ],
+                [
+                    1064,
+                    1104
+                ],
+                [
+                    184,
+                    1114
+                ]
+            ],
+            [
+                [
+                    183,
+                    1116
+                ],
+                [
+                    1099,
+                    1105
+                ],
+                [
+                    1100,
+                    1136
+                ],
+                [
+                    183,
+                    1147
+                ]
+            ],
+            [
+                [
+                    184,
+                    1151
+                ],
+                [
+                    370,
+                    1148
+                ],
+                [
+                    371,
+                    1177
+                ],
+                [
+                    185,
+                    1181
+                ]
+            ],
+            [
+                [
+                    185,
+                    1183
+                ],
+                [
+                    1014,
+                    1175
+                ],
+                [
+                    1014,
+                    1202
+                ],
+                [
+                    185,
+                    1210
+                ]
+            ],
+            [
+                [
+                    185,
+                    1213
+                ],
+                [
+                    1065,
+                    1204
+                ],
+                [
+                    1065,
+                    1234
+                ],
+                [
+                    185,
+                    1243
+                ]
+            ],
+            [
+                [
+                    187,
+                    1245
+                ],
+                [
+                    926,
+                    1239
+                ],
+                [
+                    926,
+                    1266
+                ],
+                [
+                    187,
+                    1272
+                ]
+            ],
+            [
+                [
+                    109,
+                    1329
+                ],
+                [
+                    590,
+                    1332
+                ],
+                [
+                    590,
+                    1361
+                ],
+                [
+                    109,
+                    1359
+                ]
+            ],
+            [
+                [
+                    184,
+                    1360
+                ],
+                [
+                    301,
+                    1364
+                ],
+                [
+                    300,
+                    1394
+                ],
+                [
+                    183,
+                    1391
+                ]
+            ],
+            [
+                [
+                    182,
+                    1392
+                ],
+                [
+                    258,
+                    1394
+                ],
+                [
+                    257,
+                    1427
+                ],
+                [
+                    181,
+                    1425
+                ]
+            ],
+            [
+                [
+                    104,
+                    1423
+                ],
+                [
+                    1055,
+                    1427
+                ],
+                [
+                    1055,
+                    1461
+                ],
+                [
+                    104,
+                    1457
+                ]
+            ]
+        ],
+        "rec_boxes": [
+            [
+                97,
+                88,
+                983,
+                118
+            ],
+            [
+                96,
+                122,
+                260,
+                158
+            ],
+            [
+                99,
+                179,
+                459,
+                221
+            ],
+            [
+                99,
+                227,
+                1069,
+                271
+            ],
+            [
+                101,
+                262,
+                1069,
+                303
+            ],
+            [
+                103,
+                303,
+                633,
+                335
+            ],
+            [
+                104,
+                383,
+                859,
+                422
+            ],
+            [
+                104,
+                429,
+                1033,
+                464
+            ],
+            [
+                106,
+                466,
+                312,
+                492
+            ],
+            [
+                181,
+                517,
+                1088,
+                552
+            ],
+            [
+                182,
+                550,
+                1041,
+                585
+            ],
+            [
+                182,
+                581,
+                898,
+                619
+            ],
+            [
+                182,
+                614,
+                1053,
+                652
+            ],
+            [
+                184,
+                649,
+                1027,
+                686
+            ],
+            [
+                184,
+                683,
+                729,
+                719
+            ],
+            [
+                185,
+                712,
+                1084,
+                754
+            ],
+            [
+                186,
+                746,
+                980,
+                787
+            ],
+            [
+                187,
+                782,
+                765,
+                818
+            ],
+            [
+                111,
+                840,
+                856,
+                885
+            ],
+            [
+                111,
+                887,
+                1013,
+                925
+            ],
+            [
+                113,
+                924,
+                369,
+                955
+            ],
+            [
+                172,
+                977,
+                1068,
+                1014
+            ],
+            [
+                186,
+                1010,
+                1067,
+                1048
+            ],
+            [
+                185,
+                1044,
+                905,
+                1080
+            ],
+            [
+                184,
+                1073,
+                1064,
+                1114
+            ],
+            [
+                183,
+                1105,
+                1100,
+                1147
+            ],
+            [
+                184,
+                1148,
+                371,
+                1181
+            ],
+            [
+                185,
+                1175,
+                1014,
+                1210
+            ],
+            [
+                185,
+                1204,
+                1065,
+                1243
+            ],
+            [
+                187,
+                1239,
+                926,
+                1272
+            ],
+            [
+                109,
+                1329,
+                590,
+                1361
+            ],
+            [
+                183,
+                1360,
+                301,
+                1394
+            ],
+            [
+                181,
+                1392,
+                258,
+                1427
+            ],
+            [
+                104,
+                1423,
+                1055,
+                1461
+            ]
+        ]
+    }
+}

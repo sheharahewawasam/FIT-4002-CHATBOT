@@ -1,0 +1,209 @@
+{
+    "input_path": "..\\pdfs\\Proposal Document.pdf",
+    "page_index": 21,
+    "page_count": 22,
+    "width": 1192,
+    "height": 1684,
+    "model_settings": {
+        "use_doc_preprocessor": true,
+        "use_seal_recognition": false,
+        "use_table_recognition": true,
+        "use_formula_recognition": true,
+        "use_chart_recognition": false,
+        "use_region_detection": true,
+        "format_block_content": false,
+        "markdown_ignore_labels": [
+            "number",
+            "footnote",
+            "header",
+            "header_image",
+            "footer",
+            "footer_image",
+            "aside_text"
+        ]
+    },
+    "parsing_res_list": [
+        {
+            "block_label": "doc_title",
+            "block_content": "13.0 Conclusion ",
+            "block_bbox": [
+                73,
+                88,
+                372,
+                122
+            ],
+            "block_id": 0,
+            "block_order": 1
+        },
+        {
+            "block_label": "text",
+            "block_content": "This document should serve as a ",
+            "block_bbox": [
+                70,
+                149,
+                414,
+                172
+            ],
+            "block_id": 1,
+            "block_order": 2
+        }
+    ],
+    "doc_preprocessor_res": {
+        "input_path": null,
+        "page_index": null,
+        "model_settings": {
+            "use_doc_orientation_classify": true,
+            "use_doc_unwarping": true
+        },
+        "angle": 0
+    },
+    "layout_det_res": {
+        "input_path": null,
+        "page_index": null,
+        "boxes": [
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.7706080675125122,
+                "coordinate": [
+                    70.41276550292969,
+                    149.37374877929688,
+                    414.910400390625,
+                    172.00799560546875
+                ]
+            },
+            {
+                "cls_id": 0,
+                "label": "paragraph_title",
+                "score": 0.6819589138031006,
+                "coordinate": [
+                    73.47024536132812,
+                    88.38199615478516,
+                    372.3070373535156,
+                    122.94837188720703
+                ]
+            }
+        ]
+    },
+    "overall_ocr_res": {
+        "input_path": null,
+        "page_index": null,
+        "model_settings": {
+            "use_doc_preprocessor": false,
+            "use_textline_orientation": true
+        },
+        "dt_polys": [
+            [
+                [
+                    72,
+                    82
+                ],
+                [
+                    377,
+                    87
+                ],
+                [
+                    376,
+                    128
+                ],
+                [
+                    71,
+                    124
+                ]
+            ],
+            [
+                [
+                    69,
+                    145
+                ],
+                [
+                    419,
+                    150
+                ],
+                [
+                    419,
+                    177
+                ],
+                [
+                    68,
+                    172
+                ]
+            ]
+        ],
+        "text_det_params": {
+            "limit_side_len": 736,
+            "limit_type": "min",
+            "thresh": 0.3,
+            "max_side_limit": 4000,
+            "box_thresh": 0.6,
+            "unclip_ratio": 1.5
+        },
+        "text_type": "general",
+        "textline_orientation_angles": [
+            0,
+            0
+        ],
+        "text_rec_score_thresh": 0.0,
+        "return_word_box": false,
+        "rec_texts": [
+            "13.0 Conclusion",
+            "This document should serve as a"
+        ],
+        "rec_scores": [
+            0.9997960329055786,
+            0.998070478439331
+        ],
+        "rec_polys": [
+            [
+                [
+                    72,
+                    82
+                ],
+                [
+                    377,
+                    87
+                ],
+                [
+                    376,
+                    128
+                ],
+                [
+                    71,
+                    124
+                ]
+            ],
+            [
+                [
+                    69,
+                    145
+                ],
+                [
+                    419,
+                    150
+                ],
+                [
+                    419,
+                    177
+                ],
+                [
+                    68,
+                    172
+                ]
+            ]
+        ],
+        "rec_boxes": [
+            [
+                71,
+                82,
+                377,
+                128
+            ],
+            [
+                68,
+                145,
+                419,
+                177
+            ]
+        ]
+    }
+}

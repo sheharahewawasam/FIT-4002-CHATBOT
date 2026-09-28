@@ -1,0 +1,1001 @@
+{
+    "input_path": "..\\pdfs\\SIS Act -1.pdf",
+    "page_index": 103,
+    "page_count": 394,
+    "width": 1191,
+    "height": 1684,
+    "model_settings": {
+        "use_doc_preprocessor": true,
+        "use_seal_recognition": false,
+        "use_table_recognition": true,
+        "use_formula_recognition": true,
+        "use_chart_recognition": false,
+        "use_region_detection": true,
+        "format_block_content": false,
+        "markdown_ignore_labels": [
+            "number",
+            "footnote",
+            "header",
+            "header_image",
+            "footer",
+            "footer_image",
+            "aside_text"
+        ]
+    },
+    "parsing_res_list": [
+        {
+            "block_label": "text",
+            "block_content": "Section 29FF ",
+            "block_bbox": [
+                140,
+                83,
+                305,
+                106
+            ],
+            "block_id": 0,
+            "block_order": 1
+        },
+        {
+            "block_label": "text",
+            "block_content": "(b) the variation remains in force until:.",
+            "block_bbox": [
+                303,
+                149,
+                724,
+                175
+            ],
+            "block_id": 1,
+            "block_order": 2
+        },
+        {
+            "block_label": "text",
+            "block_content": "(i) the condition is varied in an inconsistent manner, or.",
+            "block_bbox": [
+                364,
+                182,
+                953,
+                208
+            ],
+            "block_id": 2,
+            "block_order": 3
+        },
+        {
+            "block_label": "text",
+            "block_content": "(ii) the condition is revoked; or.",
+            "block_bbox": [
+                358,
+                216,
+                702,
+                240
+            ],
+            "block_id": 3,
+            "block_order": 4
+        },
+        {
+            "block_label": "text",
+            "block_content": "(iii) the licence is cancelled..",
+            "block_bbox": [
+                353,
+                248,
+                660,
+                273
+            ],
+            "block_id": 4,
+            "block_order": 5
+        },
+        {
+            "block_label": "text",
+            "block_content": "(3) If, under section 29FC or 29FD, APRA revokes a condition imposed on an RSE licence, the revocation comes into force on the day specified in the notice under paragraph 29FE(2)(d).",
+            "block_bbox": [
+                244,
+                296,
+                1006,
+                379
+            ],
+            "block_id": 5,
+            "block_order": 6
+        },
+        {
+            "block_label": "number",
+            "block_content": "88",
+            "block_bbox": [
+                156,
+                1318,
+                177,
+                1333
+            ],
+            "block_id": 6,
+            "block_order": null
+        },
+        {
+            "block_label": "footer",
+            "block_content": "Superannuation Industry (Supervision) Act 1993",
+            "block_bbox": [
+                440,
+                1302,
+                831,
+                1327
+            ],
+            "block_id": 7,
+            "block_order": null
+        },
+        {
+            "block_label": "footer",
+            "block_content": "Compilation No. 103",
+            "block_bbox": [
+                155,
+                1357,
+                328,
+                1378
+            ],
+            "block_id": 8,
+            "block_order": null
+        },
+        {
+            "block_label": "footer",
+            "block_content": "Compilation date: 18/02/2020",
+            "block_bbox": [
+                479,
+                1346,
+                718,
+                1368
+            ],
+            "block_id": 9,
+            "block_order": null
+        },
+        {
+            "block_label": "footer",
+            "block_content": "Registered: 05/03/2020",
+            "block_bbox": [
+                853,
+                1342,
+                1041,
+                1363
+            ],
+            "block_id": 10,
+            "block_order": null
+        }
+    ],
+    "doc_preprocessor_res": {
+        "input_path": null,
+        "page_index": null,
+        "model_settings": {
+            "use_doc_orientation_classify": true,
+            "use_doc_unwarping": true
+        },
+        "angle": 0
+    },
+    "layout_det_res": {
+        "input_path": null,
+        "page_index": null,
+        "boxes": [
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.9578620791435242,
+                "coordinate": [
+                    244.40768432617188,
+                    296.08917236328125,
+                    1006.839599609375,
+                    379.14019775390625
+                ]
+            },
+            {
+                "cls_id": 14,
+                "label": "footer",
+                "score": 0.8293412923812866,
+                "coordinate": [
+                    440.55767822265625,
+                    1302.307861328125,
+                    831.0654907226562,
+                    1327.7744140625
+                ]
+            },
+            {
+                "cls_id": 14,
+                "label": "footer",
+                "score": 0.8275743722915649,
+                "coordinate": [
+                    155.70669555664062,
+                    1357.2294921875,
+                    328.13958740234375,
+                    1378.49609375
+                ]
+            },
+            {
+                "cls_id": 14,
+                "label": "footer",
+                "score": 0.8114116787910461,
+                "coordinate": [
+                    853.7552490234375,
+                    1342.62158203125,
+                    1041.5274658203125,
+                    1363.03369140625
+                ]
+            },
+            {
+                "cls_id": 3,
+                "label": "number",
+                "score": 0.7918028831481934,
+                "coordinate": [
+                    156.13479614257812,
+                    1318.138916015625,
+                    177.70510864257812,
+                    1333.7783203125
+                ]
+            },
+            {
+                "cls_id": 14,
+                "label": "footer",
+                "score": 0.778074324131012,
+                "coordinate": [
+                    479.8541259765625,
+                    1346.5087890625,
+                    718.3873291015625,
+                    1368.408203125
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.7255392074584961,
+                "coordinate": [
+                    353.16986083984375,
+                    248.72030639648438,
+                    660.2352905273438,
+                    273.0275573730469
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.6445989608764648,
+                "coordinate": [
+                    358.87518310546875,
+                    216.18429565429688,
+                    702.1940307617188,
+                    240.11715698242188
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.6440565586090088,
+                "coordinate": [
+                    303.341796875,
+                    149.542236328125,
+                    724.63037109375,
+                    175.0340576171875
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.5839641094207764,
+                "coordinate": [
+                    140.34182739257812,
+                    83.92581176757812,
+                    305.5544738769531,
+                    106.61654663085938
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.5723896026611328,
+                "coordinate": [
+                    364.42919921875,
+                    182.57923889160156,
+                    953.435546875,
+                    208.74058532714844
+                ]
+            }
+        ]
+    },
+    "overall_ocr_res": {
+        "input_path": null,
+        "page_index": null,
+        "model_settings": {
+            "use_doc_preprocessor": false,
+            "use_textline_orientation": true
+        },
+        "dt_polys": [
+            [
+                [
+                    137,
+                    0
+                ],
+                [
+                    762,
+                    5
+                ],
+                [
+                    761,
+                    36
+                ],
+                [
+                    137,
+                    25
+                ]
+            ],
+            [
+                [
+                    140,
+                    28
+                ],
+                [
+                    478,
+                    29
+                ],
+                [
+                    478,
+                    53
+                ],
+                [
+                    140,
+                    52
+                ]
+            ],
+            [
+                [
+                    143,
+                    83
+                ],
+                [
+                    309,
+                    83
+                ],
+                [
+                    309,
+                    110
+                ],
+                [
+                    143,
+                    110
+                ]
+            ],
+            [
+                [
+                    307,
+                    148
+                ],
+                [
+                    725,
+                    152
+                ],
+                [
+                    725,
+                    179
+                ],
+                [
+                    307,
+                    175
+                ]
+            ],
+            [
+                [
+                    368,
+                    181
+                ],
+                [
+                    956,
+                    187
+                ],
+                [
+                    955,
+                    213
+                ],
+                [
+                    368,
+                    206
+                ]
+            ],
+            [
+                [
+                    363,
+                    215
+                ],
+                [
+                    702,
+                    215
+                ],
+                [
+                    702,
+                    242
+                ],
+                [
+                    363,
+                    242
+                ]
+            ],
+            [
+                [
+                    356,
+                    249
+                ],
+                [
+                    662,
+                    247
+                ],
+                [
+                    662,
+                    274
+                ],
+                [
+                    356,
+                    276
+                ]
+            ],
+            [
+                [
+                    247,
+                    299
+                ],
+                [
+                    928,
+                    293
+                ],
+                [
+                    929,
+                    320
+                ],
+                [
+                    248,
+                    326
+                ]
+            ],
+            [
+                [
+                    293,
+                    328
+                ],
+                [
+                    1009,
+                    321
+                ],
+                [
+                    1009,
+                    347
+                ],
+                [
+                    293,
+                    355
+                ]
+            ],
+            [
+                [
+                    293,
+                    356
+                ],
+                [
+                    888,
+                    349
+                ],
+                [
+                    888,
+                    376
+                ],
+                [
+                    293,
+                    382
+                ]
+            ],
+            [
+                [
+                    153,
+                    1315
+                ],
+                [
+                    184,
+                    1315
+                ],
+                [
+                    184,
+                    1340
+                ],
+                [
+                    153,
+                    1340
+                ]
+            ],
+            [
+                [
+                    440,
+                    1308
+                ],
+                [
+                    834,
+                    1299
+                ],
+                [
+                    834,
+                    1322
+                ],
+                [
+                    441,
+                    1332
+                ]
+            ],
+            [
+                [
+                    479,
+                    1349
+                ],
+                [
+                    721,
+                    1341
+                ],
+                [
+                    721,
+                    1365
+                ],
+                [
+                    479,
+                    1372
+                ]
+            ],
+            [
+                [
+                    852,
+                    1342
+                ],
+                [
+                    1045,
+                    1339
+                ],
+                [
+                    1045,
+                    1363
+                ],
+                [
+                    852,
+                    1365
+                ]
+            ],
+            [
+                [
+                    155,
+                    1359
+                ],
+                [
+                    331,
+                    1353
+                ],
+                [
+                    332,
+                    1377
+                ],
+                [
+                    155,
+                    1382
+                ]
+            ]
+        ],
+        "text_det_params": {
+            "limit_side_len": 736,
+            "limit_type": "min",
+            "thresh": 0.3,
+            "max_side_limit": 4000,
+            "box_thresh": 0.6,
+            "unclip_ratio": 1.5
+        },
+        "text_type": "general",
+        "textline_orientation_angles": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        "text_rec_score_thresh": 0.0,
+        "return_word_box": false,
+        "rec_texts": [
+            "Part 2A Licensing of trustees and groups of individual trustees.",
+            "Division 6 Varying RSE licences",
+            "Section 29FF",
+            "(b) the variation remains in force until:.",
+            "(i) the condition is varied in an inconsistent manner, or.",
+            "(ii) the condition is revoked; or.",
+            "(iii) the licence is cancelled..",
+            "(3) If, under section 29FC or 29FD, APRA revokes a condition",
+            "imposed on an RSE licence, the revocation comes into force on the",
+            "day specified in the notice under paragraph 29FE(2)(d).",
+            "88",
+            "Superannuation Industry (Supervision) Act 1993",
+            "Compilation date: 18/02/2020",
+            "Registered: 05/03/2020",
+            "Compilation No. 103"
+        ],
+        "rec_scores": [
+            0.9836088418960571,
+            0.9902620911598206,
+            0.9992035031318665,
+            0.9819334745407104,
+            0.9698771834373474,
+            0.9462617039680481,
+            0.9818105697631836,
+            0.9937735199928284,
+            0.9842914342880249,
+            0.9907397031784058,
+            0.9903188943862915,
+            0.9879035949707031,
+            0.9924021363258362,
+            0.9790815114974976,
+            0.964590847492218
+        ],
+        "rec_polys": [
+            [
+                [
+                    137,
+                    0
+                ],
+                [
+                    762,
+                    5
+                ],
+                [
+                    761,
+                    36
+                ],
+                [
+                    137,
+                    25
+                ]
+            ],
+            [
+                [
+                    140,
+                    28
+                ],
+                [
+                    478,
+                    29
+                ],
+                [
+                    478,
+                    53
+                ],
+                [
+                    140,
+                    52
+                ]
+            ],
+            [
+                [
+                    143,
+                    83
+                ],
+                [
+                    309,
+                    83
+                ],
+                [
+                    309,
+                    110
+                ],
+                [
+                    143,
+                    110
+                ]
+            ],
+            [
+                [
+                    307,
+                    148
+                ],
+                [
+                    725,
+                    152
+                ],
+                [
+                    725,
+                    179
+                ],
+                [
+                    307,
+                    175
+                ]
+            ],
+            [
+                [
+                    368,
+                    181
+                ],
+                [
+                    956,
+                    187
+                ],
+                [
+                    955,
+                    213
+                ],
+                [
+                    368,
+                    206
+                ]
+            ],
+            [
+                [
+                    363,
+                    215
+                ],
+                [
+                    702,
+                    215
+                ],
+                [
+                    702,
+                    242
+                ],
+                [
+                    363,
+                    242
+                ]
+            ],
+            [
+                [
+                    356,
+                    249
+                ],
+                [
+                    662,
+                    247
+                ],
+                [
+                    662,
+                    274
+                ],
+                [
+                    356,
+                    276
+                ]
+            ],
+            [
+                [
+                    247,
+                    299
+                ],
+                [
+                    928,
+                    293
+                ],
+                [
+                    929,
+                    320
+                ],
+                [
+                    248,
+                    326
+                ]
+            ],
+            [
+                [
+                    293,
+                    328
+                ],
+                [
+                    1009,
+                    321
+                ],
+                [
+                    1009,
+                    347
+                ],
+                [
+                    293,
+                    355
+                ]
+            ],
+            [
+                [
+                    293,
+                    356
+                ],
+                [
+                    888,
+                    349
+                ],
+                [
+                    888,
+                    376
+                ],
+                [
+                    293,
+                    382
+                ]
+            ],
+            [
+                [
+                    153,
+                    1315
+                ],
+                [
+                    184,
+                    1315
+                ],
+                [
+                    184,
+                    1340
+                ],
+                [
+                    153,
+                    1340
+                ]
+            ],
+            [
+                [
+                    440,
+                    1308
+                ],
+                [
+                    834,
+                    1299
+                ],
+                [
+                    834,
+                    1322
+                ],
+                [
+                    441,
+                    1332
+                ]
+            ],
+            [
+                [
+                    479,
+                    1349
+                ],
+                [
+                    721,
+                    1341
+                ],
+                [
+                    721,
+                    1365
+                ],
+                [
+                    479,
+                    1372
+                ]
+            ],
+            [
+                [
+                    852,
+                    1342
+                ],
+                [
+                    1045,
+                    1339
+                ],
+                [
+                    1045,
+                    1363
+                ],
+                [
+                    852,
+                    1365
+                ]
+            ],
+            [
+                [
+                    155,
+                    1359
+                ],
+                [
+                    331,
+                    1353
+                ],
+                [
+                    332,
+                    1377
+                ],
+                [
+                    155,
+                    1382
+                ]
+            ]
+        ],
+        "rec_boxes": [
+            [
+                137,
+                0,
+                762,
+                36
+            ],
+            [
+                140,
+                28,
+                478,
+                53
+            ],
+            [
+                143,
+                83,
+                309,
+                110
+            ],
+            [
+                307,
+                148,
+                725,
+                179
+            ],
+            [
+                368,
+                181,
+                956,
+                213
+            ],
+            [
+                363,
+                215,
+                702,
+                242
+            ],
+            [
+                356,
+                247,
+                662,
+                276
+            ],
+            [
+                247,
+                293,
+                929,
+                326
+            ],
+            [
+                293,
+                321,
+                1009,
+                355
+            ],
+            [
+                293,
+                349,
+                888,
+                382
+            ],
+            [
+                153,
+                1315,
+                184,
+                1340
+            ],
+            [
+                440,
+                1299,
+                834,
+                1332
+            ],
+            [
+                479,
+                1341,
+                721,
+                1372
+            ],
+            [
+                852,
+                1339,
+                1045,
+                1365
+            ],
+            [
+                155,
+                1353,
+                332,
+                1382
+            ]
+        ]
+    }
+}

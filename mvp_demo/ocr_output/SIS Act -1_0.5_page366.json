@@ -1,0 +1,756 @@
+{
+    "input_path": "..\\pdfs\\SIS Act -1.pdf",
+    "page_index": 366,
+    "page_count": 394,
+    "width": 1191,
+    "height": 1684,
+    "model_settings": {
+        "use_doc_preprocessor": true,
+        "use_seal_recognition": false,
+        "use_table_recognition": true,
+        "use_formula_recognition": true,
+        "use_chart_recognition": false,
+        "use_region_detection": true,
+        "format_block_content": false,
+        "markdown_ignore_labels": [
+            "number",
+            "footnote",
+            "header",
+            "header_image",
+            "footer",
+            "footer_image",
+            "aside_text"
+        ]
+    },
+    "parsing_res_list": [
+        {
+            "block_label": "header",
+            "block_content": "Duties of trustees and investment managers of superannuation entities Part 13",
+            "block_bbox": [
+                271,
+                0,
+                1009,
+                23
+            ],
+            "block_id": 0,
+            "block_order": null
+        },
+        {
+            "block_label": "header",
+            "block_content": "Section 109",
+            "block_bbox": [
+                875,
+                82,
+                1014,
+                107
+            ],
+            "block_id": 1,
+            "block_order": null
+        },
+        {
+            "block_label": "text",
+            "block_content": "consequences of contravening, or of being involved in a.contravention of, those subsections.\n",
+            "block_bbox": [
+                310,
+                142,
+                897,
+                192
+            ],
+            "block_id": 2,
+            "block_order": 1
+        },
+        {
+            "block_label": "text",
+            "block_content": "(3) A contravention of subsection (1) or (1A) does not affect the validity of a transaction.\n",
+            "block_bbox": [
+                266,
+                214,
+                952,
+                267
+            ],
+            "block_id": 3,
+            "block_order": 2
+        },
+        {
+            "block_label": "footer",
+            "block_content": "Superannuation Industry (Supervision) Act 1993",
+            "block_bbox": [
+                441,
+                1301,
+                833,
+                1325
+            ],
+            "block_id": 4,
+            "block_order": null
+        },
+        {
+            "block_label": "number",
+            "block_content": "351",
+            "block_bbox": [
+                1013,
+                1301,
+                1041,
+                1316
+            ],
+            "block_id": 5,
+            "block_order": null
+        },
+        {
+            "block_label": "footer",
+            "block_content": "Compilation No. 103",
+            "block_bbox": [
+                155,
+                1354,
+                329,
+                1375
+            ],
+            "block_id": 6,
+            "block_order": null
+        },
+        {
+            "block_label": "footer",
+            "block_content": "Compilation date: 18/02/2020",
+            "block_bbox": [
+                480,
+                1345,
+                719,
+                1367
+            ],
+            "block_id": 7,
+            "block_order": null
+        },
+        {
+            "block_label": "footer",
+            "block_content": "Registered: 05/03/2020",
+            "block_bbox": [
+                854,
+                1343,
+                1039,
+                1363
+            ],
+            "block_id": 8,
+            "block_order": null
+        }
+    ],
+    "doc_preprocessor_res": {
+        "input_path": null,
+        "page_index": null,
+        "model_settings": {
+            "use_doc_orientation_classify": true,
+            "use_doc_unwarping": true
+        },
+        "angle": 0
+    },
+    "layout_det_res": {
+        "input_path": null,
+        "page_index": null,
+        "boxes": [
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.8190302848815918,
+                "coordinate": [
+                    310.49407958984375,
+                    142.84967041015625,
+                    897.4214477539062,
+                    192.52496337890625
+                ]
+            },
+            {
+                "cls_id": 3,
+                "label": "number",
+                "score": 0.7981687784194946,
+                "coordinate": [
+                    1013.233642578125,
+                    1301.051025390625,
+                    1041.52099609375,
+                    1316.995361328125
+                ]
+            },
+            {
+                "cls_id": 14,
+                "label": "footer",
+                "score": 0.7898221015930176,
+                "coordinate": [
+                    441.47625732421875,
+                    1301.67822265625,
+                    833.3837280273438,
+                    1325.67919921875
+                ]
+            },
+            {
+                "cls_id": 14,
+                "label": "footer",
+                "score": 0.7769924998283386,
+                "coordinate": [
+                    155.887451171875,
+                    1354.2874755859375,
+                    329.0235595703125,
+                    1375.7523193359375
+                ]
+            },
+            {
+                "cls_id": 14,
+                "label": "footer",
+                "score": 0.7636449337005615,
+                "coordinate": [
+                    854.811767578125,
+                    1343.258056640625,
+                    1039.51220703125,
+                    1363.048828125
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.7299023270606995,
+                "coordinate": [
+                    266.8612060546875,
+                    214.68655395507812,
+                    952.2471923828125,
+                    267.672607421875
+                ]
+            },
+            {
+                "cls_id": 14,
+                "label": "footer",
+                "score": 0.728819727897644,
+                "coordinate": [
+                    480.03265380859375,
+                    1345.55615234375,
+                    719.8789672851562,
+                    1367.27099609375
+                ]
+            },
+            {
+                "cls_id": 12,
+                "label": "header",
+                "score": 0.6907547116279602,
+                "coordinate": [
+                    875.5159912109375,
+                    82.95735168457031,
+                    1014.4486083984375,
+                    107.47685241699219
+                ]
+            },
+            {
+                "cls_id": 12,
+                "label": "header",
+                "score": 0.668309211730957,
+                "coordinate": [
+                    271.78802490234375,
+                    0.20647716522216797,
+                    1009.5808715820312,
+                    23.36077880859375
+                ]
+            }
+        ]
+    },
+    "overall_ocr_res": {
+        "input_path": null,
+        "page_index": null,
+        "model_settings": {
+            "use_doc_preprocessor": false,
+            "use_textline_orientation": true
+        },
+        "dt_polys": [
+            [
+                [
+                    874,
+                    78
+                ],
+                [
+                    1019,
+                    84
+                ],
+                [
+                    1018,
+                    115
+                ],
+                [
+                    873,
+                    109
+                ]
+            ],
+            [
+                [
+                    313,
+                    139
+                ],
+                [
+                    901,
+                    143
+                ],
+                [
+                    901,
+                    173
+                ],
+                [
+                    313,
+                    169
+                ]
+            ],
+            [
+                [
+                    315,
+                    166
+                ],
+                [
+                    694,
+                    173
+                ],
+                [
+                    694,
+                    197
+                ],
+                [
+                    315,
+                    190
+                ]
+            ],
+            [
+                [
+                    269,
+                    211
+                ],
+                [
+                    955,
+                    215
+                ],
+                [
+                    955,
+                    245
+                ],
+                [
+                    269,
+                    242
+                ]
+            ],
+            [
+                [
+                    312,
+                    240
+                ],
+                [
+                    572,
+                    245
+                ],
+                [
+                    571,
+                    272
+                ],
+                [
+                    312,
+                    267
+                ]
+            ],
+            [
+                [
+                    441,
+                    1305
+                ],
+                [
+                    836,
+                    1298
+                ],
+                [
+                    836,
+                    1321
+                ],
+                [
+                    442,
+                    1329
+                ]
+            ],
+            [
+                [
+                    1009,
+                    1298
+                ],
+                [
+                    1048,
+                    1298
+                ],
+                [
+                    1048,
+                    1324
+                ],
+                [
+                    1009,
+                    1324
+                ]
+            ],
+            [
+                [
+                    480,
+                    1348
+                ],
+                [
+                    722,
+                    1341
+                ],
+                [
+                    722,
+                    1364
+                ],
+                [
+                    480,
+                    1370
+                ]
+            ],
+            [
+                [
+                    852,
+                    1343
+                ],
+                [
+                    1043,
+                    1340
+                ],
+                [
+                    1043,
+                    1364
+                ],
+                [
+                    852,
+                    1366
+                ]
+            ],
+            [
+                [
+                    156,
+                    1356
+                ],
+                [
+                    332,
+                    1350
+                ],
+                [
+                    333,
+                    1374
+                ],
+                [
+                    156,
+                    1379
+                ]
+            ]
+        ],
+        "text_det_params": {
+            "limit_side_len": 736,
+            "limit_type": "min",
+            "thresh": 0.3,
+            "max_side_limit": 4000,
+            "box_thresh": 0.6,
+            "unclip_ratio": 1.5
+        },
+        "text_type": "general",
+        "textline_orientation_angles": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        "text_rec_score_thresh": 0.0,
+        "return_word_box": false,
+        "rec_texts": [
+            "Section 109",
+            "consequences of contravening, or of being involved in a.",
+            "contravention of, those subsections.",
+            "(3) A contravention of subsection (1) or (1A) does not affect the",
+            "validity of a transaction.",
+            "Superannuation Industry (Supervision) Act 1993",
+            "351",
+            "Compilation date: 18/02/2020",
+            "Registered: 05/03/2020",
+            "Compilation No. 103",
+            "Duties of trustees and investment managers of superannuation entities Part 13"
+        ],
+        "rec_scores": [
+            0.9772258400917053,
+            0.9864606261253357,
+            0.9997925162315369,
+            0.9939005970954895,
+            0.996039628982544,
+            0.9897884130477905,
+            0.9960341453552246,
+            0.9975677132606506,
+            0.9845723509788513,
+            0.9864402413368225,
+            0.9667590260505676
+        ],
+        "rec_polys": [
+            [
+                [
+                    874,
+                    78
+                ],
+                [
+                    1019,
+                    84
+                ],
+                [
+                    1018,
+                    115
+                ],
+                [
+                    873,
+                    109
+                ]
+            ],
+            [
+                [
+                    313,
+                    139
+                ],
+                [
+                    901,
+                    143
+                ],
+                [
+                    901,
+                    173
+                ],
+                [
+                    313,
+                    169
+                ]
+            ],
+            [
+                [
+                    315,
+                    166
+                ],
+                [
+                    694,
+                    173
+                ],
+                [
+                    694,
+                    197
+                ],
+                [
+                    315,
+                    190
+                ]
+            ],
+            [
+                [
+                    269,
+                    211
+                ],
+                [
+                    955,
+                    215
+                ],
+                [
+                    955,
+                    245
+                ],
+                [
+                    269,
+                    242
+                ]
+            ],
+            [
+                [
+                    312,
+                    240
+                ],
+                [
+                    572,
+                    245
+                ],
+                [
+                    571,
+                    272
+                ],
+                [
+                    312,
+                    267
+                ]
+            ],
+            [
+                [
+                    441,
+                    1305
+                ],
+                [
+                    836,
+                    1298
+                ],
+                [
+                    836,
+                    1321
+                ],
+                [
+                    442,
+                    1329
+                ]
+            ],
+            [
+                [
+                    1009,
+                    1298
+                ],
+                [
+                    1048,
+                    1298
+                ],
+                [
+                    1048,
+                    1324
+                ],
+                [
+                    1009,
+                    1324
+                ]
+            ],
+            [
+                [
+                    480,
+                    1348
+                ],
+                [
+                    722,
+                    1341
+                ],
+                [
+                    722,
+                    1364
+                ],
+                [
+                    480,
+                    1370
+                ]
+            ],
+            [
+                [
+                    852,
+                    1343
+                ],
+                [
+                    1043,
+                    1340
+                ],
+                [
+                    1043,
+                    1364
+                ],
+                [
+                    852,
+                    1366
+                ]
+            ],
+            [
+                [
+                    156,
+                    1356
+                ],
+                [
+                    332,
+                    1350
+                ],
+                [
+                    333,
+                    1374
+                ],
+                [
+                    156,
+                    1379
+                ]
+            ],
+            [
+                [
+                    271,
+                    0
+                ],
+                [
+                    1009,
+                    0
+                ],
+                [
+                    1009,
+                    23
+                ],
+                [
+                    271,
+                    23
+                ]
+            ]
+        ],
+        "rec_boxes": [
+            [
+                873.0,
+                78.0,
+                1019.0,
+                115.0
+            ],
+            [
+                313.0,
+                139.0,
+                901.0,
+                173.0
+            ],
+            [
+                315.0,
+                166.0,
+                694.0,
+                197.0
+            ],
+            [
+                269.0,
+                211.0,
+                955.0,
+                245.0
+            ],
+            [
+                312.0,
+                240.0,
+                572.0,
+                272.0
+            ],
+            [
+                441.0,
+                1298.0,
+                836.0,
+                1329.0
+            ],
+            [
+                1009.0,
+                1298.0,
+                1048.0,
+                1324.0
+            ],
+            [
+                480.0,
+                1341.0,
+                722.0,
+                1370.0
+            ],
+            [
+                852.0,
+                1340.0,
+                1043.0,
+                1366.0
+            ],
+            [
+                156.0,
+                1350.0,
+                333.0,
+                1379.0
+            ],
+            [
+                271.78802490234375,
+                0.20647716522216797,
+                1009.5808715820312,
+                23.36077880859375
+            ]
+        ]
+    }
+}

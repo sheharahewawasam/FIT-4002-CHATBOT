@@ -1,0 +1,2128 @@
+{
+    "input_path": "..\\pdfs\\sample-smsf-trust-deed.pdf",
+    "page_index": 37,
+    "page_count": 53,
+    "width": 1191,
+    "height": 1684,
+    "model_settings": {
+        "use_doc_preprocessor": true,
+        "use_seal_recognition": false,
+        "use_table_recognition": true,
+        "use_formula_recognition": true,
+        "use_chart_recognition": false,
+        "use_region_detection": true,
+        "format_block_content": false,
+        "markdown_ignore_labels": [
+            "number",
+            "footnote",
+            "header",
+            "header_image",
+            "footer",
+            "footer_image",
+            "aside_text"
+        ]
+    },
+    "parsing_res_list": [
+        {
+            "block_label": "text",
+            "block_content": " transfer investments of equivalent value to the member or beneficiary or to the trustee of.the relevant approved benefit arrangement.\n",
+            "block_bbox": [
+                232,
+                53,
+                1083,
+                119
+            ],
+            "block_id": 0,
+            "block_order": 1
+        },
+        {
+            "block_label": "paragraph_title",
+            "block_content": "The trustee's power to receive transfer ",
+            "block_bbox": [
+                144,
+                181,
+                584,
+                204
+            ],
+            "block_id": 1,
+            "block_order": 2
+        },
+        {
+            "block_label": "text",
+            "block_content": "145The trustee may take over or acquire by transfer from an approved benefit arrangement any part of the assets of that arrangement that represent the interest of a participant in that arrangement who has become or is to become a member or beneficiary of the fund. The trustee will hold the amount on trust for that person in the relevant accumulation or pension account. The person will have rights in respect of that amount that are equivalent to the rights he or she had under the approved benefit arrangement. The trustee may decide that the person is to be treated as having been a member of the fund from the time he or she became a member of the approved benefit arrangement.\n",
+            "block_bbox": [
+                153,
+                231,
+                1095,
+                480
+            ],
+            "block_id": 2,
+            "block_order": 3
+        },
+        {
+            "block_label": "paragraph_title",
+            "block_content": "M Administration of fund ",
+            "block_bbox": [
+                143,
+                535,
+                511,
+                560
+            ],
+            "block_id": 3,
+            "block_order": 4
+        },
+        {
+            "block_label": "paragraph_title",
+            "block_content": "Dealing with money received ",
+            "block_bbox": [
+                141,
+                606,
+                467,
+                631
+            ],
+            "block_id": 4,
+            "block_order": 5
+        },
+        {
+            "block_label": "text",
+            "block_content": "146The trustee must ensure that any money received by the fund is dealt with as soon as practicable in one of the following ways:",
+            "block_bbox": [
+                142,
+                655,
+                1051,
+                716
+            ],
+            "block_id": 5,
+            "block_order": 6
+        },
+        {
+            "block_label": "text",
+            "block_content": "Deposited to the credit of the fund in an account kept with a bank, friendly society, building society, or other similar body chosen by the trustee.",
+            "block_bbox": [
+                227,
+                737,
+                1030,
+                796
+            ],
+            "block_id": 6,
+            "block_order": 7
+        },
+        {
+            "block_label": "text",
+            "block_content": "Paid to the credit of an insurer for the payment of premiums in relation to a policy of insurance effected by the trustee for the purposes of the fund..",
+            "block_bbox": [
+                225,
+                817,
+                1098,
+                872
+            ],
+            "block_id": 7,
+            "block_order": 8
+        },
+        {
+            "block_label": "text",
+            "block_content": "Paid into the trust account of a lawyer, accountant or investment manager appointed in accordance with this deed.\n",
+            "block_bbox": [
+                222,
+                893,
+                1029,
+                951
+            ],
+            "block_id": 8,
+            "block_order": 9
+        },
+        {
+            "block_label": "paragraph_title",
+            "block_content": "Effect of receipts ",
+            "block_bbox": [
+                129,
+                1003,
+                324,
+                1027
+            ],
+            "block_id": 9,
+            "block_order": 10
+        },
+        {
+            "block_label": "text",
+            "block_content": "147A receipt given by the trustee or the secretary of the fund or another person authorised by  the trustee in writing to issue receipts is a sufficient discharge to the person by whom money is paid to the fund.\n",
+            "block_bbox": [
+                129,
+                1053,
+                1087,
+                1145
+            ],
+            "block_id": 10,
+            "block_order": 11
+        },
+        {
+            "block_label": "paragraph_title",
+            "block_content": "Trustee may not charge fees ",
+            "block_bbox": [
+                123,
+                1201,
+                450,
+                1226
+            ],
+            "block_id": 11,
+            "block_order": 12
+        },
+        {
+            "block_label": "text",
+            "block_content": "148The trustee must not charge any fees in relation to acting as trustee under this deed or performing any services in respect of the fund..\n",
+            "block_bbox": [
+                121,
+                1248,
+                1059,
+                1307
+            ],
+            "block_id": 12,
+            "block_order": 13
+        },
+        {
+            "block_label": "paragraph_title",
+            "block_content": "Trustee entitled to be reimbursed for expenses.",
+            "block_bbox": [
+                117,
+                1360,
+                658,
+                1388
+            ],
+            "block_id": 13,
+            "block_order": 14
+        },
+        {
+            "block_label": "text",
+            "block_content": "149The trustee is entitled to be reimbursed from the fund for all expenses, taxes, levies,charges, fees and other amounts necessarily or reasonably incurred in acting as trustee under this deed.\n",
+            "block_bbox": [
+                117,
+                1408,
+                1069,
+                1499
+            ],
+            "block_id": 14,
+            "block_order": 15
+        }
+    ],
+    "doc_preprocessor_res": {
+        "input_path": null,
+        "page_index": null,
+        "model_settings": {
+            "use_doc_orientation_classify": true,
+            "use_doc_unwarping": true
+        },
+        "angle": 0
+    },
+    "layout_det_res": {
+        "input_path": null,
+        "page_index": null,
+        "boxes": [
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.9661191701889038,
+                "coordinate": [
+                    117.5528564453125,
+                    1408.7734375,
+                    1069.163330078125,
+                    1499.83544921875
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.9652462005615234,
+                "coordinate": [
+                    153.42425537109375,
+                    231.4907684326172,
+                    1095.285888671875,
+                    480.54937744140625
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.9629546403884888,
+                "coordinate": [
+                    121.98916625976562,
+                    1248.847412109375,
+                    1059.1331787109375,
+                    1307.297607421875
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.9624758958816528,
+                "coordinate": [
+                    225.21240234375,
+                    817.7950439453125,
+                    1098.1727294921875,
+                    872.7711181640625
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.9623644351959229,
+                "coordinate": [
+                    232.49270629882812,
+                    53.77421569824219,
+                    1083.955322265625,
+                    119.12063598632812
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.9601656198501587,
+                "coordinate": [
+                    222.9488525390625,
+                    893.989013671875,
+                    1029.9281005859375,
+                    951.49072265625
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.95978182554245,
+                "coordinate": [
+                    129.90048217773438,
+                    1053.7486572265625,
+                    1087.9710693359375,
+                    1145.7938232421875
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.955951988697052,
+                "coordinate": [
+                    227.48321533203125,
+                    737.7810668945312,
+                    1030.04736328125,
+                    796.4585571289062
+                ]
+            },
+            {
+                "cls_id": 0,
+                "label": "paragraph_title",
+                "score": 0.9456079006195068,
+                "coordinate": [
+                    141.7489013671875,
+                    606.10302734375,
+                    467.2689208984375,
+                    631.20703125
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.9394152164459229,
+                "coordinate": [
+                    142.3861083984375,
+                    655.9462890625,
+                    1051.3232421875,
+                    716.0738525390625
+                ]
+            },
+            {
+                "cls_id": 0,
+                "label": "paragraph_title",
+                "score": 0.9351721405982971,
+                "coordinate": [
+                    144.55609130859375,
+                    181.59744262695312,
+                    584.4003295898438,
+                    204.85638427734375
+                ]
+            },
+            {
+                "cls_id": 0,
+                "label": "paragraph_title",
+                "score": 0.9332666993141174,
+                "coordinate": [
+                    117.48886108398438,
+                    1360.8125,
+                    658.024169921875,
+                    1388.53955078125
+                ]
+            },
+            {
+                "cls_id": 0,
+                "label": "paragraph_title",
+                "score": 0.9278848767280579,
+                "coordinate": [
+                    129.47268676757812,
+                    1003.35546875,
+                    324.7510681152344,
+                    1027.0479736328125
+                ]
+            },
+            {
+                "cls_id": 0,
+                "label": "paragraph_title",
+                "score": 0.9257384538650513,
+                "coordinate": [
+                    143.2562255859375,
+                    535.634765625,
+                    511.6229248046875,
+                    560.00439453125
+                ]
+            },
+            {
+                "cls_id": 0,
+                "label": "paragraph_title",
+                "score": 0.9217803478240967,
+                "coordinate": [
+                    123.38389587402344,
+                    1201.548828125,
+                    450.33636474609375,
+                    1226.55029296875
+                ]
+            }
+        ]
+    },
+    "overall_ocr_res": {
+        "input_path": null,
+        "page_index": null,
+        "model_settings": {
+            "use_doc_preprocessor": false,
+            "use_textline_orientation": true
+        },
+        "dt_polys": [
+            [
+                [
+                    232,
+                    45
+                ],
+                [
+                    1091,
+                    57
+                ],
+                [
+                    1090,
+                    97
+                ],
+                [
+                    231,
+                    85
+                ]
+            ],
+            [
+                [
+                    235,
+                    86
+                ],
+                [
+                    657,
+                    89
+                ],
+                [
+                    657,
+                    124
+                ],
+                [
+                    234,
+                    121
+                ]
+            ],
+            [
+                [
+                    146,
+                    180
+                ],
+                [
+                    587,
+                    180
+                ],
+                [
+                    587,
+                    210
+                ],
+                [
+                    146,
+                    210
+                ]
+            ],
+            [
+                [
+                    145,
+                    226
+                ],
+                [
+                    192,
+                    226
+                ],
+                [
+                    192,
+                    257
+                ],
+                [
+                    145,
+                    257
+                ]
+            ],
+            [
+                [
+                    240,
+                    227
+                ],
+                [
+                    1070,
+                    240
+                ],
+                [
+                    1070,
+                    267
+                ],
+                [
+                    239,
+                    254
+                ]
+            ],
+            [
+                [
+                    240,
+                    262
+                ],
+                [
+                    1100,
+                    273
+                ],
+                [
+                    1099,
+                    300
+                ],
+                [
+                    239,
+                    289
+                ]
+            ],
+            [
+                [
+                    240,
+                    295
+                ],
+                [
+                    1074,
+                    305
+                ],
+                [
+                    1074,
+                    333
+                ],
+                [
+                    239,
+                    323
+                ]
+            ],
+            [
+                [
+                    239,
+                    326
+                ],
+                [
+                    1099,
+                    338
+                ],
+                [
+                    1098,
+                    366
+                ],
+                [
+                    238,
+                    353
+                ]
+            ],
+            [
+                [
+                    240,
+                    357
+                ],
+                [
+                    1063,
+                    369
+                ],
+                [
+                    1063,
+                    396
+                ],
+                [
+                    239,
+                    384
+                ]
+            ],
+            [
+                [
+                    238,
+                    387
+                ],
+                [
+                    1097,
+                    399
+                ],
+                [
+                    1096,
+                    429
+                ],
+                [
+                    237,
+                    417
+                ]
+            ],
+            [
+                [
+                    239,
+                    421
+                ],
+                [
+                    1072,
+                    433
+                ],
+                [
+                    1072,
+                    460
+                ],
+                [
+                    238,
+                    448
+                ]
+            ],
+            [
+                [
+                    238,
+                    452
+                ],
+                [
+                    777,
+                    459
+                ],
+                [
+                    776,
+                    485
+                ],
+                [
+                    237,
+                    477
+                ]
+            ],
+            [
+                [
+                    144,
+                    533
+                ],
+                [
+                    173,
+                    533
+                ],
+                [
+                    173,
+                    561
+                ],
+                [
+                    144,
+                    561
+                ]
+            ],
+            [
+                [
+                    236,
+                    533
+                ],
+                [
+                    515,
+                    537
+                ],
+                [
+                    515,
+                    565
+                ],
+                [
+                    235,
+                    561
+                ]
+            ],
+            [
+                [
+                    144,
+                    603
+                ],
+                [
+                    470,
+                    609
+                ],
+                [
+                    469,
+                    637
+                ],
+                [
+                    144,
+                    630
+                ]
+            ],
+            [
+                [
+                    140,
+                    651
+                ],
+                [
+                    186,
+                    651
+                ],
+                [
+                    186,
+                    679
+                ],
+                [
+                    140,
+                    679
+                ]
+            ],
+            [
+                [
+                    232,
+                    652
+                ],
+                [
+                    1054,
+                    665
+                ],
+                [
+                    1054,
+                    696
+                ],
+                [
+                    231,
+                    683
+                ]
+            ],
+            [
+                [
+                    233,
+                    685
+                ],
+                [
+                    617,
+                    694
+                ],
+                [
+                    616,
+                    722
+                ],
+                [
+                    232,
+                    713
+                ]
+            ],
+            [
+                [
+                    321,
+                    735
+                ],
+                [
+                    1030,
+                    743
+                ],
+                [
+                    1030,
+                    770
+                ],
+                [
+                    321,
+                    761
+                ]
+            ],
+            [
+                [
+                    320,
+                    767
+                ],
+                [
+                    978,
+                    776
+                ],
+                [
+                    978,
+                    802
+                ],
+                [
+                    320,
+                    794
+                ]
+            ],
+            [
+                [
+                    318,
+                    813
+                ],
+                [
+                    1099,
+                    822
+                ],
+                [
+                    1098,
+                    849
+                ],
+                [
+                    318,
+                    840
+                ]
+            ],
+            [
+                [
+                    318,
+                    844
+                ],
+                [
+                    938,
+                    852
+                ],
+                [
+                    937,
+                    880
+                ],
+                [
+                    318,
+                    872
+                ]
+            ],
+            [
+                [
+                    315,
+                    890
+                ],
+                [
+                    1031,
+                    900
+                ],
+                [
+                    1031,
+                    930
+                ],
+                [
+                    315,
+                    919
+                ]
+            ],
+            [
+                [
+                    315,
+                    924
+                ],
+                [
+                    702,
+                    931
+                ],
+                [
+                    702,
+                    956
+                ],
+                [
+                    315,
+                    950
+                ]
+            ],
+            [
+                [
+                    130,
+                    998
+                ],
+                [
+                    328,
+                    1002
+                ],
+                [
+                    327,
+                    1033
+                ],
+                [
+                    130,
+                    1028
+                ]
+            ],
+            [
+                [
+                    129,
+                    1049
+                ],
+                [
+                    174,
+                    1049
+                ],
+                [
+                    174,
+                    1078
+                ],
+                [
+                    129,
+                    1078
+                ]
+            ],
+            [
+                [
+                    218,
+                    1048
+                ],
+                [
+                    1090,
+                    1060
+                ],
+                [
+                    1089,
+                    1090
+                ],
+                [
+                    217,
+                    1079
+                ]
+            ],
+            [
+                [
+                    216,
+                    1081
+                ],
+                [
+                    1045,
+                    1092
+                ],
+                [
+                    1045,
+                    1125
+                ],
+                [
+                    215,
+                    1114
+                ]
+            ],
+            [
+                [
+                    218,
+                    1119
+                ],
+                [
+                    472,
+                    1122
+                ],
+                [
+                    472,
+                    1149
+                ],
+                [
+                    217,
+                    1146
+                ]
+            ],
+            [
+                [
+                    123,
+                    1196
+                ],
+                [
+                    453,
+                    1204
+                ],
+                [
+                    452,
+                    1234
+                ],
+                [
+                    122,
+                    1227
+                ]
+            ],
+            [
+                [
+                    120,
+                    1243
+                ],
+                [
+                    168,
+                    1243
+                ],
+                [
+                    168,
+                    1274
+                ],
+                [
+                    120,
+                    1274
+                ]
+            ],
+            [
+                [
+                    213,
+                    1247
+                ],
+                [
+                    1060,
+                    1254
+                ],
+                [
+                    1060,
+                    1281
+                ],
+                [
+                    213,
+                    1274
+                ]
+            ],
+            [
+                [
+                    213,
+                    1281
+                ],
+                [
+                    667,
+                    1285
+                ],
+                [
+                    667,
+                    1312
+                ],
+                [
+                    213,
+                    1308
+                ]
+            ],
+            [
+                [
+                    118,
+                    1356
+                ],
+                [
+                    660,
+                    1367
+                ],
+                [
+                    659,
+                    1395
+                ],
+                [
+                    118,
+                    1384
+                ]
+            ],
+            [
+                [
+                    115,
+                    1402
+                ],
+                [
+                    163,
+                    1402
+                ],
+                [
+                    163,
+                    1433
+                ],
+                [
+                    115,
+                    1433
+                ]
+            ],
+            [
+                [
+                    210,
+                    1407
+                ],
+                [
+                    1035,
+                    1418
+                ],
+                [
+                    1035,
+                    1445
+                ],
+                [
+                    210,
+                    1434
+                ]
+            ],
+            [
+                [
+                    211,
+                    1440
+                ],
+                [
+                    1072,
+                    1452
+                ],
+                [
+                    1072,
+                    1482
+                ],
+                [
+                    210,
+                    1469
+                ]
+            ],
+            [
+                [
+                    212,
+                    1474
+                ],
+                [
+                    371,
+                    1479
+                ],
+                [
+                    371,
+                    1503
+                ],
+                [
+                    211,
+                    1499
+                ]
+            ]
+        ],
+        "text_det_params": {
+            "limit_side_len": 736,
+            "limit_type": "min",
+            "thresh": 0.3,
+            "max_side_limit": 4000,
+            "box_thresh": 0.6,
+            "unclip_ratio": 1.5
+        },
+        "text_type": "general",
+        "textline_orientation_angles": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        "text_rec_score_thresh": 0.0,
+        "return_word_box": false,
+        "rec_texts": [
+            " transfer investments of equivalent value to the member or beneficiary or to the trustee of.",
+            "the relevant approved benefit arrangement.",
+            "The trustee's power to receive transfer",
+            "145",
+            "The trustee may take over or acquire by transfer from an approved benefit arrangement",
+            "any part of the assets of that arrangement that represent the interest of a participant in that",
+            "arrangement who has become or is to become a member or beneficiary of the fund. The",
+            "trustee will hold the amount on trust for that person in the relevant accumulation or pension",
+            "account. The person will have rights in respect of that amount that are equivalent to the",
+            "rights he or she had under the approved benefit arrangement. The trustee may decide that",
+            "the person is to be treated as having been a member of the fund from the time he or she",
+            "became a member of the approved benefit arrangement.",
+            "M",
+            "Administration of fund",
+            "Dealing with money received",
+            "146",
+            "The trustee must ensure that any money received by the fund is dealt with as soon as",
+            "practicable in one of the following ways:",
+            "Deposited to the credit of the fund in an account kept with a bank, friendly",
+            "society, building society, or other similar body chosen by the trustee.",
+            "Paid to the credit of an insurer for the payment of premiums in relation to a policy",
+            "of insurance effected by the trustee for the purposes of the fund..",
+            "Paid into the trust account of a lawyer, accountant or investment manager",
+            "appointed in accordance with this deed.",
+            "Effect of receipts",
+            "147",
+            "A receipt given by the trustee or the secretary of the fund or another person authorised by",
+            " the trustee in writing to issue receipts is a sufficient discharge to the person by whom",
+            "money is paid to the fund.",
+            "Trustee may not charge fees",
+            "148",
+            "The trustee must not charge any fees in relation to acting as trustee under this deed or",
+            "performing any services in respect of the fund..",
+            "Trustee entitled to be reimbursed for expenses.",
+            "149",
+            "The trustee is entitled to be reimbursed from the fund for all expenses, taxes, levies,",
+            "charges, fees and other amounts necessarily or reasonably incurred in acting as trustee",
+            "under this deed."
+        ],
+        "rec_scores": [
+            0.971905529499054,
+            0.9878835082054138,
+            0.9961743354797363,
+            0.9999597668647766,
+            0.9927082061767578,
+            0.9883950352668762,
+            0.9931515455245972,
+            0.9865373373031616,
+            0.998802900314331,
+            0.9930242300033569,
+            0.9986213445663452,
+            0.9923234581947327,
+            0.6740388870239258,
+            0.9995480179786682,
+            0.999911904335022,
+            0.9798779487609863,
+            0.9917919635772705,
+            0.9896316528320312,
+            0.9993817210197449,
+            0.9923502802848816,
+            0.9929671287536621,
+            0.984451949596405,
+            0.9949805736541748,
+            0.9750984311103821,
+            0.9992700219154358,
+            0.9999772906303406,
+            0.9884777069091797,
+            0.9740834832191467,
+            0.9663264155387878,
+            0.9999318718910217,
+            0.9999727606773376,
+            0.9905785918235779,
+            0.9909458160400391,
+            0.98641437292099,
+            0.9999660849571228,
+            0.979210615158081,
+            0.9883808493614197,
+            0.9998969435691833
+        ],
+        "rec_polys": [
+            [
+                [
+                    232,
+                    45
+                ],
+                [
+                    1091,
+                    57
+                ],
+                [
+                    1090,
+                    97
+                ],
+                [
+                    231,
+                    85
+                ]
+            ],
+            [
+                [
+                    235,
+                    86
+                ],
+                [
+                    657,
+                    89
+                ],
+                [
+                    657,
+                    124
+                ],
+                [
+                    234,
+                    121
+                ]
+            ],
+            [
+                [
+                    146,
+                    180
+                ],
+                [
+                    587,
+                    180
+                ],
+                [
+                    587,
+                    210
+                ],
+                [
+                    146,
+                    210
+                ]
+            ],
+            [
+                [
+                    145,
+                    226
+                ],
+                [
+                    192,
+                    226
+                ],
+                [
+                    192,
+                    257
+                ],
+                [
+                    145,
+                    257
+                ]
+            ],
+            [
+                [
+                    240,
+                    227
+                ],
+                [
+                    1070,
+                    240
+                ],
+                [
+                    1070,
+                    267
+                ],
+                [
+                    239,
+                    254
+                ]
+            ],
+            [
+                [
+                    240,
+                    262
+                ],
+                [
+                    1100,
+                    273
+                ],
+                [
+                    1099,
+                    300
+                ],
+                [
+                    239,
+                    289
+                ]
+            ],
+            [
+                [
+                    240,
+                    295
+                ],
+                [
+                    1074,
+                    305
+                ],
+                [
+                    1074,
+                    333
+                ],
+                [
+                    239,
+                    323
+                ]
+            ],
+            [
+                [
+                    239,
+                    326
+                ],
+                [
+                    1099,
+                    338
+                ],
+                [
+                    1098,
+                    366
+                ],
+                [
+                    238,
+                    353
+                ]
+            ],
+            [
+                [
+                    240,
+                    357
+                ],
+                [
+                    1063,
+                    369
+                ],
+                [
+                    1063,
+                    396
+                ],
+                [
+                    239,
+                    384
+                ]
+            ],
+            [
+                [
+                    238,
+                    387
+                ],
+                [
+                    1097,
+                    399
+                ],
+                [
+                    1096,
+                    429
+                ],
+                [
+                    237,
+                    417
+                ]
+            ],
+            [
+                [
+                    239,
+                    421
+                ],
+                [
+                    1072,
+                    433
+                ],
+                [
+                    1072,
+                    460
+                ],
+                [
+                    238,
+                    448
+                ]
+            ],
+            [
+                [
+                    238,
+                    452
+                ],
+                [
+                    777,
+                    459
+                ],
+                [
+                    776,
+                    485
+                ],
+                [
+                    237,
+                    477
+                ]
+            ],
+            [
+                [
+                    144,
+                    533
+                ],
+                [
+                    173,
+                    533
+                ],
+                [
+                    173,
+                    561
+                ],
+                [
+                    144,
+                    561
+                ]
+            ],
+            [
+                [
+                    236,
+                    533
+                ],
+                [
+                    515,
+                    537
+                ],
+                [
+                    515,
+                    565
+                ],
+                [
+                    235,
+                    561
+                ]
+            ],
+            [
+                [
+                    144,
+                    603
+                ],
+                [
+                    470,
+                    609
+                ],
+                [
+                    469,
+                    637
+                ],
+                [
+                    144,
+                    630
+                ]
+            ],
+            [
+                [
+                    140,
+                    651
+                ],
+                [
+                    186,
+                    651
+                ],
+                [
+                    186,
+                    679
+                ],
+                [
+                    140,
+                    679
+                ]
+            ],
+            [
+                [
+                    232,
+                    652
+                ],
+                [
+                    1054,
+                    665
+                ],
+                [
+                    1054,
+                    696
+                ],
+                [
+                    231,
+                    683
+                ]
+            ],
+            [
+                [
+                    233,
+                    685
+                ],
+                [
+                    617,
+                    694
+                ],
+                [
+                    616,
+                    722
+                ],
+                [
+                    232,
+                    713
+                ]
+            ],
+            [
+                [
+                    321,
+                    735
+                ],
+                [
+                    1030,
+                    743
+                ],
+                [
+                    1030,
+                    770
+                ],
+                [
+                    321,
+                    761
+                ]
+            ],
+            [
+                [
+                    320,
+                    767
+                ],
+                [
+                    978,
+                    776
+                ],
+                [
+                    978,
+                    802
+                ],
+                [
+                    320,
+                    794
+                ]
+            ],
+            [
+                [
+                    318,
+                    813
+                ],
+                [
+                    1099,
+                    822
+                ],
+                [
+                    1098,
+                    849
+                ],
+                [
+                    318,
+                    840
+                ]
+            ],
+            [
+                [
+                    318,
+                    844
+                ],
+                [
+                    938,
+                    852
+                ],
+                [
+                    937,
+                    880
+                ],
+                [
+                    318,
+                    872
+                ]
+            ],
+            [
+                [
+                    315,
+                    890
+                ],
+                [
+                    1031,
+                    900
+                ],
+                [
+                    1031,
+                    930
+                ],
+                [
+                    315,
+                    919
+                ]
+            ],
+            [
+                [
+                    315,
+                    924
+                ],
+                [
+                    702,
+                    931
+                ],
+                [
+                    702,
+                    956
+                ],
+                [
+                    315,
+                    950
+                ]
+            ],
+            [
+                [
+                    130,
+                    998
+                ],
+                [
+                    328,
+                    1002
+                ],
+                [
+                    327,
+                    1033
+                ],
+                [
+                    130,
+                    1028
+                ]
+            ],
+            [
+                [
+                    129,
+                    1049
+                ],
+                [
+                    174,
+                    1049
+                ],
+                [
+                    174,
+                    1078
+                ],
+                [
+                    129,
+                    1078
+                ]
+            ],
+            [
+                [
+                    218,
+                    1048
+                ],
+                [
+                    1090,
+                    1060
+                ],
+                [
+                    1089,
+                    1090
+                ],
+                [
+                    217,
+                    1079
+                ]
+            ],
+            [
+                [
+                    216,
+                    1081
+                ],
+                [
+                    1045,
+                    1092
+                ],
+                [
+                    1045,
+                    1125
+                ],
+                [
+                    215,
+                    1114
+                ]
+            ],
+            [
+                [
+                    218,
+                    1119
+                ],
+                [
+                    472,
+                    1122
+                ],
+                [
+                    472,
+                    1149
+                ],
+                [
+                    217,
+                    1146
+                ]
+            ],
+            [
+                [
+                    123,
+                    1196
+                ],
+                [
+                    453,
+                    1204
+                ],
+                [
+                    452,
+                    1234
+                ],
+                [
+                    122,
+                    1227
+                ]
+            ],
+            [
+                [
+                    120,
+                    1243
+                ],
+                [
+                    168,
+                    1243
+                ],
+                [
+                    168,
+                    1274
+                ],
+                [
+                    120,
+                    1274
+                ]
+            ],
+            [
+                [
+                    213,
+                    1247
+                ],
+                [
+                    1060,
+                    1254
+                ],
+                [
+                    1060,
+                    1281
+                ],
+                [
+                    213,
+                    1274
+                ]
+            ],
+            [
+                [
+                    213,
+                    1281
+                ],
+                [
+                    667,
+                    1285
+                ],
+                [
+                    667,
+                    1312
+                ],
+                [
+                    213,
+                    1308
+                ]
+            ],
+            [
+                [
+                    118,
+                    1356
+                ],
+                [
+                    660,
+                    1367
+                ],
+                [
+                    659,
+                    1395
+                ],
+                [
+                    118,
+                    1384
+                ]
+            ],
+            [
+                [
+                    115,
+                    1402
+                ],
+                [
+                    163,
+                    1402
+                ],
+                [
+                    163,
+                    1433
+                ],
+                [
+                    115,
+                    1433
+                ]
+            ],
+            [
+                [
+                    210,
+                    1407
+                ],
+                [
+                    1035,
+                    1418
+                ],
+                [
+                    1035,
+                    1445
+                ],
+                [
+                    210,
+                    1434
+                ]
+            ],
+            [
+                [
+                    211,
+                    1440
+                ],
+                [
+                    1072,
+                    1452
+                ],
+                [
+                    1072,
+                    1482
+                ],
+                [
+                    210,
+                    1469
+                ]
+            ],
+            [
+                [
+                    212,
+                    1474
+                ],
+                [
+                    371,
+                    1479
+                ],
+                [
+                    371,
+                    1503
+                ],
+                [
+                    211,
+                    1499
+                ]
+            ]
+        ],
+        "rec_boxes": [
+            [
+                231,
+                45,
+                1091,
+                97
+            ],
+            [
+                234,
+                86,
+                657,
+                124
+            ],
+            [
+                146,
+                180,
+                587,
+                210
+            ],
+            [
+                145,
+                226,
+                192,
+                257
+            ],
+            [
+                239,
+                227,
+                1070,
+                267
+            ],
+            [
+                239,
+                262,
+                1100,
+                300
+            ],
+            [
+                239,
+                295,
+                1074,
+                333
+            ],
+            [
+                238,
+                326,
+                1099,
+                366
+            ],
+            [
+                239,
+                357,
+                1063,
+                396
+            ],
+            [
+                237,
+                387,
+                1097,
+                429
+            ],
+            [
+                238,
+                421,
+                1072,
+                460
+            ],
+            [
+                237,
+                452,
+                777,
+                485
+            ],
+            [
+                144,
+                533,
+                173,
+                561
+            ],
+            [
+                235,
+                533,
+                515,
+                565
+            ],
+            [
+                144,
+                603,
+                470,
+                637
+            ],
+            [
+                140,
+                651,
+                186,
+                679
+            ],
+            [
+                231,
+                652,
+                1054,
+                696
+            ],
+            [
+                232,
+                685,
+                617,
+                722
+            ],
+            [
+                321,
+                735,
+                1030,
+                770
+            ],
+            [
+                320,
+                767,
+                978,
+                802
+            ],
+            [
+                318,
+                813,
+                1099,
+                849
+            ],
+            [
+                318,
+                844,
+                938,
+                880
+            ],
+            [
+                315,
+                890,
+                1031,
+                930
+            ],
+            [
+                315,
+                924,
+                702,
+                956
+            ],
+            [
+                130,
+                998,
+                328,
+                1033
+            ],
+            [
+                129,
+                1049,
+                174,
+                1078
+            ],
+            [
+                217,
+                1048,
+                1090,
+                1090
+            ],
+            [
+                215,
+                1081,
+                1045,
+                1125
+            ],
+            [
+                217,
+                1119,
+                472,
+                1149
+            ],
+            [
+                122,
+                1196,
+                453,
+                1234
+            ],
+            [
+                120,
+                1243,
+                168,
+                1274
+            ],
+            [
+                213,
+                1247,
+                1060,
+                1281
+            ],
+            [
+                213,
+                1281,
+                667,
+                1312
+            ],
+            [
+                118,
+                1356,
+                660,
+                1395
+            ],
+            [
+                115,
+                1402,
+                163,
+                1433
+            ],
+            [
+                210,
+                1407,
+                1035,
+                1445
+            ],
+            [
+                210,
+                1440,
+                1072,
+                1482
+            ],
+            [
+                211,
+                1474,
+                371,
+                1503
+            ]
+        ]
+    }
+}

@@ -1,0 +1,457 @@
+{
+    "input_path": "..\\pdfs\\Trust_Deed_Sample_Superannuation_Fund.pdf",
+    "page_index": 55,
+    "page_count": 57,
+    "width": 1190,
+    "height": 1684,
+    "model_settings": {
+        "use_doc_preprocessor": true,
+        "use_seal_recognition": false,
+        "use_table_recognition": true,
+        "use_formula_recognition": true,
+        "use_chart_recognition": false,
+        "use_region_detection": true,
+        "format_block_content": false,
+        "markdown_ignore_labels": [
+            "number",
+            "footnote",
+            "header",
+            "header_image",
+            "footer",
+            "footer_image",
+            "aside_text"
+        ]
+    },
+    "parsing_res_list": [
+        {
+            "block_label": "text",
+            "block_content": "Deed Date:09/10/2020",
+            "block_bbox": [
+                36,
+                73,
+                466,
+                101
+            ],
+            "block_id": 0,
+            "block_order": 1
+        },
+        {
+            "block_label": "text",
+            "block_content": "Trustee/s:Sample Company Pty Ltd ACN 123 456 789",
+            "block_bbox": [
+                31,
+                172,
+                819,
+                198
+            ],
+            "block_id": 1,
+            "block_order": 2
+        },
+        {
+            "block_label": "text",
+            "block_content": "Name of Fund Sample Superannuation Fund ",
+            "block_bbox": [
+                20,
+                283,
+                674,
+                310
+            ],
+            "block_id": 2,
+            "block_order": 3
+        }
+    ],
+    "doc_preprocessor_res": {
+        "input_path": null,
+        "page_index": null,
+        "model_settings": {
+            "use_doc_orientation_classify": true,
+            "use_doc_unwarping": true
+        },
+        "angle": 0
+    },
+    "layout_det_res": {
+        "input_path": null,
+        "page_index": null,
+        "boxes": [
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.6164876818656921,
+                "coordinate": [
+                    31.618377685546875,
+                    172.68145751953125,
+                    819.9188232421875,
+                    198.14303588867188
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.5540629625320435,
+                "coordinate": [
+                    36.96929931640625,
+                    73.55364990234375,
+                    466.289794921875,
+                    101.68328857421875
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.5519097447395325,
+                "coordinate": [
+                    20.2840576171875,
+                    283.7988586425781,
+                    674.327392578125,
+                    310.8216857910156
+                ]
+            }
+        ]
+    },
+    "overall_ocr_res": {
+        "input_path": null,
+        "page_index": null,
+        "model_settings": {
+            "use_doc_preprocessor": false,
+            "use_textline_orientation": true
+        },
+        "dt_polys": [
+            [
+                [
+                    467,
+                    1
+                ],
+                [
+                    560,
+                    1
+                ],
+                [
+                    560,
+                    8
+                ],
+                [
+                    467,
+                    8
+                ]
+            ],
+            [
+                [
+                    38,
+                    68
+                ],
+                [
+                    161,
+                    72
+                ],
+                [
+                    160,
+                    101
+                ],
+                [
+                    37,
+                    97
+                ]
+            ],
+            [
+                [
+                    343,
+                    76
+                ],
+                [
+                    469,
+                    79
+                ],
+                [
+                    468,
+                    107
+                ],
+                [
+                    343,
+                    105
+                ]
+            ],
+            [
+                [
+                    31,
+                    167
+                ],
+                [
+                    147,
+                    170
+                ],
+                [
+                    146,
+                    198
+                ],
+                [
+                    30,
+                    194
+                ]
+            ],
+            [
+                [
+                    343,
+                    173
+                ],
+                [
+                    821,
+                    169
+                ],
+                [
+                    821,
+                    200
+                ],
+                [
+                    343,
+                    204
+                ]
+            ],
+            [
+                [
+                    22,
+                    278
+                ],
+                [
+                    183,
+                    284
+                ],
+                [
+                    182,
+                    312
+                ],
+                [
+                    21,
+                    305
+                ]
+            ],
+            [
+                [
+                    345,
+                    288
+                ],
+                [
+                    674,
+                    283
+                ],
+                [
+                    675,
+                    310
+                ],
+                [
+                    345,
+                    315
+                ]
+            ]
+        ],
+        "text_det_params": {
+            "limit_side_len": 736,
+            "limit_type": "min",
+            "thresh": 0.3,
+            "max_side_limit": 4000,
+            "box_thresh": 0.6,
+            "unclip_ratio": 1.5
+        },
+        "text_type": "general",
+        "textline_orientation_angles": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        "text_rec_score_thresh": 0.0,
+        "return_word_box": false,
+        "rec_texts": [
+            "SCIIDUOC",
+            "Deed Date:",
+            "09/10/2020",
+            "Trustee/s:",
+            "Sample Company Pty Ltd ACN 123 456 789",
+            "Name of Fund",
+            "Sample Superannuation Fund"
+        ],
+        "rec_scores": [
+            0.28623777627944946,
+            0.9974943995475769,
+            0.9999324679374695,
+            0.9994617700576782,
+            0.9966986775398254,
+            0.999798059463501,
+            0.9999222159385681
+        ],
+        "rec_polys": [
+            [
+                [
+                    467,
+                    1
+                ],
+                [
+                    560,
+                    1
+                ],
+                [
+                    560,
+                    8
+                ],
+                [
+                    467,
+                    8
+                ]
+            ],
+            [
+                [
+                    38,
+                    68
+                ],
+                [
+                    161,
+                    72
+                ],
+                [
+                    160,
+                    101
+                ],
+                [
+                    37,
+                    97
+                ]
+            ],
+            [
+                [
+                    343,
+                    76
+                ],
+                [
+                    469,
+                    79
+                ],
+                [
+                    468,
+                    107
+                ],
+                [
+                    343,
+                    105
+                ]
+            ],
+            [
+                [
+                    31,
+                    167
+                ],
+                [
+                    147,
+                    170
+                ],
+                [
+                    146,
+                    198
+                ],
+                [
+                    30,
+                    194
+                ]
+            ],
+            [
+                [
+                    343,
+                    173
+                ],
+                [
+                    821,
+                    169
+                ],
+                [
+                    821,
+                    200
+                ],
+                [
+                    343,
+                    204
+                ]
+            ],
+            [
+                [
+                    22,
+                    278
+                ],
+                [
+                    183,
+                    284
+                ],
+                [
+                    182,
+                    312
+                ],
+                [
+                    21,
+                    305
+                ]
+            ],
+            [
+                [
+                    345,
+                    288
+                ],
+                [
+                    674,
+                    283
+                ],
+                [
+                    675,
+                    310
+                ],
+                [
+                    345,
+                    315
+                ]
+            ]
+        ],
+        "rec_boxes": [
+            [
+                467,
+                1,
+                560,
+                8
+            ],
+            [
+                37,
+                68,
+                161,
+                101
+            ],
+            [
+                343,
+                76,
+                469,
+                107
+            ],
+            [
+                30,
+                167,
+                147,
+                198
+            ],
+            [
+                343,
+                169,
+                821,
+                204
+            ],
+            [
+                21,
+                278,
+                183,
+                312
+            ],
+            [
+                345,
+                283,
+                675,
+                315
+            ]
+        ]
+    }
+}

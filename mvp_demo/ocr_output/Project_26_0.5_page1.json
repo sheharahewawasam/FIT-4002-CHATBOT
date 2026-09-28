@@ -1,0 +1,421 @@
+{
+    "input_path": "..\\pdfs\\Project_26.pdf",
+    "page_index": 1,
+    "page_count": 2,
+    "width": 1192,
+    "height": 1684,
+    "model_settings": {
+        "use_doc_preprocessor": true,
+        "use_seal_recognition": false,
+        "use_table_recognition": true,
+        "use_formula_recognition": true,
+        "use_chart_recognition": false,
+        "use_region_detection": true,
+        "format_block_content": false,
+        "markdown_ignore_labels": [
+            "number",
+            "footnote",
+            "header",
+            "header_image",
+            "footer",
+            "footer_image",
+            "aside_text"
+        ]
+    },
+    "parsing_res_list": [
+        {
+            "block_label": "table",
+            "block_content": "<html><body><table><tr><td>Project owner:</td></tr><tr><td>Champ Mendis (Champake.Mendis@tripleasuper.com.au)</td></tr><tr><td>Additional Info (if any).</td></tr><tr><td>None</td></tr></table></body></html>",
+            "block_bbox": [
+                0,
+                95,
+                1191,
+                355
+            ],
+            "block_id": 0,
+            "block_order": null
+        }
+    ],
+    "doc_preprocessor_res": {
+        "input_path": null,
+        "page_index": null,
+        "model_settings": {
+            "use_doc_orientation_classify": true,
+            "use_doc_unwarping": true
+        },
+        "angle": 0
+    },
+    "layout_det_res": {
+        "input_path": null,
+        "page_index": null,
+        "boxes": [
+            {
+                "cls_id": 8,
+                "label": "table",
+                "score": 0.6589229106903076,
+                "coordinate": [
+                    0,
+                    95.27775573730469,
+                    1191.737548828125,
+                    355.3048095703125
+                ]
+            }
+        ]
+    },
+    "overall_ocr_res": {
+        "input_path": null,
+        "page_index": null,
+        "model_settings": {
+            "use_doc_preprocessor": false,
+            "use_textline_orientation": true
+        },
+        "dt_polys": [
+            [
+                [
+                    5,
+                    120
+                ],
+                [
+                    183,
+                    126
+                ],
+                [
+                    181,
+                    154
+                ],
+                [
+                    4,
+                    148
+                ]
+            ],
+            [
+                [
+                    17,
+                    159
+                ],
+                [
+                    627,
+                    172
+                ],
+                [
+                    627,
+                    203
+                ],
+                [
+                    16,
+                    189
+                ]
+            ],
+            [
+                [
+                    1,
+                    242
+                ],
+                [
+                    245,
+                    251
+                ],
+                [
+                    244,
+                    280
+                ],
+                [
+                    0,
+                    272
+                ]
+            ],
+            [
+                [
+                    11,
+                    282
+                ],
+                [
+                    85,
+                    285
+                ],
+                [
+                    83,
+                    318
+                ],
+                [
+                    10,
+                    314
+                ]
+            ]
+        ],
+        "text_det_params": {
+            "limit_side_len": 736,
+            "limit_type": "min",
+            "thresh": 0.3,
+            "max_side_limit": 4000,
+            "box_thresh": 0.6,
+            "unclip_ratio": 1.5
+        },
+        "text_type": "general",
+        "textline_orientation_angles": [
+            0,
+            0,
+            0,
+            0
+        ],
+        "text_rec_score_thresh": 0.0,
+        "return_word_box": false,
+        "rec_texts": [
+            "Project owner:",
+            "Champ Mendis (Champake.Mendis@tripleasuper.com.au)",
+            "Additional Info (if any).",
+            "None"
+        ],
+        "rec_scores": [
+            0.9993869662284851,
+            0.9940736889839172,
+            0.9634349346160889,
+            0.9906930923461914
+        ],
+        "rec_polys": [
+            [
+                [
+                    5,
+                    120
+                ],
+                [
+                    183,
+                    126
+                ],
+                [
+                    181,
+                    154
+                ],
+                [
+                    4,
+                    148
+                ]
+            ],
+            [
+                [
+                    17,
+                    159
+                ],
+                [
+                    627,
+                    172
+                ],
+                [
+                    627,
+                    203
+                ],
+                [
+                    16,
+                    189
+                ]
+            ],
+            [
+                [
+                    1,
+                    242
+                ],
+                [
+                    245,
+                    251
+                ],
+                [
+                    244,
+                    280
+                ],
+                [
+                    0,
+                    272
+                ]
+            ],
+            [
+                [
+                    11,
+                    282
+                ],
+                [
+                    85,
+                    285
+                ],
+                [
+                    83,
+                    318
+                ],
+                [
+                    10,
+                    314
+                ]
+            ]
+        ],
+        "rec_boxes": [
+            [
+                4,
+                120,
+                183,
+                154
+            ],
+            [
+                16,
+                159,
+                627,
+                203
+            ],
+            [
+                0,
+                242,
+                245,
+                280
+            ],
+            [
+                10,
+                282,
+                85,
+                318
+            ]
+        ]
+    },
+    "table_res_list": [
+        {
+            "cell_box_list": [
+                [
+                    0.33432331681251526,
+                    95.27775573730469,
+                    1189.8641357421875,
+                    172.8046112060547
+                ],
+                [
+                    0.5689778923988342,
+                    145.62042617797852,
+                    1189.326904296875,
+                    238.21556091308594
+                ],
+                [
+                    0.035210609436035156,
+                    210.27802276611328,
+                    1190.28955078125,
+                    296.3965301513672
+                ],
+                [
+                    0.0,
+                    271.0384216308594,
+                    1189.9100341796875,
+                    355.2777557373047
+                ]
+            ],
+            "pred_html": "<html><body><table><tr><td>Project owner:</td></tr><tr><td>Champ Mendis (Champake.Mendis@tripleasuper.com.au)</td></tr><tr><td>Additional Info (if any).</td></tr><tr><td>None</td></tr></table></body></html>",
+            "table_ocr_pred": {
+                "rec_polys": [
+                    [
+                        [
+                            5,
+                            120
+                        ],
+                        [
+                            183,
+                            126
+                        ],
+                        [
+                            181,
+                            154
+                        ],
+                        [
+                            4,
+                            148
+                        ]
+                    ],
+                    [
+                        [
+                            17,
+                            159
+                        ],
+                        [
+                            627,
+                            172
+                        ],
+                        [
+                            627,
+                            203
+                        ],
+                        [
+                            16,
+                            189
+                        ]
+                    ],
+                    [
+                        [
+                            1,
+                            242
+                        ],
+                        [
+                            245,
+                            251
+                        ],
+                        [
+                            244,
+                            280
+                        ],
+                        [
+                            0,
+                            272
+                        ]
+                    ],
+                    [
+                        [
+                            11,
+                            282
+                        ],
+                        [
+                            85,
+                            285
+                        ],
+                        [
+                            83,
+                            318
+                        ],
+                        [
+                            10,
+                            314
+                        ]
+                    ]
+                ],
+                "rec_texts": [
+                    "Project owner:",
+                    "Champ Mendis (Champake.Mendis@tripleasuper.com.au)",
+                    "Additional Info (if any).",
+                    "None"
+                ],
+                "rec_scores": [
+                    0.9993869662284851,
+                    0.9940736889839172,
+                    0.9634349346160889,
+                    0.9906930923461914
+                ],
+                "rec_boxes": [
+                    [
+                        4,
+                        120,
+                        183,
+                        154
+                    ],
+                    [
+                        16,
+                        159,
+                        627,
+                        203
+                    ],
+                    [
+                        0,
+                        242,
+                        245,
+                        280
+                    ],
+                    [
+                        10,
+                        282,
+                        85,
+                        318
+                    ]
+                ]
+            }
+        }
+    ]
+}

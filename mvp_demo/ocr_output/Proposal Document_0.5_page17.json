@@ -1,0 +1,570 @@
+{
+    "input_path": "..\\pdfs\\Proposal Document.pdf",
+    "page_index": 17,
+    "page_count": 22,
+    "width": 1192,
+    "height": 1684,
+    "model_settings": {
+        "use_doc_preprocessor": true,
+        "use_seal_recognition": false,
+        "use_table_recognition": true,
+        "use_formula_recognition": true,
+        "use_chart_recognition": false,
+        "use_region_detection": true,
+        "format_block_content": false,
+        "markdown_ignore_labels": [
+            "number",
+            "footnote",
+            "header",
+            "header_image",
+            "footer",
+            "footer_image",
+            "aside_text"
+        ]
+    },
+    "parsing_res_list": [
+        {
+            "block_label": "paragraph_title",
+            "block_content": "11.0 Integration Strategy ",
+            "block_bbox": [
+                56,
+                81,
+                590,
+                126
+            ],
+            "block_id": 0,
+            "block_order": 1
+        },
+        {
+            "block_label": "text",
+            "block_content": "Django Backend Hook: The chatbot service will be deployed as a microservice that communicates with the client's current Django API via RESTful requests..",
+            "block_bbox": [
+                89,
+                161,
+                1065,
+                217
+            ],
+            "block_id": 1,
+            "block_order": 2
+        },
+        {
+            "block_label": "text",
+            "block_content": "Apex Frontend Compatibility: The user interface will be designed for seamless.embedding into the client's Apex-based dashboard, appearing as a native tool for.advisors.\n",
+            "block_bbox": [
+                87,
+                226,
+                1046,
+                313
+            ],
+            "block_id": 2,
+            "block_order": 3
+        },
+        {
+            "block_label": "text",
+            "block_content": "Firecloud Protocols: The retrieval and indexing logic will follow the client's established \nFirecloud interface protocols to ensure compatibility with their document.\nmanagement workflow.\n\n",
+            "block_bbox": [
+                84,
+                322,
+                1091,
+                413
+            ],
+            "block_id": 3,
+            "block_order": 4
+        }
+    ],
+    "doc_preprocessor_res": {
+        "input_path": null,
+        "page_index": null,
+        "model_settings": {
+            "use_doc_orientation_classify": true,
+            "use_doc_unwarping": true
+        },
+        "angle": 0
+    },
+    "layout_det_res": {
+        "input_path": null,
+        "page_index": null,
+        "boxes": [
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.9710601568222046,
+                "coordinate": [
+                    87.3319091796875,
+                    226.98056030273438,
+                    1046.0189208984375,
+                    313.3786926269531
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.9683189988136292,
+                "coordinate": [
+                    84.400634765625,
+                    322.52288818359375,
+                    1091.61279296875,
+                    413.22833251953125
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.9599068760871887,
+                "coordinate": [
+                    89.5374755859375,
+                    161.94700622558594,
+                    1065.918212890625,
+                    217.98191833496094
+                ]
+            },
+            {
+                "cls_id": 0,
+                "label": "paragraph_title",
+                "score": 0.9107118844985962,
+                "coordinate": [
+                    56.647064208984375,
+                    81.80299377441406,
+                    590.01513671875,
+                    126.50035095214844
+                ]
+            }
+        ]
+    },
+    "overall_ocr_res": {
+        "input_path": null,
+        "page_index": null,
+        "model_settings": {
+            "use_doc_preprocessor": false,
+            "use_textline_orientation": true
+        },
+        "dt_polys": [
+            [
+                [
+                    54,
+                    74
+                ],
+                [
+                    595,
+                    83
+                ],
+                [
+                    594,
+                    133
+                ],
+                [
+                    53,
+                    125
+                ]
+            ],
+            [
+                [
+                    133,
+                    162
+                ],
+                [
+                    1067,
+                    162
+                ],
+                [
+                    1067,
+                    189
+                ],
+                [
+                    133,
+                    189
+                ]
+            ],
+            [
+                [
+                    131,
+                    194
+                ],
+                [
+                    951,
+                    194
+                ],
+                [
+                    951,
+                    220
+                ],
+                [
+                    131,
+                    220
+                ]
+            ],
+            [
+                [
+                    128,
+                    223
+                ],
+                [
+                    1013,
+                    224
+                ],
+                [
+                    1013,
+                    254
+                ],
+                [
+                    128,
+                    253
+                ]
+            ],
+            [
+                [
+                    130,
+                    255
+                ],
+                [
+                    1047,
+                    257
+                ],
+                [
+                    1047,
+                    287
+                ],
+                [
+                    130,
+                    285
+                ]
+            ],
+            [
+                [
+                    127,
+                    288
+                ],
+                [
+                    236,
+                    290
+                ],
+                [
+                    235,
+                    318
+                ],
+                [
+                    127,
+                    316
+                ]
+            ],
+            [
+                [
+                    126,
+                    319
+                ],
+                [
+                    1094,
+                    323
+                ],
+                [
+                    1094,
+                    353
+                ],
+                [
+                    126,
+                    348
+                ]
+            ],
+            [
+                [
+                    126,
+                    352
+                ],
+                [
+                    943,
+                    354
+                ],
+                [
+                    943,
+                    384
+                ],
+                [
+                    126,
+                    382
+                ]
+            ],
+            [
+                [
+                    126,
+                    388
+                ],
+                [
+                    392,
+                    386
+                ],
+                [
+                    393,
+                    413
+                ],
+                [
+                    126,
+                    415
+                ]
+            ]
+        ],
+        "text_det_params": {
+            "limit_side_len": 736,
+            "limit_type": "min",
+            "thresh": 0.3,
+            "max_side_limit": 4000,
+            "box_thresh": 0.6,
+            "unclip_ratio": 1.5
+        },
+        "text_type": "general",
+        "textline_orientation_angles": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        "text_rec_score_thresh": 0.0,
+        "return_word_box": false,
+        "rec_texts": [
+            "11.0 Integration Strategy",
+            "Django Backend Hook: The chatbot service will be deployed as a microservice that",
+            "communicates with the client's current Django API via RESTful requests..",
+            "Apex Frontend Compatibility: The user interface will be designed for seamless.",
+            "embedding into the client's Apex-based dashboard, appearing as a native tool for.",
+            "advisors.",
+            "Firecloud Protocols: The retrieval and indexing logic will follow the client's established",
+            "Firecloud interface protocols to ensure compatibility with their document.",
+            "management workflow."
+        ],
+        "rec_scores": [
+            0.974581778049469,
+            0.9987133145332336,
+            0.9895056486129761,
+            0.9866176247596741,
+            0.9958149194717407,
+            0.9869556427001953,
+            0.9895280599594116,
+            0.9875513315200806,
+            0.9804642796516418
+        ],
+        "rec_polys": [
+            [
+                [
+                    54,
+                    74
+                ],
+                [
+                    595,
+                    83
+                ],
+                [
+                    594,
+                    133
+                ],
+                [
+                    53,
+                    125
+                ]
+            ],
+            [
+                [
+                    133,
+                    162
+                ],
+                [
+                    1067,
+                    162
+                ],
+                [
+                    1067,
+                    189
+                ],
+                [
+                    133,
+                    189
+                ]
+            ],
+            [
+                [
+                    131,
+                    194
+                ],
+                [
+                    951,
+                    194
+                ],
+                [
+                    951,
+                    220
+                ],
+                [
+                    131,
+                    220
+                ]
+            ],
+            [
+                [
+                    128,
+                    223
+                ],
+                [
+                    1013,
+                    224
+                ],
+                [
+                    1013,
+                    254
+                ],
+                [
+                    128,
+                    253
+                ]
+            ],
+            [
+                [
+                    130,
+                    255
+                ],
+                [
+                    1047,
+                    257
+                ],
+                [
+                    1047,
+                    287
+                ],
+                [
+                    130,
+                    285
+                ]
+            ],
+            [
+                [
+                    127,
+                    288
+                ],
+                [
+                    236,
+                    290
+                ],
+                [
+                    235,
+                    318
+                ],
+                [
+                    127,
+                    316
+                ]
+            ],
+            [
+                [
+                    126,
+                    319
+                ],
+                [
+                    1094,
+                    323
+                ],
+                [
+                    1094,
+                    353
+                ],
+                [
+                    126,
+                    348
+                ]
+            ],
+            [
+                [
+                    126,
+                    352
+                ],
+                [
+                    943,
+                    354
+                ],
+                [
+                    943,
+                    384
+                ],
+                [
+                    126,
+                    382
+                ]
+            ],
+            [
+                [
+                    126,
+                    388
+                ],
+                [
+                    392,
+                    386
+                ],
+                [
+                    393,
+                    413
+                ],
+                [
+                    126,
+                    415
+                ]
+            ]
+        ],
+        "rec_boxes": [
+            [
+                53,
+                74,
+                595,
+                133
+            ],
+            [
+                133,
+                162,
+                1067,
+                189
+            ],
+            [
+                131,
+                194,
+                951,
+                220
+            ],
+            [
+                128,
+                223,
+                1013,
+                254
+            ],
+            [
+                130,
+                255,
+                1047,
+                287
+            ],
+            [
+                127,
+                288,
+                236,
+                318
+            ],
+            [
+                126,
+                319,
+                1094,
+                353
+            ],
+            [
+                126,
+                352,
+                943,
+                384
+            ],
+            [
+                126,
+                386,
+                393,
+                415
+            ]
+        ]
+    }
+}

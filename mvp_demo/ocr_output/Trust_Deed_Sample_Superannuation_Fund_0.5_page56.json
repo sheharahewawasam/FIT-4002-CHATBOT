@@ -1,0 +1,457 @@
+{
+    "input_path": "..\\pdfs\\Trust_Deed_Sample_Superannuation_Fund.pdf",
+    "page_index": 56,
+    "page_count": 57,
+    "width": 1190,
+    "height": 1684,
+    "model_settings": {
+        "use_doc_preprocessor": true,
+        "use_seal_recognition": false,
+        "use_table_recognition": true,
+        "use_formula_recognition": true,
+        "use_chart_recognition": false,
+        "use_region_detection": true,
+        "format_block_content": false,
+        "markdown_ignore_labels": [
+            "number",
+            "footnote",
+            "header",
+            "header_image",
+            "footer",
+            "footer_image",
+            "aside_text"
+        ]
+    },
+    "parsing_res_list": [
+        {
+            "block_label": "text",
+            "block_content": "EXECUTED AS A DEED by Sample Company )Pty Ltd ACN 123 456 789.\n",
+            "block_bbox": [
+                29,
+                81,
+                580,
+                130
+            ],
+            "block_id": 0,
+            "block_order": 1
+        },
+        {
+            "block_label": "text",
+            "block_content": "John William Smith Director \n",
+            "block_bbox": [
+                608,
+                169,
+                830,
+                217
+            ],
+            "block_id": 1,
+            "block_order": 2
+        },
+        {
+            "block_label": "text",
+            "block_content": "Mary Jane Smith Director ",
+            "block_bbox": [
+                609,
+                322,
+                809,
+                369
+            ],
+            "block_id": 2,
+            "block_order": 3
+        }
+    ],
+    "doc_preprocessor_res": {
+        "input_path": null,
+        "page_index": null,
+        "model_settings": {
+            "use_doc_orientation_classify": true,
+            "use_doc_unwarping": true
+        },
+        "angle": 0
+    },
+    "layout_det_res": {
+        "input_path": null,
+        "page_index": null,
+        "boxes": [
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.8401658535003662,
+                "coordinate": [
+                    609.289794921875,
+                    322.0337829589844,
+                    809.267333984375,
+                    369.0690002441406
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.7854939699172974,
+                "coordinate": [
+                    29.694488525390625,
+                    81.79301452636719,
+                    580.986572265625,
+                    130.5937957763672
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.777250349521637,
+                "coordinate": [
+                    608.8284912109375,
+                    169.82110595703125,
+                    830.5108642578125,
+                    217.62689208984375
+                ]
+            }
+        ]
+    },
+    "overall_ocr_res": {
+        "input_path": null,
+        "page_index": null,
+        "model_settings": {
+            "use_doc_preprocessor": false,
+            "use_textline_orientation": true
+        },
+        "dt_polys": [
+            [
+                [
+                    41,
+                    0
+                ],
+                [
+                    267,
+                    0
+                ],
+                [
+                    267,
+                    19
+                ],
+                [
+                    41,
+                    19
+                ]
+            ],
+            [
+                [
+                    31,
+                    77
+                ],
+                [
+                    597,
+                    76
+                ],
+                [
+                    597,
+                    110
+                ],
+                [
+                    31,
+                    111
+                ]
+            ],
+            [
+                [
+                    32,
+                    104
+                ],
+                [
+                    332,
+                    109
+                ],
+                [
+                    331,
+                    136
+                ],
+                [
+                    32,
+                    131
+                ]
+            ],
+            [
+                [
+                    610,
+                    169
+                ],
+                [
+                    832,
+                    169
+                ],
+                [
+                    832,
+                    196
+                ],
+                [
+                    610,
+                    196
+                ]
+            ],
+            [
+                [
+                    608,
+                    194
+                ],
+                [
+                    707,
+                    194
+                ],
+                [
+                    707,
+                    221
+                ],
+                [
+                    608,
+                    221
+                ]
+            ],
+            [
+                [
+                    608,
+                    320
+                ],
+                [
+                    812,
+                    320
+                ],
+                [
+                    812,
+                    351
+                ],
+                [
+                    608,
+                    351
+                ]
+            ],
+            [
+                [
+                    608,
+                    346
+                ],
+                [
+                    709,
+                    346
+                ],
+                [
+                    709,
+                    373
+                ],
+                [
+                    608,
+                    373
+                ]
+            ]
+        ],
+        "text_det_params": {
+            "limit_side_len": 736,
+            "limit_type": "min",
+            "thresh": 0.3,
+            "max_side_limit": 4000,
+            "box_thresh": 0.6,
+            "unclip_ratio": 1.5
+        },
+        "text_type": "general",
+        "textline_orientation_angles": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        "text_rec_score_thresh": 0.0,
+        "return_word_box": false,
+        "rec_texts": [
+            "Executed as a Deed",
+            "EXECUTED AS A DEED by Sample Company )",
+            "Pty Ltd ACN 123 456 789.",
+            "John William Smith",
+            "Director",
+            "Mary Jane Smith",
+            "Director"
+        ],
+        "rec_scores": [
+            0.9509885311126709,
+            0.9937840700149536,
+            0.9998366236686707,
+            0.9995076656341553,
+            0.9997579455375671,
+            0.9999017715454102,
+            0.9997150897979736
+        ],
+        "rec_polys": [
+            [
+                [
+                    41,
+                    0
+                ],
+                [
+                    267,
+                    0
+                ],
+                [
+                    267,
+                    19
+                ],
+                [
+                    41,
+                    19
+                ]
+            ],
+            [
+                [
+                    31,
+                    77
+                ],
+                [
+                    597,
+                    76
+                ],
+                [
+                    597,
+                    110
+                ],
+                [
+                    31,
+                    111
+                ]
+            ],
+            [
+                [
+                    32,
+                    104
+                ],
+                [
+                    332,
+                    109
+                ],
+                [
+                    331,
+                    136
+                ],
+                [
+                    32,
+                    131
+                ]
+            ],
+            [
+                [
+                    610,
+                    169
+                ],
+                [
+                    832,
+                    169
+                ],
+                [
+                    832,
+                    196
+                ],
+                [
+                    610,
+                    196
+                ]
+            ],
+            [
+                [
+                    608,
+                    194
+                ],
+                [
+                    707,
+                    194
+                ],
+                [
+                    707,
+                    221
+                ],
+                [
+                    608,
+                    221
+                ]
+            ],
+            [
+                [
+                    608,
+                    320
+                ],
+                [
+                    812,
+                    320
+                ],
+                [
+                    812,
+                    351
+                ],
+                [
+                    608,
+                    351
+                ]
+            ],
+            [
+                [
+                    608,
+                    346
+                ],
+                [
+                    709,
+                    346
+                ],
+                [
+                    709,
+                    373
+                ],
+                [
+                    608,
+                    373
+                ]
+            ]
+        ],
+        "rec_boxes": [
+            [
+                41,
+                0,
+                267,
+                19
+            ],
+            [
+                31,
+                76,
+                597,
+                111
+            ],
+            [
+                32,
+                104,
+                332,
+                136
+            ],
+            [
+                610,
+                169,
+                832,
+                196
+            ],
+            [
+                608,
+                194,
+                707,
+                221
+            ],
+            [
+                608,
+                320,
+                812,
+                351
+            ],
+            [
+                608,
+                346,
+                709,
+                373
+            ]
+        ]
+    }
+}

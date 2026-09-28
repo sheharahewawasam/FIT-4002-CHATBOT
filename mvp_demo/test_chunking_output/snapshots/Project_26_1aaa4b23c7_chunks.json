@@ -1,0 +1,303 @@
+{
+  "schema_version": 2,
+  "full_text": "\n\n## Project 26\n\nClient Email: Champake.Mendis@tripleasuper.com.au \n\nClient Name: Champ Mendis \n\nClient: Triple A Super Pty Ltd \n\nTitle: RAG-Based Chatbot for Advisors.\n\n## Description:\n\nRAG (Retrieval-Augmented Generation) chatbot to answer advisor questions \n\nUses documents stored in S3\n\nProvides compliant, consistent, explainable answers \n\n\n\n## Requirements:\n\nObjectives \n\nProvide advisors with instant access to policies, procedures, guidelines Provide advisors with the current updates or issues with the documents Reduce human dependency and turnaround time Ensure consistent communication \n\nArchitecture Overview (initial reference)Include RAG pipeline:\n\n1. Document ingestion from S32. Chunking + embeddings 3. Vector store 4. LLM retrieves relevant context 5. Response generated + citations 6. Logs &amp; analytics \n\n<div style=\"text-align: center;\"><img src=\"imgs/img_in_image_box_114_1220_201_1341.jpg\" alt=\"Image\" width=\"7%\" /></div>\n\n\n<div style=\"text-align: center;\"><img src=\"imgs/img_in_image_box_288_1203_441_1367.jpg\" alt=\"Image\" width=\"12%\" /></div>\n\n\nFunctional Steps:\n\n1. Advisor asks a question.\n\n2. Query embedded and matched with vector store \n\n3. Top-K context retrieved \n\n4. LLM generates response \n\n5. Output returned with references.\n\n\n\n<div style=\"text-align: center;\"><img src=\"imgs/img_in_image_box_529_1228_618_1353.jpg\" alt=\"Image\" width=\"7%\" /></div>\n\n\n<div style=\"text-align: center;\"><img src=\"imgs/img_in_image_box_707_1235_829_1362.jpg\" alt=\"Image\" width=\"10%\" /></div>\n{\"blocks\": [\"S3 Bucket\"]}{\"blocks\": [\"OCR AI Agent & (Chunking + Embeddings)\"]}{\"blocks\": [\"Vector\", \"Store\"]}{\"blocks\": [\"LLM Retrieval\"]}\n\nPage: 0\n\n\n<div style=\"text-align: center;\"><html><body><table border=\"1\"><tr><td>Project owner:</td></tr><tr><td>Champ Mendis (Champake.Mendis@tripleasuper.com.au)</td></tr><tr><td>Additional Info (if any).</td></tr><tr><td>None</td></tr></table></body></html></div>\n{\"blocks\": [\"Project owner:\", \"Champ Mendis (Champake.Mendis@tripleasuper.com.au)\", \"Additional Info (if any)\", \"None\"]}\n\nPage: 1",
+  "entries": [
+    {
+      "source_url": "Project_26.pdf",
+      "fund_name": "Triple A Super",
+      "doc_type": "Project Brief",
+      "date": "2012-01-21",
+      "date_numeric": 20120121,
+      "leaf_text": "Project 26\n\nClient Email: Champake.Mendis@tripleasuper.com.au\n\nClient Name: Champ Mendis\n\nClient: Triple A Super Pty Ltd\n\nTitle: RAG-Based Chatbot for Advisors.",
+      "parent_text": "Project 26\n\nClient Email: Champake.Mendis@tripleasuper.com.au\n\nClient Name: Champ Mendis\n\nClient: Triple A Super Pty Ltd\n\nTitle: RAG-Based Chatbot for Advisors.",
+      "parent_id": "94fc983d429ef9afecf9448e",
+      "chunk_id": "94fc983d429ef9afecf9448e:0",
+      "section_title": "Project 26",
+      "chunking_method": "markdown_structure",
+      "block_ids": [
+        "text:b0",
+        "text:b1",
+        "text:b2",
+        "text:b3",
+        "text:b4"
+      ],
+      "layout_sources": [
+        {
+          "page": null,
+          "block_id": "text:b0",
+          "block_type": "heading",
+          "bbox": null
+        },
+        {
+          "page": null,
+          "block_id": "text:b1",
+          "block_type": "text",
+          "bbox": null
+        },
+        {
+          "page": null,
+          "block_id": "text:b2",
+          "block_type": "text",
+          "bbox": null
+        },
+        {
+          "page": null,
+          "block_id": "text:b3",
+          "block_type": "text",
+          "bbox": null
+        },
+        {
+          "page": null,
+          "block_id": "text:b4",
+          "block_type": "text",
+          "bbox": null
+        }
+      ],
+      "oversized_child": false
+    },
+    {
+      "source_url": "Project_26.pdf",
+      "fund_name": "Triple A Super",
+      "doc_type": "Project Brief",
+      "date": "2012-01-21",
+      "date_numeric": 20120121,
+      "leaf_text": "Description:\n\nRAG (Retrieval-Augmented Generation) chatbot to answer advisor questions\n\nUses documents stored in S3\n\nProvides compliant, consistent, explainable answers",
+      "parent_text": "Description:\n\nRAG (Retrieval-Augmented Generation) chatbot to answer advisor questions\n\nUses documents stored in S3\n\nProvides compliant, consistent, explainable answers",
+      "parent_id": "ef491eaddbfe70fb5202afc0",
+      "chunk_id": "ef491eaddbfe70fb5202afc0:1",
+      "section_title": "Description:",
+      "chunking_method": "markdown_structure",
+      "block_ids": [
+        "text:b5",
+        "text:b6",
+        "text:b7",
+        "text:b8"
+      ],
+      "layout_sources": [
+        {
+          "page": null,
+          "block_id": "text:b5",
+          "block_type": "heading",
+          "bbox": null
+        },
+        {
+          "page": null,
+          "block_id": "text:b6",
+          "block_type": "text",
+          "bbox": null
+        },
+        {
+          "page": null,
+          "block_id": "text:b7",
+          "block_type": "text",
+          "bbox": null
+        },
+        {
+          "page": null,
+          "block_id": "text:b8",
+          "block_type": "text",
+          "bbox": null
+        }
+      ],
+      "oversized_child": false
+    },
+    {
+      "source_url": "Project_26.pdf",
+      "fund_name": "Triple A Super",
+      "doc_type": "Project Brief",
+      "date": "2012-01-21",
+      "date_numeric": 20120121,
+      "leaf_text": "Requirements:\n\nObjectives\n\nProvide advisors with instant access to policies, procedures, guidelines Provide advisors with the current updates or issues with the documents Reduce human dependency and turnaround time Ensure consistent communication\n\nArchitecture Overview (initial reference)Include RAG pipeline:\n\n1. Document ingestion from S32. Chunking + embeddings 3. Vector store 4. LLM retrieves relevant context 5. Response generated + citations 6. Logs & analytics\n\nFunctional Steps:\n\n1. Advisor asks a question.",
+      "parent_text": "Requirements:\n\nObjectives\n\nProvide advisors with instant access to policies, procedures, guidelines Provide advisors with the current updates or issues with the documents Reduce human dependency and turnaround time Ensure consistent communication\n\nArchitecture Overview (initial reference)Include RAG pipeline:\n\n1. Document ingestion from S32. Chunking + embeddings 3. Vector store 4. LLM retrieves relevant context 5. Response generated + citations 6. Logs & analytics\n\nFunctional Steps:\n\n1. Advisor asks a question.\n\n2. Query embedded and matched with vector store\n\n3. Top-K context retrieved\n\n4. LLM generates response\n\n5. Output returned with references.\n\n{\"blocks\": [\"S3 Bucket\"]}{\"blocks\": [\"OCR AI Agent & (Chunking + Embeddings)\"]}{\"blocks\": [\"Vector\", \"Store\"]}{\"blocks\": [\"LLM Retrieval\"]}\n\nPage: 0\n\n[Section: Requirements:]\n[Table 1]\nTable row 1 | Column 1: Project owner:\n\n[Section: Requirements:]\n[Table 1]\nTable row 2 | Column 1: Champ Mendis (Champake.Mendis@tripleasuper.com.au)\n\n[Section: Requirements:]\n[Table 1]\nTable row 3 | Column 1: Additional Info (if any).\n\n[Section: Requirements:]\n[Table 1]\nTable row 4 | Column 1: None\n\n{\"blocks\": [\"Project owner:\", \"Champ Mendis (Champake.Mendis@tripleasuper.com.au)\", \"Additional Info (if any)\", \"None\"]}\n\nPage: 1",
+      "parent_id": "3c9cd8a119af0303eac56eb9",
+      "chunk_id": "3c9cd8a119af0303eac56eb9:2",
+      "section_title": "Requirements:",
+      "chunking_method": "markdown_structure",
+      "block_ids": [
+        "text:b9",
+        "text:b10",
+        "text:b11",
+        "text:b12",
+        "text:b13",
+        "text:b14",
+        "text:b15"
+      ],
+      "layout_sources": [
+        {
+          "page": null,
+          "block_id": "text:b9",
+          "block_type": "heading",
+          "bbox": null
+        },
+        {
+          "page": null,
+          "block_id": "text:b10",
+          "block_type": "text",
+          "bbox": null
+        },
+        {
+          "page": null,
+          "block_id": "text:b11",
+          "block_type": "text",
+          "bbox": null
+        },
+        {
+          "page": null,
+          "block_id": "text:b12",
+          "block_type": "text",
+          "bbox": null
+        },
+        {
+          "page": null,
+          "block_id": "text:b13",
+          "block_type": "text",
+          "bbox": null
+        },
+        {
+          "page": null,
+          "block_id": "text:b14",
+          "block_type": "text",
+          "bbox": null
+        },
+        {
+          "page": null,
+          "block_id": "text:b15",
+          "block_type": "text",
+          "bbox": null
+        }
+      ],
+      "oversized_child": false
+    },
+    {
+      "source_url": "Project_26.pdf",
+      "fund_name": "Triple A Super",
+      "doc_type": "Project Brief",
+      "date": "2012-01-21",
+      "date_numeric": 20120121,
+      "leaf_text": "2. Query embedded and matched with vector store\n\n3. Top-K context retrieved\n\n4. LLM generates response\n\n5. Output returned with references.\n\n{\"blocks\": [\"S3 Bucket\"]}{\"blocks\": [\"OCR AI Agent & (Chunking + Embeddings)\"]}{\"blocks\": [\"Vector\", \"Store\"]}{\"blocks\": [\"LLM Retrieval\"]}\n\nPage: 0\n\n[Section: Requirements:]\n[Table 1]\nTable row 1 | Column 1: Project owner:\n\n[Section: Requirements:]\n[Table 1]\nTable row 2 | Column 1: Champ Mendis (Champake.Mendis@tripleasuper.com.au)",
+      "parent_text": "Requirements:\n\nObjectives\n\nProvide advisors with instant access to policies, procedures, guidelines Provide advisors with the current updates or issues with the documents Reduce human dependency and turnaround time Ensure consistent communication\n\nArchitecture Overview (initial reference)Include RAG pipeline:\n\n1. Document ingestion from S32. Chunking + embeddings 3. Vector store 4. LLM retrieves relevant context 5. Response generated + citations 6. Logs & analytics\n\nFunctional Steps:\n\n1. Advisor asks a question.\n\n2. Query embedded and matched with vector store\n\n3. Top-K context retrieved\n\n4. LLM generates response\n\n5. Output returned with references.\n\n{\"blocks\": [\"S3 Bucket\"]}{\"blocks\": [\"OCR AI Agent & (Chunking + Embeddings)\"]}{\"blocks\": [\"Vector\", \"Store\"]}{\"blocks\": [\"LLM Retrieval\"]}\n\nPage: 0\n\n[Section: Requirements:]\n[Table 1]\nTable row 1 | Column 1: Project owner:\n\n[Section: Requirements:]\n[Table 1]\nTable row 2 | Column 1: Champ Mendis (Champake.Mendis@tripleasuper.com.au)\n\n[Section: Requirements:]\n[Table 1]\nTable row 3 | Column 1: Additional Info (if any).\n\n[Section: Requirements:]\n[Table 1]\nTable row 4 | Column 1: None\n\n{\"blocks\": [\"Project owner:\", \"Champ Mendis (Champake.Mendis@tripleasuper.com.au)\", \"Additional Info (if any)\", \"None\"]}\n\nPage: 1",
+      "parent_id": "3c9cd8a119af0303eac56eb9",
+      "chunk_id": "3c9cd8a119af0303eac56eb9:3",
+      "section_title": "Requirements:",
+      "chunking_method": "markdown_structure",
+      "block_ids": [
+        "text:b16",
+        "text:b17",
+        "text:b18",
+        "text:b19",
+        "text:b20",
+        "text:b21",
+        "text:b22",
+        "text:b23"
+      ],
+      "layout_sources": [
+        {
+          "page": null,
+          "block_id": "text:b16",
+          "block_type": "text",
+          "bbox": null
+        },
+        {
+          "page": null,
+          "block_id": "text:b17",
+          "block_type": "text",
+          "bbox": null
+        },
+        {
+          "page": null,
+          "block_id": "text:b18",
+          "block_type": "text",
+          "bbox": null
+        },
+        {
+          "page": null,
+          "block_id": "text:b19",
+          "block_type": "text",
+          "bbox": null
+        },
+        {
+          "page": null,
+          "block_id": "text:b20",
+          "block_type": "text",
+          "bbox": null
+        },
+        {
+          "page": null,
+          "block_id": "text:b21",
+          "block_type": "text",
+          "bbox": null
+        },
+        {
+          "page": null,
+          "block_id": "text:b22",
+          "block_type": "form_item",
+          "bbox": null
+        },
+        {
+          "page": null,
+          "block_id": "text:b23",
+          "block_type": "form_item",
+          "bbox": null
+        }
+      ],
+      "oversized_child": false
+    },
+    {
+      "source_url": "Project_26.pdf",
+      "fund_name": "Triple A Super",
+      "doc_type": "Project Brief",
+      "date": "2012-01-21",
+      "date_numeric": 20120121,
+      "leaf_text": "[Section: Requirements:]\n[Table 1]\nTable row 3 | Column 1: Additional Info (if any).\n\n[Section: Requirements:]\n[Table 1]\nTable row 4 | Column 1: None\n\n{\"blocks\": [\"Project owner:\", \"Champ Mendis (Champake.Mendis@tripleasuper.com.au)\", \"Additional Info (if any)\", \"None\"]}\n\nPage: 1",
+      "parent_text": "Requirements:\n\nObjectives\n\nProvide advisors with instant access to policies, procedures, guidelines Provide advisors with the current updates or issues with the documents Reduce human dependency and turnaround time Ensure consistent communication\n\nArchitecture Overview (initial reference)Include RAG pipeline:\n\n1. Document ingestion from S32. Chunking + embeddings 3. Vector store 4. LLM retrieves relevant context 5. Response generated + citations 6. Logs & analytics\n\nFunctional Steps:\n\n1. Advisor asks a question.\n\n2. Query embedded and matched with vector store\n\n3. Top-K context retrieved\n\n4. LLM generates response\n\n5. Output returned with references.\n\n{\"blocks\": [\"S3 Bucket\"]}{\"blocks\": [\"OCR AI Agent & (Chunking + Embeddings)\"]}{\"blocks\": [\"Vector\", \"Store\"]}{\"blocks\": [\"LLM Retrieval\"]}\n\nPage: 0\n\n[Section: Requirements:]\n[Table 1]\nTable row 1 | Column 1: Project owner:\n\n[Section: Requirements:]\n[Table 1]\nTable row 2 | Column 1: Champ Mendis (Champake.Mendis@tripleasuper.com.au)\n\n[Section: Requirements:]\n[Table 1]\nTable row 3 | Column 1: Additional Info (if any).\n\n[Section: Requirements:]\n[Table 1]\nTable row 4 | Column 1: None\n\n{\"blocks\": [\"Project owner:\", \"Champ Mendis (Champake.Mendis@tripleasuper.com.au)\", \"Additional Info (if any)\", \"None\"]}\n\nPage: 1",
+      "parent_id": "3c9cd8a119af0303eac56eb9",
+      "chunk_id": "3c9cd8a119af0303eac56eb9:4",
+      "section_title": "Requirements:",
+      "chunking_method": "markdown_structure",
+      "block_ids": [
+        "text:b24",
+        "text:b25",
+        "text:b26",
+        "text:b27"
+      ],
+      "layout_sources": [
+        {
+          "page": null,
+          "block_id": "text:b24",
+          "block_type": "form_item",
+          "bbox": null
+        },
+        {
+          "page": null,
+          "block_id": "text:b25",
+          "block_type": "form_item",
+          "bbox": null
+        },
+        {
+          "page": null,
+          "block_id": "text:b26",
+          "block_type": "text",
+          "bbox": null
+        },
+        {
+          "page": null,
+          "block_id": "text:b27",
+          "block_type": "text",
+          "bbox": null
+        }
+      ],
+      "oversized_child": false
+    }
+  ],
+  "rejected_chunks": [],
+  "layout_diagnostics": [
+    "Table text:table1 has no explicit th headers; using positional column labels",
+    "Selected text has no verified page coordinates; page metadata omitted"
+  ],
+  "chunking_method": "markdown_structure",
+  "chunking_config": {
+    "parent_max_chars": 1500,
+    "child_max_chars": 550
+  },
+  "source_path": "../pdfs/Project_26.pdf"
+}

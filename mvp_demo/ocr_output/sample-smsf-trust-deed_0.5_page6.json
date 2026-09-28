@@ -1,0 +1,726 @@
+{
+    "input_path": "..\\pdfs\\sample-smsf-trust-deed.pdf",
+    "page_index": 6,
+    "page_count": 53,
+    "width": 1191,
+    "height": 1684,
+    "model_settings": {
+        "use_doc_preprocessor": true,
+        "use_seal_recognition": false,
+        "use_table_recognition": true,
+        "use_formula_recognition": true,
+        "use_chart_recognition": false,
+        "use_region_detection": true,
+        "format_block_content": false,
+        "markdown_ignore_labels": [
+            "number",
+            "footnote",
+            "header",
+            "header_image",
+            "footer",
+            "footer_image",
+            "aside_text"
+        ]
+    },
+    "parsing_res_list": [
+        {
+            "block_label": "paragraph_title",
+            "block_content": "Overview ",
+            "block_bbox": [
+                114,
+                90,
+                248,
+                115
+            ],
+            "block_id": 0,
+            "block_order": 1
+        },
+        {
+            "block_label": "text",
+            "block_content": "For the convenience of users, this superannuation trust deed is written in plain language. It contains  only those clauses that are appropriate for the particular form of self-managed superannuation fund that you have chosen. It is not suitable for any other form of fund.\n",
+            "block_bbox": [
+                115,
+                165,
+                1089,
+                256
+            ],
+            "block_id": 1,
+            "block_order": 2
+        },
+        {
+            "block_label": "text",
+            "block_content": " If you decide to change the trustees of the fund, for example, replace individual trustees with a ",
+            "block_bbox": [
+                118,
+                277,
+                1099,
+                404
+            ],
+            "block_id": 2,
+            "block_order": 3
+        },
+        {
+            "block_label": "text",
+            "block_content": "You cannot change the form of the fund in any other way.",
+            "block_bbox": [
+                119,
+                421,
+                679,
+                451
+            ],
+            "block_id": 3,
+            "block_order": 4
+        },
+        {
+            "block_label": "image",
+            "block_content": "SAIPLE ",
+            "block_bbox": [
+                143,
+                456,
+                1046,
+                1346
+            ],
+            "block_id": 4,
+            "block_order": null
+        }
+    ],
+    "doc_preprocessor_res": {
+        "input_path": null,
+        "page_index": null,
+        "model_settings": {
+            "use_doc_orientation_classify": true,
+            "use_doc_unwarping": true
+        },
+        "angle": 0
+    },
+    "layout_det_res": {
+        "input_path": null,
+        "page_index": null,
+        "boxes": [
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.941204845905304,
+                "coordinate": [
+                    115.76708984375,
+                    165.73556518554688,
+                    1089.598876953125,
+                    256.3724670410156
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.9397775530815125,
+                "coordinate": [
+                    118.12173461914062,
+                    277.11065673828125,
+                    1099.2757568359375,
+                    404.59307861328125
+                ]
+            },
+            {
+                "cls_id": 0,
+                "label": "paragraph_title",
+                "score": 0.8249953985214233,
+                "coordinate": [
+                    114.74356079101562,
+                    90.43946838378906,
+                    248.11422729492188,
+                    115.3746337890625
+                ]
+            },
+            {
+                "cls_id": 2,
+                "label": "text",
+                "score": 0.8110798001289368,
+                "coordinate": [
+                    119.78042602539062,
+                    421.2926330566406,
+                    679.5496826171875,
+                    451.3954772949219
+                ]
+            },
+            {
+                "cls_id": 1,
+                "label": "image",
+                "score": 0.540627121925354,
+                "coordinate": [
+                    143.2579345703125,
+                    456.4560546875,
+                    1046.0694580078125,
+                    1346.827880859375
+                ]
+            }
+        ]
+    },
+    "overall_ocr_res": {
+        "input_path": null,
+        "page_index": null,
+        "model_settings": {
+            "use_doc_preprocessor": false,
+            "use_textline_orientation": true
+        },
+        "dt_polys": [
+            [
+                [
+                    115,
+                    88
+                ],
+                [
+                    252,
+                    88
+                ],
+                [
+                    252,
+                    120
+                ],
+                [
+                    115,
+                    120
+                ]
+            ],
+            [
+                [
+                    117,
+                    165
+                ],
+                [
+                    1091,
+                    163
+                ],
+                [
+                    1091,
+                    190
+                ],
+                [
+                    117,
+                    192
+                ]
+            ],
+            [
+                [
+                    118,
+                    199
+                ],
+                [
+                    1087,
+                    195
+                ],
+                [
+                    1087,
+                    221
+                ],
+                [
+                    118,
+                    225
+                ]
+            ],
+            [
+                [
+                    118,
+                    234
+                ],
+                [
+                    753,
+                    227
+                ],
+                [
+                    754,
+                    253
+                ],
+                [
+                    118,
+                    260
+                ]
+            ],
+            [
+                [
+                    118,
+                    279
+                ],
+                [
+                    1039,
+                    270
+                ],
+                [
+                    1039,
+                    301
+                ],
+                [
+                    118,
+                    310
+                ]
+            ],
+            [
+                [
+                    119,
+                    314
+                ],
+                [
+                    1053,
+                    303
+                ],
+                [
+                    1053,
+                    333
+                ],
+                [
+                    119,
+                    344
+                ]
+            ],
+            [
+                [
+                    120,
+                    347
+                ],
+                [
+                    1101,
+                    333
+                ],
+                [
+                    1102,
+                    363
+                ],
+                [
+                    120,
+                    376
+                ]
+            ],
+            [
+                [
+                    118,
+                    381
+                ],
+                [
+                    250,
+                    379
+                ],
+                [
+                    251,
+                    407
+                ],
+                [
+                    118,
+                    409
+                ]
+            ],
+            [
+                [
+                    121,
+                    428
+                ],
+                [
+                    681,
+                    416
+                ],
+                [
+                    681,
+                    443
+                ],
+                [
+                    121,
+                    455
+                ]
+            ],
+            [
+                [
+                    118,
+                    310
+                ],
+                [
+                    1099,
+                    310
+                ],
+                [
+                    1099,
+                    404
+                ],
+                [
+                    118,
+                    404
+                ]
+            ],
+            [
+                [
+                    119,
+                    421
+                ],
+                [
+                    679,
+                    421
+                ],
+                [
+                    679,
+                    451
+                ],
+                [
+                    119,
+                    451
+                ]
+            ],
+            [
+                [
+                    143,
+                    456
+                ],
+                [
+                    1046,
+                    456
+                ],
+                [
+                    1046,
+                    1346
+                ],
+                [
+                    143,
+                    1346
+                ]
+            ]
+        ],
+        "text_det_params": {
+            "limit_side_len": 736,
+            "limit_type": "min",
+            "thresh": 0.3,
+            "max_side_limit": 4000,
+            "box_thresh": 0.6,
+            "unclip_ratio": 1.5
+        },
+        "text_type": "general",
+        "textline_orientation_angles": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        "text_rec_score_thresh": 0.0,
+        "return_word_box": false,
+        "rec_texts": [
+            "Overview",
+            "For the convenience of users, this superannuation trust deed is written in plain language. It contains",
+            " only those clauses that are appropriate for the particular form of self-managed superannuation fund",
+            "that you have chosen. It is not suitable for any other form of fund.",
+            " If you decide to change the trustees of the fund, for example, replace individual trustees with a",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "You cannot change the form of the fund in any other way.",
+            "SAIPLE"
+        ],
+        "rec_scores": [
+            0.9961468577384949,
+            0.995006799697876,
+            0.984743595123291,
+            0.9965694546699524,
+            0.9859458804130554,
+            0.9876986145973206,
+            0.9985939264297485,
+            0.9637491703033447,
+            0.9988698363304138,
+            0.0,
+            0.9956359267234802,
+            0.808750331401825
+        ],
+        "rec_polys": [
+            [
+                [
+                    115,
+                    88
+                ],
+                [
+                    252,
+                    88
+                ],
+                [
+                    252,
+                    120
+                ],
+                [
+                    115,
+                    120
+                ]
+            ],
+            [
+                [
+                    117,
+                    165
+                ],
+                [
+                    1091,
+                    163
+                ],
+                [
+                    1091,
+                    190
+                ],
+                [
+                    117,
+                    192
+                ]
+            ],
+            [
+                [
+                    118,
+                    199
+                ],
+                [
+                    1087,
+                    195
+                ],
+                [
+                    1087,
+                    221
+                ],
+                [
+                    118,
+                    225
+                ]
+            ],
+            [
+                [
+                    118,
+                    234
+                ],
+                [
+                    753,
+                    227
+                ],
+                [
+                    754,
+                    253
+                ],
+                [
+                    118,
+                    260
+                ]
+            ],
+            [
+                [
+                    118,
+                    279
+                ],
+                [
+                    1039,
+                    270
+                ],
+                [
+                    1039,
+                    301
+                ],
+                [
+                    118,
+                    310
+                ]
+            ],
+            [
+                [
+                    119,
+                    314
+                ],
+                [
+                    1053,
+                    303
+                ],
+                [
+                    1053,
+                    333
+                ],
+                [
+                    119,
+                    344
+                ]
+            ],
+            [
+                [
+                    120,
+                    347
+                ],
+                [
+                    1101,
+                    333
+                ],
+                [
+                    1102,
+                    363
+                ],
+                [
+                    120,
+                    376
+                ]
+            ],
+            [
+                [
+                    118,
+                    381
+                ],
+                [
+                    250,
+                    379
+                ],
+                [
+                    251,
+                    407
+                ],
+                [
+                    118,
+                    409
+                ]
+            ],
+            [
+                [
+                    121,
+                    428
+                ],
+                [
+                    681,
+                    416
+                ],
+                [
+                    681,
+                    443
+                ],
+                [
+                    121,
+                    455
+                ]
+            ],
+            [
+                [
+                    118,
+                    310
+                ],
+                [
+                    1099,
+                    310
+                ],
+                [
+                    1099,
+                    404
+                ],
+                [
+                    118,
+                    404
+                ]
+            ],
+            [
+                [
+                    119,
+                    421
+                ],
+                [
+                    679,
+                    421
+                ],
+                [
+                    679,
+                    451
+                ],
+                [
+                    119,
+                    451
+                ]
+            ],
+            [
+                [
+                    143,
+                    456
+                ],
+                [
+                    1046,
+                    456
+                ],
+                [
+                    1046,
+                    1346
+                ],
+                [
+                    143,
+                    1346
+                ]
+            ]
+        ],
+        "rec_boxes": [
+            [
+                115.0,
+                88.0,
+                252.0,
+                120.0
+            ],
+            [
+                117.0,
+                163.0,
+                1091.0,
+                192.0
+            ],
+            [
+                118.0,
+                195.0,
+                1087.0,
+                225.0
+            ],
+            [
+                118.0,
+                227.0,
+                754.0,
+                260.0
+            ],
+            [
+                118.0,
+                270.0,
+                1039.0,
+                310.0
+            ],
+            [
+                119.0,
+                303.0,
+                1053.0,
+                344.0
+            ],
+            [
+                120.0,
+                333.0,
+                1102.0,
+                376.0
+            ],
+            [
+                118.0,
+                379.0,
+                251.0,
+                409.0
+            ],
+            [
+                121.0,
+                416.0,
+                681.0,
+                455.0
+            ],
+            [
+                118.0,
+                310.0,
+                1099.0,
+                404.0
+            ],
+            [
+                119.78042602539062,
+                421.2926330566406,
+                679.5496826171875,
+                451.3954772949219
+            ],
+            [
+                143.2579345703125,
+                456.4560546875,
+                1046.0694580078125,
+                1346.827880859375
+            ]
+        ]
+    }
+}
