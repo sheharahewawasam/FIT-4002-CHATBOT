@@ -21,14 +21,17 @@ from .models import Document, Fund
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 ALLOWED_EXTENSIONS = {".pdf"}
 
-# Ingestion is off unless a deployment explicitly turns it on.
+# Ingestion is on unless a deployment turns it off.
 #
-# The endpoint takes an advisor name from the request body and trusts it, so
-# until authentication lands anyone who can reach the server can write into the
-# shared Pinecone index. Off by default means a host that is exposed to the
-# internet is safe without remembering to configure anything; a developer who
-# wants to ingest locally sets DOCUMENT_UPLOADS_ENABLED=true.
-UPLOADS_ENABLED = os.getenv("DOCUMENT_UPLOADS_ENABLED", "false").lower() in ("1", "true", "yes")
+# It was off by default while the endpoint took an advisor name from the request
+# body and trusted it: anyone who could reach the server could write into the
+# shared Pinecone index. Sign-in now supplies the advisor, the fund is checked
+# against their own grant, and uploaded vectors carry an owner - so the reason
+# for defaulting to off is gone.
+#
+# The flag stays because a deployment may still want a read-only instance: a
+# demo, or a host whose corpus is managed only by the bulk script.
+UPLOADS_ENABLED = os.getenv("DOCUMENT_UPLOADS_ENABLED", "true").lower() in ("1", "true", "yes")
 
 
 def _serialise(doc):
