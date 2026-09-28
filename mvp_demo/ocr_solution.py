@@ -149,7 +149,8 @@ class OCR():
 
         res = ""
 
-        self.initiate_model_v3()
+        if not self.pipelineV3:
+            self.initiate_model_v3()    
 
         thresh_med = self.predictV3(pdf_path, 0.50)
 
