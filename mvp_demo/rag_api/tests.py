@@ -12,7 +12,7 @@ from unittest import mock
 
 from django.test import TestCase
 
-from rag_api import views
+from rag_api import sources, views
 from django.contrib.auth.models import User
 from django.core.cache import cache
 
@@ -310,3 +310,89 @@ class ChatThrottleTests(TestCase):
         self.assertIn(429, codes, f"no request was throttled: {codes}")
         # 10/min, so the first ten are let through and the rest refused.
         self.assertEqual(codes.count(400), 10)
+
+
+class SourceDocumentGrantTests(TestCase):
+    """
+    A citation link must not become a way to read another fund's documents.
+
+    The link used to be a bare relative path to a filename, which served nothing
+    (no such route) but would have been an access hole the moment one existed:
+    the filename comes from Pinecone metadata, so any signed-in advisor could
+    have asked for any fund's deed by name. The link now carries a signed grant
+    naming both the file and the advisor it was issued to.
+    """
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp()
+        self.pdf = os.path.join(self.root, "Trust Deed.pdf")
+        with open(self.pdf, "wb") as fh:
+            fh.write(b"%PDF-1.4 not a real pdf, enough to serve\n")
+
+        self.alice = Advisor.objects.create(
+            name="AliceSrc", user=User.objects.create_user("alicesrc", password="pw"))
+        self.bob = Advisor.objects.create(
+            name="BobSrc", user=User.objects.create_user("bobsrc", password="pw"))
+
+        patcher = mock.patch.dict(os.environ, {"SOURCE_DOCUMENT_DIRS": self.root})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _url(self, grant):
+        return "/api/source/?d=" + grant
+
+    def test_the_advisor_it_was_issued_to_gets_the_file(self):
+        grant = sources.grant_for("Trust Deed.pdf", "AliceSrc")
+        self.client.force_login(self.alice.user)
+        response = self.client.get(self._url(grant))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertIn("Trust Deed.pdf", response["Content-Disposition"])
+
+    def test_another_advisor_cannot_use_the_same_link(self):
+        """The whole point: a link Alice received is useless to Bob."""
+        grant = sources.grant_for("Trust Deed.pdf", "AliceSrc")
+        self.client.force_login(self.bob.user)
+        response = self.client.get(self._url(grant))
+        self.assertEqual(response.status_code, 404)
+
+    def test_anonymous_callers_are_refused(self):
+        grant = sources.grant_for("Trust Deed.pdf", "AliceSrc")
+        self.assertEqual(self.client.get(self._url(grant)).status_code, 403)
+
+    def test_a_forged_grant_is_refused(self):
+        """Without the signing key a caller cannot name a file of their choosing."""
+        self.client.force_login(self.alice.user)
+        for forged in ("", "rubbish", "eyJmIjogIlgucGRmIn0:fake:sig"):
+            response = self.client.get(self._url(forged))
+            self.assertEqual(response.status_code, 404, forged)
+
+    def test_traversal_in_a_signed_grant_still_resolves_nothing(self):
+        """
+        Defence in depth: even a grant we signed ourselves cannot escape the
+        configured directory, so a bug that signed hostile input stays contained.
+        """
+        self.client.force_login(self.alice.user)
+        for hostile in ("../../../../etc/passwd", "..", ".", "/etc/passwd"):
+            grant = sources.grant_for(hostile, "AliceSrc")
+            response = self.client.get(self._url(grant))
+            self.assertEqual(response.status_code, 404, hostile)
+
+    def test_an_expired_grant_says_so_rather_than_failing_silently(self):
+        grant = sources.grant_for("Trust Deed.pdf", "AliceSrc")
+        self.client.force_login(self.alice.user)
+        with mock.patch.object(sources, "GRANT_MAX_AGE_SECONDS", -1):
+            response = self.client.get(self._url(grant))
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("expired", response.json()["error"].lower())
+
+    def test_a_missing_file_is_reported_as_not_stored_here(self):
+        """
+        The fund documents are deliberately not in version control, so this is
+        the ordinary case on a host that has not been given them.
+        """
+        grant = sources.grant_for("Never Deployed.pdf", "AliceSrc")
+        self.client.force_login(self.alice.user)
+        response = self.client.get(self._url(grant))
+        self.assertEqual(response.status_code, 404)
+        self.assertIn("not stored", response.json()["error"].lower())

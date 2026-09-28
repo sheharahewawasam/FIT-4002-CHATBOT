@@ -15,6 +15,7 @@ from rest_framework.throttling import UserRateThrottle
 
 from . import resources
 from .models import Advisor
+from .sources import grant_for
 
 logger = logging.getLogger(__name__)
 
@@ -343,7 +344,11 @@ def chat_with_advisor_bot(request):
             context_text += f"--- Source: {source_name} ({fund_name}) ---\n{chunk_text}\n\n"
             citations.append({
                 "source": source_name,
-                "fund": fund_name
+                "fund": fund_name,
+                # A signed grant, not a filename: the link works only for this
+                # advisor, so a citation cannot become a way to fetch another
+                # fund's documents by name.
+                "grant": grant_for(source_name, acting_user),
             })
 
         # print("\n=== RETRIEVED CHUNKS ===")

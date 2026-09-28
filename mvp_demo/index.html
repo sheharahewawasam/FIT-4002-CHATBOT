@@ -461,10 +461,10 @@
         const msgDiv = document.createElement('div');
         msgDiv.className = 'message bot-msg';
         
-        // Escape first, then insert line breaks: the <br> we add survives but markup
-        // in the model's answer does not. The answer is built from retrieved document
-        // text, and documents are user-uploaded, so it must be treated as untrusted.
-        let htmlContent = `<div class="answer-text">${escapeHtmlDoc(answer).replace(/\n/g, '<br>')}</div>`;
+        // Citations only. The answer itself is appended below as DOM nodes by
+        // renderBoldMarkdown; it used to be prepended here as well, which rendered
+        // every answer twice inside the same bubble.
+        let htmlContent = '';
         
         if (citations && citations.length > 0) {
             // Deduplicate citations based on source_url
@@ -474,12 +474,18 @@
             htmlContent += `<div class="citations"><strong>Sources:</strong><ul>`;
             uniqueCitations.forEach(cit => {
                 // source and fund come from document metadata, which for an upload is
-                // the filename the user chose. Escape for text, URL-encode for the href.
+                // the filename the user chose, so escape before display.
                 const rawName = String(cit.source || '').split('/').pop();
                 const fileText = escapeHtmlDoc(rawName);
-                const fileHref = encodeURIComponent(rawName);
                 const fundText = escapeHtmlDoc(String(cit.fund || ''));
-                htmlContent += `<li><a href="../${fileHref}" target="_blank" style="color:#0056b3;">${fileText}</a> (${fundText})</li>`;
+                // The server issues a signed grant per citation; without one the
+                // document is not retrievable and the name is shown as plain text.
+                if (cit.grant) {
+                    const href = '/api/source/?d=' + encodeURIComponent(cit.grant);
+                    htmlContent += `<li><a href="${href}" target="_blank" rel="noopener" style="color:#0056b3;">${fileText}</a> (${fundText})</li>`;
+                } else {
+                    htmlContent += `<li>${fileText} (${fundText})</li>`;
+                }
             });
             htmlContent += `</ul></div>`;
         }

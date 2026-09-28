@@ -13,6 +13,7 @@ from rag_api.documents import (
     upload_document,
 )
 from rag_api.auth import login_view, logout_view, whoami
+from rag_api.sources import serve_source_document
 from rag_api.users import get_funds, get_users
 from rag_api.views import chat_with_advisor_bot
 
@@ -37,6 +38,9 @@ urlpatterns = [
     path('api/documents/upload/', upload_document, name='upload_document'),
     path('api/documents/<int:doc_id>/', document_status, name='document_status'),
     path('api/documents/<int:doc_id>/delete/', delete_document, name='delete_document'),
+
+    # The PDF behind a citation. Takes a signed grant rather than a filename.
+    path('api/source/', serve_source_document, name='serve_source_document'),
 
     path('users/', get_users),
     path('users/<str:name>/', get_funds),
