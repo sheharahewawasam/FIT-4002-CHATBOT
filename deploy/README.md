@@ -76,6 +76,36 @@ connection error while every other endpoint works.
     curl -fsSL https://ollama.com/install.sh | sh
     ollama pull qwen3:1.7b
 
+## 7b. Source documents behind citations
+
+Each citation in an answer links to the PDF it came from, served by
+`/api/source/`. The endpoint takes a signed grant rather than a filename - the
+filename arrives from Pinecone metadata, so a route accepting one would let any
+signed-in advisor fetch any fund's deed by naming it. Grants are issued per
+citation, name the advisor they were issued to, and expire after 12 hours.
+
+The PDFs themselves are not in version control, so a fresh host serves none of
+them and every link answers "That document is not stored on this server" - which
+is accurate, not a bug. Put the files somewhere outside the checkout, so a
+`git pull` cannot disturb them and they cannot drift into the repository:
+
+    mkdir -p /opt/chatbot/documents && chmod 750 /opt/chatbot/documents
+    scp -i <key>.pem <local>/*.pdf ec2-user@<host>:/opt/chatbot/documents/
+    chmod 640 /opt/chatbot/documents/*.pdf
+
+Then point the application at it in `secrets.env` and restart:
+
+    SOURCE_DOCUMENT_DIRS=/opt/chatbot/documents
+
+Multiple directories may be given, separated by the platform path separator
+(`:` on Linux). Files are found by basename, so the directory can be flat even
+when the originals are filed in per-fund folders. Left unset, the search falls
+back to the repository root and `pdfs/`, which only covers the sample documents.
+
+To check what a deployment is missing, compare the `source_url` values in the
+index against the directory - all 26 cited names must be present for every link
+to resolve.
+
 ## Reaching it
 
 Inbound 8000 is not open in the security group. Until it is, tunnel:
