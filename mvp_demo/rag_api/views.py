@@ -58,8 +58,10 @@ def perform_vector_search(query_embedding, user_query, filters, top_k=40, date_f
     """
     sparse_vector = _bm25.encode_queries(user_query)
 
-    query_filter ={"fund_name": {"$in": filters}}
+    query_filter = {"fund_name": {"$in": filters}}
 
+    # An empty range keeps the fund filter only, including undated documents.
+    # With either bound supplied, Pinecone matches only dated documents in range.
     date_condition = {}
     if date_from is not None:
         date_condition["$gte"] = date_from
@@ -139,12 +141,13 @@ def get_chat_response(system_prompt, user_query):
     return strip_think_tags(response.json()["message"]["content"])
 
 def date_string_to_numeric(date_str):
-    if not date_str:
+    if date_str is None or (isinstance(date_str, str) and not date_str.strip()):
         return None
     try:
-        return int(date_str.replace("-", ""))
-    except ValueError:
-        return None
+        parsed = datetime.date.fromisoformat(date_str)
+    except (TypeError, ValueError):
+        raise ValueError("Dates must use YYYY-MM-DD format")
+    return int(parsed.strftime("%Y%m%d"))
 
 @api_view(["POST"])
 @throttle_classes([ChatbotRateThrottle])
@@ -161,10 +164,16 @@ def chat_with_advisor_bot(request):
     """
     user_query = request.data.get("query")
     funds = request.data.get("funds", [])
-    date_from = date_string_to_numeric(request.data.get("date_from"))
-    date_to = date_string_to_numeric(request.data.get("date_to"))
     if not user_query:
         return JsonResponse({"error": "Query is required"}, status=400)
+
+    try:
+        date_from = date_string_to_numeric(request.data.get("date_from"))
+        date_to = date_string_to_numeric(request.data.get("date_to"))
+    except ValueError as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+    if date_from is not None and date_to is not None and date_from > date_to:
+        return JsonResponse({"error": "The start date cannot be later than the end date."}, status=400)
 
     # Session timeout check
     session_expired = not bool(request.session.get("active"))

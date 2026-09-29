@@ -68,7 +68,7 @@
             </div>
 
             <div class="selector-group">
-                <label>Date range</label>
+                <label>Date range (optional)</label>
                 <div style="display:flex; gap:6px; justify-content:center;">
                     <input type="date" id="date-from" style="padding:6px; border-radius:6px; border:none; font-size:0.85em;">
                     <input type="date" id="date-to" style="padding:6px; border-radius:6px; border:none; font-size:0.85em;">
@@ -126,12 +126,7 @@
         const dateFrom = document.getElementById('date-from').value;
         const dateTo = document.getElementById('date-to').value;
 
-        if (!dateFrom || !dateTo) {
-            addMessage("Please select a date range first.", 'bot-msg');
-            return;
-        }
-
-        if (dateFrom > dateTo) {
+        if (dateFrom && dateTo && dateFrom > dateTo) {
             addMessage("The start date cannot be later than the end date.", 'bot-msg');
             return;
         }
