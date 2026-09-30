@@ -78,6 +78,7 @@ class OCR():
         """
         self.output = output
         self.gpu = gpu
+        self.pipelineV3 = None
 
 
     def initiate_model_v3(self):
