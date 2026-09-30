@@ -326,7 +326,7 @@ class OCR():
             res.save_to_json(str(page_json_path))
 
             low_conf = self.calc_ocr_confidence(res)
-            self.print_format(f"Page {page_num} Low Confidence: {low_conf}")
+            self.print_format(f"Page {page_num} | Low Confidence: {low_conf}")
 
             vlm_success = False
 
