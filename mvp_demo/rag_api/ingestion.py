@@ -35,30 +35,71 @@ PARENT_METADATA_CHARS = 1500
 LEAF_METADATA_CHARS = 800
 
 
+# A page yielding less than this is treated as having no usable text layer.
+# Matches the threshold the OCR module used before its rewrite.
+MIN_CHARS_PER_PAGE = 50
+
+
+def _text_is_adequate(text, page_count):
+    """Whether pdfplumber got enough out of the PDF to be worth keeping."""
+    if page_count <= 0:
+        return bool(text and text.strip())
+    return len((text or "").strip()) >= MIN_CHARS_PER_PAGE * page_count * 0.1
+
+
 def _extract_text(pdf_path):
     """
-    Get text out of a PDF, preferring OCR for scanned documents.
+    Get text out of a PDF, using OCR only when the text layer is inadequate.
 
-    ocr_solution imports paddleocr, pymupdf, chonkie and ollama at module
-    level, none of which are guaranteed to be installed - the README treats
-    PaddleOCR as a separate manual step. So OCR is optional: when it is
-    unavailable, or the PDF already has a text layer, pdfplumber handles it.
+    Extraction runs first and OCR is the fallback, rather than the other way
+    round. That ordering matters on two counts: OCR costs minutes per document
+    on this hardware, and it replaces the whole document, so running it on a
+    file that is 90% cleanly extractable trades good text for OCR output to
+    recover one page.
+
+    ocr_solution imports paddleocr, pymupdf, chonkie and ollama at module level,
+    none of which are guaranteed to be installed, so OCR stays optional and a
+    missing package means pdfplumber alone.
     """
+    plain = extract_text_with_tables(str(pdf_path))
+
+    try:
+        import pdfplumber
+        with pdfplumber.open(str(pdf_path)) as pdf:
+            page_count = len(pdf.pages)
+    except Exception:
+        page_count = 0
+
+    if _text_is_adequate(plain, page_count):
+        return plain
+
+    logger.info("Text layer is thin (%d chars over %d pages); trying OCR",
+                len((plain or "").strip()), page_count)
+
     try:
         from ocr_solution import OCR
     except Exception as exc:
-        logger.info("OCR unavailable (%s); using pdfplumber", exc.__class__.__name__)
-        return extract_text_with_tables(str(pdf_path))
+        logger.info("OCR unavailable (%s); using what pdfplumber found",
+                    exc.__class__.__name__)
+        return plain
 
     try:
+        from pathlib import Path
         ocr = OCR()
-        if not ocr.determine_if_OCR(pdf_path):
-            return extract_text_with_tables(str(pdf_path))
-        text = ocr.output_document(pdf_path)
-        return text or extract_text_with_tables(str(pdf_path))
+        # cleanup=False: the cleanup pass sends every chunk to a language model,
+        # which on a CPU-only host costs minutes per chunk for a tidier result
+        # that retrieval does not need.
+        text = ocr.output_document(Path(pdf_path), False)
+        if text and text.strip():
+            logger.info("OCR produced %d characters for %s",
+                        len(text.strip()), getattr(pdf_path, "name", pdf_path))
+            return text
+        logger.warning("OCR returned nothing; using what pdfplumber found")
+        return plain
     except Exception:
-        logger.warning("OCR failed, falling back to pdfplumber:\n%s", traceback.format_exc())
-        return extract_text_with_tables(str(pdf_path))
+        logger.warning("OCR failed, using what pdfplumber found:\n%s",
+                       traceback.format_exc())
+        return plain
 
 
 def ingest_document(document_id):
