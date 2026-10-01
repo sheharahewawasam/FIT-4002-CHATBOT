@@ -10,6 +10,16 @@ import json
 
 # from langchain_text_splitters import MarkdownTextSplitter
 
+# Model names come from the environment so a host can run what it actually has.
+# The VM has qwen3-vl:2b, chosen because vision inference there runs on two CPU
+# cores; a larger variant does not fit alongside the application's own models.
+# "qwen3.8" below was almost certainly a typo for qwen3:8b and is kept as the
+# default only so behaviour does not change silently for whoever wrote it.
+VLM_MODEL = os.getenv("OLLAMA_VLM_MODEL", "qwen3-vl")
+TEXT_MODEL = os.getenv("OLLAMA_MODEL", "qwen3")
+CLEANUP_MODEL = os.getenv("OLLAMA_CLEANUP_MODEL", "qwen3.8")
+
+
 class OCR():
     CONF_SCORE = 0.85
     LOW_CONF_RATIO = 0.15
@@ -215,7 +225,7 @@ class OCR():
         while tries > 0:
             try:
                 response = chat(
-                    model='qwen3-vl',
+                    model=VLM_MODEL,
                     messages=[
                         {
                             'role': 'user',
@@ -265,7 +275,7 @@ class OCR():
         img_bytes = img_bytes.getvalue()
 
         response = chat(
-            model='qwen3-vl',
+            model=VLM_MODEL,
             messages=[
                 {
                     'role': 'user',
@@ -391,7 +401,7 @@ class OCR():
         :return: chunk chosen by LLM with the best meaning
         """
         response = generate(
-            model="qwen3",
+            model=TEXT_MODEL,
             prompt=self.REASONING_PROMPT + prompt,
             think=False,
             stream=False
@@ -408,7 +418,7 @@ class OCR():
         :return: cleaned OCR output
         """
         response = generate(
-            model="qwen3.8",
+            model=CLEANUP_MODEL,
             prompt=self.CLEANING_PROMPT + prompt,
             think=False,
             stream=False
