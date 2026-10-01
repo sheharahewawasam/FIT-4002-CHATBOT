@@ -17,7 +17,7 @@
 ## Ollama guide
 
 1. Install Ollama
-2. Pull wjatever the models used in views.py into ollama
+2. Pull whatever the models used in views.py into ollama
 
 ## PaddleOCR Guide
 

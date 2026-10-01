@@ -1,17 +1,3 @@
-from chunking.toc_filter import (
-    _TOC_ENTRY_RE,
-    _TOC_DOTTED_LINE_RE,
-    _TOC_TRAILING_PAGE_RE,
-    _TOC_TITLE_RE,
-    _TOC_PAGE_RE,
-    _body_block_start,
-    _find_toc_region_end,
-    _has_body_text_after,
-    _normalise_toc_label,
-    _toc_entry_label,
-    looks_like_toc_line,
-    remove_toc_regions
-)
 import os
 import re
 import hashlib
@@ -19,6 +5,7 @@ import pdfplumber
 import json
 import warnings
 from dotenv import load_dotenv
+import difflib
 from pinecone import Pinecone, ServerlessSpec
 from pinecone_text.sparse import BM25Encoder
 from sentence_transformers import SentenceTransformer
@@ -26,19 +13,15 @@ from datetime import datetime
 
 
 from ocr_solution import OCR
-from chunking.extraction import (
-    clean_preserve_structure, extract_text_with_tables, _table_text_is_redundant,
-)
 from pathlib import Path
-from chunking.header_chunking import (
-    build_header_based_chunks, build_section_based_chunks,
-    split_into_sections, is_heading_line, trim_to_sentence_boundary,
-    _MIN_HEADINGS_FOR_STRUCTURE, _MIN_PARAGRAPHS_FOR_FALLBACK,
+from chunking.toc_filter import (
+    remove_toc_regions
 )
-from chunking.toc_filter import section_toc
+from chunking.header_chunking import (
+    build_header_based_chunks
+)
 from chunking.layout_chunking import (
-    is_layout_output, normalise_ocr_output, build_layout_snapshot,
-    build_layout_aware_chunks,
+    is_layout_output, normalise_ocr_output, build_layout_snapshot, has_table_markup,
 )
 
 load_dotenv("secrets.env")
@@ -55,10 +38,10 @@ def parse_document_date(date_str, fmt="%d %B %Y"):
     """
     Return (display, numeric) for a document date, or (None, None) if unknown.
 
-    Most entries below have no verified date yet. An unknown date must stay
-    unknown: stamping a placeholder makes every document look like it was
-    written on the same day, and a date-range filter built on that silently
-    returns the wrong documents rather than none.
+    Most rows below have no verified date. An unknown date must stay unknown:
+    a placeholder makes every document look written on the same day, and a
+    date-range filter built on that returns the wrong documents rather than
+    none.
     """
     if not date_str:
         return None, None
@@ -92,9 +75,64 @@ pdfs_to_process = [
     {"filepath": "../pdfs/Unsigned 2024 Annual Return.pdf",                                                                                  "fund_name": "Darto Super Fund",                   "doc_type": "SMSF Annual Return",                    "date": None},
     {"filepath": "../pdfs/Powell - SMSF Investment Strategy 2020.pdf",                                                                       "fund_name": "Powell Superannuation Fund",         "doc_type": "Investment Strategy",                   "date": None},
     {"filepath": "../pdfs/Powell SF - Amended Trust Deed 27.04.2020.pdf",                                                                    "fund_name": "Powell Superannuation Fund",         "doc_type": "Trust Deed",                            "date": "27 April 2020"},
+    {"filepath": "../pdfs/atoform.pdf",                                                                                                      "fund_name": "General",                            "doc_type": "ATO Form",                              "date": None,}
 ]
 
 # Cleans extracted PDF text without destroying the document structure
+def clean_preserve_structure(text):
+    lines = text.split("\n")
+    cleaned_lines = [" ".join(line.split()) for line in lines] 
+    result_lines = []
+    blank_run = 0
+    # Removes excessive empty lines 
+    for line in cleaned_lines:
+        if line == "":
+            blank_run += 1
+            if blank_run <= 1:
+                result_lines.append("")
+        else:
+            blank_run = 0
+            result_lines.append(line)
+    return "\n".join(result_lines).strip()
+
+# Returns a unique set of words or numbers that are at least 3 characters long and converted to lowercase
+def _extract_words(text):
+    return set(re.findall(r"[A-Za-z0-9]{3,}", text.lower()))
+
+# Check whether the table text has already been captured in the normal page text.
+# If at least 60% of the table's words are found in the page text, treat it as redundant.
+def _table_text_is_redundant(page_text, table_text, overlap_threshold=0.6):
+    page_words = _extract_words(page_text)
+    table_words = _extract_words(table_text)
+    if not table_words:
+        return True
+    overlap = len(table_words & page_words) / len(table_words)
+    return overlap >= overlap_threshold
+
+
+def extract_text_with_tables(pdf_path):
+    all_pages = []
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            page_text = page.extract_text() or ""
+            table_parts = []
+            for table in (page.extract_tables() or []):
+                rows = []
+                for row in (table or []):
+                    if row:
+                        cells = [str(c).strip() if c is not None else "" for c in row]
+                        if any(cells):
+                            rows.append(" | ".join(cells))
+                if rows:
+                    table_parts.append("\n".join(rows))
+            if table_parts:
+                combined_tables = "\n\n".join(table_parts)
+                if not _table_text_is_redundant(page_text, combined_tables):
+                    page_text += "\n" + combined_tables
+            if page_text.strip():
+                all_pages.append(clean_preserve_structure(page_text))
+    return "\n\n".join(all_pages)
+
 def extract_document_content(pdf_path, ocr=None):
     """Accept existing text output or a validated layout JSON response.
 
@@ -104,7 +142,7 @@ def extract_document_content(pdf_path, ocr=None):
     try:
         if ocr is None:
             ocr = OCR()
-        result = ocr.output_document(Path(pdf_path))
+        result = ocr.output_document(Path(pdf_path), cleanup=False)
     except Exception as exc:
         warnings.warn(f"OCR failed for {pdf_path}: {exc}; trying PDF text extraction.")
         return extract_text_with_tables(pdf_path)
@@ -152,6 +190,24 @@ def save_chunk_snapshot(pdf_path, full_text, entries, rejected_chunks, layout_sn
     }, ensure_ascii=False, indent=2), encoding="utf-8")
     return target
 
+def combine_text(ocr_string, pdf_string) -> str:
+    """
+    Combines two different strings into one string, removing duplicate words
+    """
+    s = difflib.SequenceMatcher(None, ocr_string, pdf_string)
+    merged_chunks = []
+
+    for tag, i1, i2, j1, j2 in s.get_opcodes():
+        if tag == 'equal':
+            merged_chunks.append(ocr_string[i1:i2])
+        elif tag == 'delete':
+            merged_chunks.append(ocr_string[i1:i2])
+        elif tag in ('insert', 'replace'):
+            merged_chunks.append(pdf_string[j1:j2])
+
+    result = "".join(merged_chunks)
+
+    return result
 
 def main():
     pc = Pinecone(api_key=PINECONE_API_KEY)
@@ -188,7 +244,9 @@ def main():
         print(f"  {pdf_info['filepath']}...", end=" ", flush=True)
         try:
             # Optional sidecar lets you test/use saved OCR without changing OCR().
-            if pdf_info.get("ocr_json_path"):
+            if pdf_info.get("selected_text_path"):
+                document_content = Path(pdf_info["selected_text_path"]).read_text(encoding="utf-8-sig")
+            elif pdf_info.get("ocr_json_path"):
                 document_content = json.loads(Path(pdf_info["ocr_json_path"]).read_text(encoding="utf-8-sig"))
             else:
                 document_content = extract_document_content(pdf_info["filepath"], ocr=ocr)
@@ -214,7 +272,7 @@ def main():
         rejected_chunks = []
         layout_snapshot = None
         try:
-            if is_layout_output(document_content):
+            if is_layout_output(document_content) or has_table_markup(document_content):
                 layout_snapshot = build_layout_snapshot(
                     document_content, base_metadata,
                     toc_filter=remove_toc_regions,
@@ -254,7 +312,7 @@ def main():
 
         # Layout IDs include block occurrence: identical answers on different pages
         # must not overwrite each other. Retain legacy IDs for existing text chunks.
-        if entry.get("chunking_method") == "layout_aware":
+        if entry.get("chunking_method") in {"layout_aware", "markdown_structure"}:
             doc_id = hashlib.sha256(
                 (entry["source_url"] + "::" + entry["chunk_id"]).encode("utf-8")
             ).hexdigest()
@@ -275,20 +333,21 @@ def main():
         if entry.get("date") is not None:
             metadatas[-1]["date"] = entry["date"]
             metadatas[-1]["date_numeric"] = entry["date_numeric"]
-        if entry.get("chunking_method") == "layout_aware":
+        if entry.get("chunking_method") in {"layout_aware", "markdown_structure"}:
             # Keep only scalar/list-of-string metadata in Pinecone. Full bbox
             # objects remain in snapshots; they are not embedding input.
             for key in ("chunking_method", "section_title", "parent_id", "chunk_id",
                         "page_start", "page_end", "parent_page_start", "parent_page_end",
                         "block_ids", "oversized_child"):
-                metadatas[-1][key] = entry[key]
+                if key in entry and entry[key] is not None:
+                    metadatas[-1][key] = entry[key]
             metadatas[-1]["layout_sources_json"] = json.dumps(entry["layout_sources"])
 
 
     # Atomic form/table units can exceed the soft character budget. Fail explicitly
     # instead of letting the embedding model silently truncate important values.
     for entry in all_entries:
-        if entry.get("chunking_method") == "layout_aware":
+        if entry.get("chunking_method") in {"layout_aware", "markdown_structure"}:
             token_ids = embedder.tokenizer(entry["leaf_text"], truncation=False)["input_ids"]
             if len(token_ids) > embedder.max_seq_length:
                 raise ValueError(
