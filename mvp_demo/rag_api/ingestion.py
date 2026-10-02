@@ -17,6 +17,7 @@ Two deliberate differences from the bulk script:
 """
 import hashlib
 import logging
+import os
 import threading
 import traceback
 
@@ -34,6 +35,13 @@ UPSERT_BATCH_SIZE = 100
 PARENT_METADATA_CHARS = 1500
 LEAF_METADATA_CHARS = 800
 
+
+# OCR is a local-development feature. On the client VM it is off: the layout
+# pipeline crashes on that host's paddlepaddle build, and the vision model needs
+# about 5.4GB resident, which the kernel OOM-killed alongside the application's
+# own 1.6GB of models on a 7.8GB box. Left merely uninstalled it would come back
+# the moment somebody ran pip install, so the intent is stated here instead.
+OCR_ENABLED = os.getenv("OCR_ENABLED", "true").lower() in ("1", "true", "yes")
 
 # A page yielding less than this is treated as having no usable text layer.
 # Matches the threshold the OCR module used before its rewrite.
@@ -71,6 +79,12 @@ def _extract_text(pdf_path):
         page_count = 0
 
     if _text_is_adequate(plain, page_count):
+        return plain
+
+    if not OCR_ENABLED:
+        logger.info("Text layer is thin (%d chars over %d pages) but OCR is "
+                    "disabled on this host; using what pdfplumber found",
+                    len((plain or "").strip()), page_count)
         return plain
 
     logger.info("Text layer is thin (%d chars over %d pages); trying OCR",
