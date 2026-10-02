@@ -3,11 +3,6 @@ from pathlib import Path
 from ocr_solution import OCR
 import difflib
 
-# ocr_tests = Path("./testing/ocr_test_files")
-
-# ocr = OCR(Path("./testing"),False)
-# ocr.initiate_model_v3()
-
 def precision_recall_test(actual: str, predicted: str) -> dict:
     """
     Performs a precision and recall test for an OCR prediction
@@ -67,6 +62,11 @@ def character_error_rate(actual: str, predicted: str) -> int:
     return edit_distance / n if n > 0 else 0.0
 
 def run_ocr_test():
+    ocr_tests = Path("./testing/ocr_test_files")
+
+    ocr = OCR(Path("./testing"),False)
+    ocr.initiate_model_v3()
+
     for file in ocr_tests.iterdir():
         if file.is_file() and file.suffix == '.json':
             with open(file, encoding='utf-8-sig') as f:

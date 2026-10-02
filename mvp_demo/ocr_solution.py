@@ -226,8 +226,9 @@ class OCR():
                     format='json',
                     think=False,
                     options={
-                        'num_ctx': 16384,
+                        'num_ctx': 16386,
                         'num_predict': -1,
+                        'num_gpu': 0,
                     }
                 )
 
@@ -249,7 +250,6 @@ class OCR():
             self.print_format("VLM failed after all retries, returning empty blocks")
             return '{"blocks": []}'
 
-        print(response)
         return response['message']['content']
 
 
