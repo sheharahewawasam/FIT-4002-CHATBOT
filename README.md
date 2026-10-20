@@ -26,6 +26,7 @@
 ```
 python -m pip install paddlepaddle==3.3.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
 ```
+- ensure Python interpreter matches versions required by paddlepaddle
 
 2. Install PaddleOCR
 

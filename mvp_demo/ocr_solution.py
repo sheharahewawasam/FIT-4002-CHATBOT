@@ -183,6 +183,10 @@ class OCR():
         end = time.perf_counter()
         print(f"Execution time: {end-start} secs")
 
+        # log execution time
+        with open(self.output / "ocr_log.txt", "a", encoding="utf-8") as log:
+            log.write(f"  Execution time: {end - start:.2f} secs (cleanup={cleanup})\n\n")
+
         return res
 
 
@@ -316,6 +320,9 @@ class OCR():
         doc = pymu.open(pdf_path)
         markdown_list = []
 
+        vlm_pages = []  # LOG
+        ocr_pages = []  # LOG
+
         mkd_file_path = self.output / f"{Path(input_file).stem}_{str(threshold)}.md"
         mkd_file_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -371,12 +378,20 @@ class OCR():
                 md_info["markdown_texts"] = md_info.get("markdown_texts", "") + f"\n\nPage: {page_num}"
                 markdown_list.append(md_info)
 
+            (vlm_pages if vlm_success else ocr_pages).append(page_num)
+
+        total_pages = len(doc)
         doc.close()
 
-        markdown_texts = self.pipelineV3.concatenate_markdown_pages(markdown_list).get("markdown_texts")
+        with open(self.output / "ocr_log.txt", "a", encoding="utf-8") as log:
+            log.write(
+                f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] File: {pdf_path.name}\n"
+                f"  Pages: {total_pages}\n"
+                f"  VLM pages ({len(vlm_pages)}): {vlm_pages}\n"
+                f"  OCR pages ({len(ocr_pages)}): {ocr_pages}\n"
+            )
 
-        # with open(mkd_file_path, "w", encoding="utf-8") as f:
-        #     f.write(markdown_texts)
+        markdown_texts = self.pipelineV3.concatenate_markdown_pages(markdown_list).get("markdown_texts")
 
         return markdown_texts
 
