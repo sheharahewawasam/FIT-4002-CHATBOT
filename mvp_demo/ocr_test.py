@@ -3,6 +3,74 @@ from pathlib import Path
 from ocr_solution import OCR
 import difflib
 
+def ocr_test(
+    self,
+    pdf_path: Path,
+    threshold: float,
+    layout_nms: bool = True,
+    table_rec: bool = True,
+    formula_rec: bool = True,
+    doc_orientation_classify: bool = True,
+    doc_unwarping: bool = True,
+    region_detection: bool = True,
+    textline_orientation: bool = False,
+    layout_unclip_ratio: float = 1.0,
+    layout_merge_bboxes_mode: str | float | None = None,
+) -> str:
+    """
+    OCR testing function.
+
+    :param pdf_path: Path object of PDF to process
+    :param threshold: layout detection score threshold (0-1). Higher = stricter,
+        may drop valid regions
+    :param layout_nms: apply Non-Maximum Suppression to layout detection
+    :param table_rec: enable table structure recognition
+    :param formula_rec: enable formula/LaTeX recognition
+    :param doc_orientation_classify: detect and correct whole-page rotation
+    :param doc_unwarping: correct perspective/curvature distortion
+    :param region_detection: enable macro region grouping pass
+    :param textline_orientation: detect rotated individual text lines
+    :param layout_unclip_ratio: expand/shrink detected layout boxes (>0, default 1.0)
+    :param layout_merge_bboxes_mode: overlapping-box merge strategy for layout detection
+    :return: string with prediction result
+    """
+    ocr_model = PPStructureV3(
+        text_recognition_model_name="en_PP-OCRv4_mobile_rec",
+        device = "gpu" if self.gpu else "cpu",
+    )
+
+    if not pdf_path.is_file():
+        return
+
+    if not 0 <= threshold <= 1:
+        return
+
+    input_file = str(pdf_path)
+
+    output = ocr_model.predict(
+        input=str(input_file),
+        layout_threshold=threshold,
+        layout_nms=layout_nms,
+        layout_unclip_ratio=layout_unclip_ratio,
+        layout_merge_bboxes_mode=layout_merge_bboxes_mode,
+        use_table_recognition=table_rec,
+        use_formula_recognition=formula_rec,
+        use_doc_orientation_classify=doc_orientation_classify,
+        use_doc_unwarping=doc_unwarping,
+        use_region_detection=region_detection,
+        use_textline_orientation=textline_orientation,
+    )
+
+    markdown_list = []
+
+    for res in output:
+        markdown_list.append(res.markdown)
+
+    markdown_texts = self.pipelineV3.concatenate_markdown_pages(markdown_list).get("markdown_texts")
+
+    return markdown_texts
+
+
 def precision_recall_test(actual: str, predicted: str) -> dict:
     """
     Performs a precision and recall test for an OCR prediction

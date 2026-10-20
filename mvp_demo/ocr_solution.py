@@ -181,7 +181,7 @@ class OCR():
             f.write(res)
 
         end = time.perf_counter()
-        self.print_format(f"Execution time: {end-start} secs")
+        print(f"Execution time: {end-start} secs")
 
         return res
 
@@ -209,13 +209,13 @@ class OCR():
         img = page.get_pixmap(dpi=200)
         image_bytes = img.tobytes("png")
 
-        tries = 2
+        tries = 1
         response = None
 
         while tries > 0:
             try:
                 response = chat(
-                    model='qwen3-vl',
+                    model='qwen3-vl:latest',
                     messages=[
                         {
                             'role': 'user',
@@ -226,28 +226,26 @@ class OCR():
                     format='json',
                     think=False,
                     options={
-                        'num_ctx': 16386,
+                        'num_ctx': 16384,
                         'num_predict': -1,
-                        'num_gpu': 0,
                     }
                 )
 
                 if response.get('done_reason') != 'stop':
-                    self.print_format(
-                        f"VLM finished with done_reason={response.get('done_reason')!r}, "
-                        f"output may be truncated"
+                    print(
+                        f"    VLM finished with done_reason={response.get('done_reason')!r} output may be truncated"
                     )
 
                 break  # success - stop retrying
 
             except Exception as e:
                 tries -= 1
-                self.print_format(f"Ollama error: {e}. Retrying ({tries} attempt(s) left)")
+                print(f"    Ollama error: {e}. Retrying ({tries} attempt(s) left)")
                 if tries > 0:
                     time.sleep(2)
 
         if response is None:
-            self.print_format("VLM failed after all retries, returning empty blocks")
+            print("    VLM failed after all retries, returning empty blocks")
             return '{"blocks": []}'
 
         return response['message']['content']
@@ -299,7 +297,7 @@ class OCR():
         if not 0 <= threshold <= 1:
             return
 
-        self.print_format(f"Currently analysing {pdf_path.name}")
+        print(f"Analysing {pdf_path.name}")
 
         input_file = str(pdf_path)
 
@@ -322,11 +320,11 @@ class OCR():
         mkd_file_path.parent.mkdir(parents=True, exist_ok=True)
 
         for page_num, res in enumerate(output):
-            page_json_path = self.output / f"{Path(input_file).stem}_{threshold}_page{page_num}.json"
+            page_json_path = self.output / f"ocr_confidence" / f"{Path(input_file).stem}_{threshold}_page{page_num}.json"
             res.save_to_json(str(page_json_path))
 
             low_conf = self.calc_ocr_confidence(res)
-            self.print_format(f"Page {page_num} | Low Confidence: {low_conf}")
+            print(f"  Page {page_num} | Low Confidence: {low_conf}")
 
             vlm_success = False
 
@@ -339,7 +337,7 @@ class OCR():
                     raw_blocks = vlm_data.get("blocks", [])
                     blocks = [self.clean_json(b) for b in raw_blocks]
                 except (json.JSONDecodeError, TypeError):
-                    self.print_format(f"Failed to parse VLM JSON on page {page_num}, falling back to raw text")
+                    print(f"    Failed to parse VLM JSON on page {page_num}, falling back to raw text")
                     blocks = [vlm_res] if vlm_res else []
 
                 page_text = "\n\n".join(blocks)
@@ -377,8 +375,8 @@ class OCR():
 
         markdown_texts = self.pipelineV3.concatenate_markdown_pages(markdown_list).get("markdown_texts")
 
-        with open(mkd_file_path, "w", encoding="utf-8") as f:
-            f.write(markdown_texts)
+        # with open(mkd_file_path, "w", encoding="utf-8") as f:
+        #     f.write(markdown_texts)
 
         return markdown_texts
 
@@ -442,80 +440,6 @@ class OCR():
         return str(block)
 
 
-    def ocr_test(
-        self,
-        pdf_path: Path,
-        threshold: float,
-        layout_nms: bool = True,
-        table_rec: bool = True,
-        formula_rec: bool = True,
-        doc_orientation_classify: bool = True,
-        doc_unwarping: bool = True,
-        region_detection: bool = True,
-        textline_orientation: bool = False,
-        layout_unclip_ratio: float = 1.0,
-        layout_merge_bboxes_mode: str | float | None = None,
-    ) -> str:
-        """
-        OCR testing function.
-
-        :param pdf_path: Path object of PDF to process
-        :param threshold: layout detection score threshold (0-1). Higher = stricter,
-            may drop valid regions
-        :param layout_nms: apply Non-Maximum Suppression to layout detection
-        :param table_rec: enable table structure recognition
-        :param formula_rec: enable formula/LaTeX recognition
-        :param doc_orientation_classify: detect and correct whole-page rotation
-        :param doc_unwarping: correct perspective/curvature distortion
-        :param region_detection: enable macro region grouping pass
-        :param textline_orientation: detect rotated individual text lines
-        :param layout_unclip_ratio: expand/shrink detected layout boxes (>0, default 1.0)
-        :param layout_merge_bboxes_mode: overlapping-box merge strategy for layout detection
-        :return: string with prediction result
-        """
-        ocr_model = PPStructureV3(
-            text_recognition_model_name="en_PP-OCRv4_mobile_rec",
-            device = "gpu" if self.gpu else "cpu",
-        )
-
-        if not pdf_path.is_file():
-            return
-
-        if not 0 <= threshold <= 1:
-            return
-
-        input_file = str(pdf_path)
-
-        output = ocr_model.predict(
-            input=str(input_file),
-            layout_threshold=threshold,
-            layout_nms=layout_nms,
-            layout_unclip_ratio=layout_unclip_ratio,
-            layout_merge_bboxes_mode=layout_merge_bboxes_mode,
-            use_table_recognition=table_rec,
-            use_formula_recognition=formula_rec,
-            use_doc_orientation_classify=doc_orientation_classify,
-            use_doc_unwarping=doc_unwarping,
-            use_region_detection=region_detection,
-            use_textline_orientation=textline_orientation,
-        )
-
-        markdown_list = []
-
-        for res in output:
-            markdown_list.append(res.markdown)
-
-        markdown_texts = self.pipelineV3.concatenate_markdown_pages(markdown_list).get("markdown_texts")
-
-        return markdown_texts
-
-
-    def print_format(self, text: str):
-        print("------------------------------------------------------")
-        print(text)
-        print("------------------------------------------------------")
-
-
 if __name__ == "__main__":
     ocr = OCR(Path("./ocr_output"), False)
 
@@ -525,11 +449,11 @@ if __name__ == "__main__":
 
     # input_file = Path("./pdfs/image-based-pdf-sample_rotated.pdf")
 
-    # input_file = Path("./pdfs/atoform.pdf")
+    input_file = Path("../pdfs/atoform.pdf")
 
     # input_file = Path("./pdfs/Investment Strategy.pdf")
 
-    input_file = Path("./pdfs/Signed_2023_Annual_Return_NOT_AUDITED[1]_unlocked.pdf")
+    # input_file = Path("./pdfs/Signed_2023_Annual_Return_NOT_AUDITED[1]_unlocked.pdf")
 
 
     ocr.output_document(input_file, False)
