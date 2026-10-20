@@ -1,0 +1,12 @@
+# Scripts that run on the VM must keep LF endings. Checked out with CRLF, a
+# shell script fails at the shebang with "bad interpreter: /bin/bash^M", and a
+# systemd unit or nginx config silently carries stray carriage returns into
+# values - which is how a CRLF secrets.env once produced an "Invalid
+# non-printable ASCII character in URL" from a perfectly correct API key.
+*.sh            text eol=lf
+*.service       text eol=lf
+*.conf          text eol=lf
+*.yaml          text eol=lf
+*.yml           text eol=lf
+secrets.env*    text eol=lf
+*.env.template  text eol=lf

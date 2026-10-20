@@ -1,40 +1,41 @@
 import os
+import logging
+import uuid
 import re
 import hashlib
+import json
 import requests
 import datetime
 import textwrap
 
 from django.http import JsonResponse
 from django.utils import timezone
-from django.conf import settings
-from dotenv import load_dotenv
-from pinecone import Pinecone
-from pinecone_text.sparse import BM25Encoder
-from sentence_transformers import SentenceTransformer, CrossEncoder
 from rest_framework.decorators import api_view, throttle_classes
-from rest_framework.throttling import AnonRateThrottle
+from rest_framework.throttling import UserRateThrottle
 
-"""
-This is the main heart of our program, it basically contains every pipeline and part of the working chatbot except ingestion and OCR
-"""
-load_dotenv("secrets.env")
+from . import resources
+from .models import Advisor
+from .sources import grant_for
 
-PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")
-BM25_ENCODER_PATH = os.getenv("BM25_ENCODER_PATH","bm25_encoder.json")
+logger = logging.getLogger(__name__)
 
-pc = Pinecone(api_key=PINECONE_API_KEY)
-index = pc.Index(PINECONE_INDEX_NAME)
-_bm25 = BM25Encoder().load(BM25_ENCODER_PATH)
+# Shared with the ingestion path so the BGE models are loaded once, not
+# twice. Aliased so the rest of this module reads unchanged.
+index = resources.index
+_bm25 = resources.bm25
+_embedder = resources.embedder
+_reranker = resources.reranker
 
-# Both models loaded once at startup — reused across all requests
-#To change the embedding and reranker model, look here
-_embedder = SentenceTransformer("BAAI/bge-base-en-v1.5")
-_embedder.max_seq_length = 512
-_reranker = CrossEncoder("BAAI/bge-reranker-base", max_length=512)
+class ChatbotRateThrottle(UserRateThrottle):
+    """
+    Per-advisor rate limit on the chat endpoint.
 
-class ChatbotRateThrottle(AnonRateThrottle):
+    This was AnonRateThrottle, which returns no cache key for an authenticated
+    request - DRF reads that as "do not throttle". It was correct while the API
+    was open, and became a no-op the moment sign-in was required, because every
+    caller is now authenticated. UserRateThrottle keys on the user instead, and
+    still falls back to the IP for an anonymous caller.
+    """
     scope = "chatbot"
 
 # Simple in-memory cache — repeated identical queries return instantly
@@ -45,49 +46,117 @@ _THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
 
 
 def strip_think_tags(text: str) -> str:
-    """
-    The Qwen Model has some thinking tags that need stripping sometimes
-    """
     return _THINK_RE.sub("", text).strip()
 
 
-def perform_vector_search(query_embedding, user_query, filters, top_k=40, date_from=None, date_to=None):
+def build_access_filter(fund_names, owner_name):
+    """
+    Pinecone filter limiting results to what this advisor may see.
+
+    Visibility is "belongs to one of their funds" OR "they uploaded it".
+    Documents added by the bulk ingest script carry no owner, so they are
+    reachable only through the fund clause.
+
+    Returns None when there is nothing to match on at all, which the caller
+    treats as "no accessible documents" rather than querying unfiltered.
+    """
+    clauses = []
+    if fund_names:
+        clauses.append({"fund_name": {"$in": list(fund_names)}})
+    if owner_name:
+        clauses.append({"owner": {"$eq": owner_name}})
+
+    if not clauses:
+        return None
+    if len(clauses) == 1:
+        return clauses[0]
+    return {"$or": clauses}
+
+
+def permitted_funds(advisor, requested):
+    """
+    The funds this request may actually read.
+
+    `requested` is whatever the client asked for and carries no authority: it
+    narrows the advisor's own grant and can never widen it. Asking for a fund
+    they do not hold is not an error, it simply does not appear - so a caller
+    cannot probe which funds exist by watching for a different response.
+
+    Returns the advisor's full grant when nothing specific was asked for.
+    """
+    granted = set(advisor.fund_names())
+    if not requested:
+        return sorted(granted)
+    return sorted(granted & {str(f) for f in requested})
+
+
+def build_date_filter(access_filter, date_from, date_to):
+    """
+    Narrow an access filter to a document date range.
+
+    Only documents with a known date carry date_numeric, so a range filter
+    excludes undated ones. That is deliberate - see parse_document_date in
+    ingest.py - but it means a range must never be applied unasked.
+    """
+    bounds = {}
+    if date_from is not None:
+        bounds["$gte"] = date_from
+    if date_to is not None:
+        bounds["$lte"] = date_to
+    if not bounds:
+        return access_filter
+    clause = {"date_numeric": bounds}
+    if not access_filter:
+        return clause
+    return {"$and": [access_filter, clause]}
+
+
+def perform_vector_search(query_embedding, user_query, access_filter, top_k=40,
+                          date_from=None, date_to=None):
     """
     Pure vector search against Pinecone.
     Returns Pinecone match dicts: {"id", "score", "metadata": {...}}
     """
     sparse_vector = _bm25.encode_queries(user_query)
 
-    query_filter = {"fund_name": {"$in": filters}}
-
-    # An empty range keeps the fund filter only, including undated documents.
-    # With either bound supplied, Pinecone matches only dated documents in range.
-    date_condition = {}
-    if date_from is not None:
-        date_condition["$gte"] = date_from
-    if date_to is not None:
-        date_condition["$lte"] = date_to
-    if date_condition:
-        query_filter["date_numeric"] = date_condition
-
-    query_args = {
+    query_kwargs = {
         "vector": query_embedding,
         "top_k": top_k,
         "include_metadata": True,
-        "filter": query_filter,
     }
 
-    if (sparse_vector and sparse_vector.get("indices") and sparse_vector.get("values")):
-        query_args["sparse_vector"] = sparse_vector
+    # Pinecone rejects a sparse vector with no indices, which happens when the
+    # question contains no term the BM25 encoder was fitted on. Dense-only is a
+    # worse search than hybrid, but it is a search rather than a 400.
+    if sparse_vector and sparse_vector.get("indices") and sparse_vector.get("values"):
+        query_kwargs["sparse_vector"] = sparse_vector
     else:
-        print(
-            f"[BM25] Empty sparse vector for query {user_query!r}. "
-            f"Falling back to dense-only search."
-        )
+        logger.info("Empty BM25 sparse vector; falling back to dense-only search.")
 
-    results = index.query(**query_args)
-    
+    combined = build_date_filter(access_filter, date_from, date_to)
+    if combined:
+        query_kwargs["filter"] = combined
+
+    results = index.query(**query_kwargs)
     return results.get("matches", [])
+
+
+def date_string_to_numeric(date_str):
+    """
+    '2024-07-01' -> 20240701, matching the date_numeric written at ingest.
+
+    Parsed as a real date rather than by stripping hyphens: the old version
+    accepted '2024-13-45' and silently produced a number no document can match,
+    so a typo returned an empty answer instead of an error. A bad value now
+    raises and the caller reports it.
+    """
+    if date_str is None or (isinstance(date_str, str) and not date_str.strip()):
+        return None
+    try:
+        parsed = datetime.date.fromisoformat(str(date_str).strip())
+    except (TypeError, ValueError):
+        raise ValueError("Dates must use YYYY-MM-DD format.")
+    return int(parsed.strftime("%Y%m%d"))
 
 
 def rerank(query, chunks, top_k=5, score_threshold=0.0):
@@ -108,6 +177,12 @@ def rerank(query, chunks, top_k=5, score_threshold=0.0):
 
     ranked = sorted(zip(scores, chunks), key=lambda x: x[0], reverse=True)
 
+    # print("\n=== RERANKING RESULTS ===")
+    # for i, (score, chunk) in enumerate(ranked[:top_k]):
+    #     meta = chunk.get("metadata", {})
+    #     print(f"\nRank {i+1}  CrossEncoder score: {score:.4f}")
+    #     print((meta.get("child_match_text") or meta.get("text", ""))[:200])
+
     filtered = [(s, c) for s, c in ranked[:top_k] if s >= score_threshold]
 
     if not filtered:
@@ -117,14 +192,44 @@ def rerank(query, chunks, top_k=5, score_threshold=0.0):
 
     return [{"result": c, "rerank_score": float(s)} for s, c in filtered]
 
+# Ollama connection details. These were literals, which is how the app and
+# cloud-init.yaml drifted onto different models. Override per environment.
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/chat")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:1.7b")
+OLLAMA_TIMEOUT_SECONDS = int(os.getenv("OLLAMA_TIMEOUT_SECONDS", "120"))
+OLLAMA_THINK = os.getenv("OLLAMA_THINK", "true").lower() not in ("0", "false", "no")
+
+
 def get_chat_response(system_prompt, user_query):
     """
-    Makes an API call to the local server Ollama instance, its important that temperature is 0 so the model's responses are as standardized as possible
-    to change what model is used for response creation, look here.
+    Ask Ollama for an answer.
+
+    Model: qwen3:1.7b rather than qwen3 (8B). Measured on a CPU-only dev
+    machine with a ~1900 token context, the 8B generates at ~3.5 tok/s and
+    never finished inside the timeout; the 1.7b answers in seconds.
+
+    Thinking: ON. It was briefly disabled to save time, which was a mistake.
+    The saving was measured on a single simple question (21s vs 3s) and did
+    not generalise - across four questions the real cost is roughly 2x, or
+    3-7 seconds. The quality difference is large on compound questions:
+
+        "What is the deed date, and has it been updated since?"
+
+    where the deed date is in the context but the update history is not.
+    Without thinking the model refuses both halves, contradicting itself in
+    the process ("does not include the current deed date ... only mentions
+    the date of the deed as 21 January 2012"). With thinking it answers the
+    first half and correctly reports the second as unavailable. Advisers ask
+    compound questions, so the seconds are worth it.
+
+    Set OLLAMA_THINK=false to trade that quality back for latency.
+
+    strip_think_tags() is applied either way: older Ollama builds ignore the
+    flag, and this stops <think> markup leaking into the UI.
     """
-    url = "http://localhost:11434/api/chat"
     data = {
-        "model": "qwen3",
+        "model": OLLAMA_MODEL,
+        "think": OLLAMA_THINK,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_query}
@@ -132,82 +237,69 @@ def get_chat_response(system_prompt, user_query):
         "stream": False,
         "options": {
             "temperature": 0.0,
-            # 5 parent chunks × ~500 tokens each + system prompt overhead — 8192 avoids silent truncation
+            # 5 parent chunks x ~500 tokens each plus system prompt overhead.
             "num_ctx": 8192
         }
     }
-    response = requests.post(url, json=data, timeout=300)
+    response = requests.post(OLLAMA_URL, json=data, timeout=OLLAMA_TIMEOUT_SECONDS)
     response.raise_for_status()
     return strip_think_tags(response.json()["message"]["content"])
-
-def date_string_to_numeric(date_str):
-    if date_str is None or (isinstance(date_str, str) and not date_str.strip()):
-        return None
-    try:
-        parsed = datetime.date.fromisoformat(date_str)
-    except (TypeError, ValueError):
-        raise ValueError("Dates must use YYYY-MM-DD format")
-    return int(parsed.strftime("%Y%m%d"))
 
 @api_view(["POST"])
 @throttle_classes([ChatbotRateThrottle])
 def chat_with_advisor_bot(request):
-    """
-    This is the actual pipeline of the whole model, it basically receives a user query (a json object currently containing their query, what funds to look for, and the date range to look for)
-    it then makes sure that the user isn't requesting too many things
-    it then performs a vector search on the user's query,
-    deduplicates the results
-    reranks the results by relevancy
-    puts the results into the output context
-    then generates the answer
-    finally it outputs an audit log
-    """
     user_query = request.data.get("query")
-    funds = request.data.get("funds", [])
-    if not user_query:
-        return JsonResponse({"error": "Query is required"}, status=400)
 
+    # Identity is the signed-in session, never the request body. The body used
+    # to supply both the name and the fund list, so any caller could read any
+    # fund by naming it; the name is now ignored and the list only narrows.
+    advisor = getattr(request.user, "advisor", None)
+    if advisor is None:
+        return JsonResponse(
+            {"error": "This account is not set up as an advisor."}, status=403)
+
+    acting_user = advisor.name
+    funds = permitted_funds(advisor, request.data.get("funds", []))
     try:
         date_from = date_string_to_numeric(request.data.get("date_from"))
         date_to = date_string_to_numeric(request.data.get("date_to"))
     except ValueError as exc:
         return JsonResponse({"error": str(exc)}, status=400)
     if date_from is not None and date_to is not None and date_from > date_to:
-        return JsonResponse({"error": "The start date cannot be later than the end date."}, status=400)
+        return JsonResponse(
+            {"error": "The start date cannot be later than the end date."}, status=400)
+    if not user_query:
+        return JsonResponse({"error": "Query is required"}, status=400)
 
-    # Session timeout check
+    # Session timeout. SESSION_COOKIE_AGE expires the cookie, so a lapsed
+    # session arrives with no "active" flag and is treated as a new one.
     session_expired = not bool(request.session.get("active"))
-
-    last_active_str = request.session.get("last_active")
-
-    if last_active_str:
-        last_active_time = datetime.datetime.fromisoformat(last_active_str)
-        if timezone.is_naive(last_active_time):
-            last_active_time = timezone.make_aware(last_active_time)
-        elapsed = (timezone.now() - last_active_time).total_seconds()
-        print(f"[SESSION CHECK] Inactive for {elapsed:.1f}s  (session_expired={session_expired})")
-    else:
-        print(f"[SESSION CHECK] No prior activity recorded  (session_expired={session_expired})")
-
     request.session["active"] = True
     request.session["last_active"] = timezone.now().isoformat()
 
-    # Return cached result for repeated identical queries
-    selected_user = request.data.get("user")
+    # A new session starts with a clean slate: drop this user's cached answers
+    # so the first question after a timeout is actually re-run.
+    if session_expired and acting_user:
+        for stale in [k for k in _query_cache if f'"user": {json.dumps(acting_user)}' in k]:
+            del _query_cache[stale]
 
-    if session_expired:
-        keys_to_delete = [key for key in _query_cache if key[0] == selected_user]
-        for key in keys_to_delete:
-            del _query_cache[key]
-        print(f"[CACHE CLEARED] Cleared cache for user: {selected_user}")
-
-    cache_key = (selected_user, user_query.strip().lower(), tuple(sorted(funds)), date_from, date_to)
-    
+    # Cache per asker, not per question.
+    #
+    # The key used to be the question text alone, so two advisers asking the same
+    # thing shared one answer regardless of which documents each may see. That
+    # bypassed the access filter completely: an adviser could receive an answer
+    # built from another fund's documents simply by asking a question someone
+    # else had already asked.
+    cache_key = json.dumps({
+        "q": user_query.strip().lower(),
+        "user": acting_user,
+        "funds": sorted(funds),
+        "date_from": date_from,
+        "date_to": date_to,
+    }, sort_keys=True)
     if cache_key in _query_cache:
         print(f"Cache hit for: {cache_key}")
-        cached = dict(_query_cache[cache_key])
-        cached["session_expired"] = session_expired
-        return JsonResponse(cached)
+        return JsonResponse({**_query_cache[cache_key], "session_expired": session_expired})
 
     try:
         # 1. Embed query with BGE prefix (required for BGE retrieval quality)
@@ -216,11 +308,16 @@ def chat_with_advisor_bot(request):
         ).tolist()
 
         # 2. Vector search
-        raw_results = perform_vector_search(query_embedding, 
-                                            user_query, funds, 
-                                            top_k=60,
-                                            date_from=date_from,
-                                            date_to=date_to,)
+        access_filter = build_access_filter(funds, acting_user)
+        if access_filter is None:
+            return JsonResponse({
+                "answer": "Select a fund, or upload a document, before asking a question.",
+                "citations": [],
+                "session_expired": session_expired,
+            })
+
+        raw_results = perform_vector_search(query_embedding, user_query, access_filter,
+                                            top_k=60, date_from=date_from, date_to=date_to)
 
         # 3. Deduplicate — keep highest-scoring copy of each unique chunk
         best_by_hash = {}
@@ -255,13 +352,17 @@ def chat_with_advisor_bot(request):
 
         for i, item in enumerate(reranked):
             metadata = item["result"].get("metadata", {})
-            chunk_text = (metadata.get("text", "") or metadata.get("child_match_text", ""))
+            chunk_text = (metadata.get("text", "") or metadata.get("child_match_text", ""))[:1500]
             source_name = metadata.get("source_url", "Unknown")
             fund_name = metadata.get("fund_name", "Unknown")
             context_text += f"--- Source: {source_name} ({fund_name}) ---\n{chunk_text}\n\n"
             citations.append({
                 "source": source_name,
-                "fund": fund_name
+                "fund": fund_name,
+                # A signed grant, not a filename: the link works only for this
+                # advisor, so a citation cannot become a way to fetch another
+                # fund's documents by name.
+                "grant": grant_for(source_name, acting_user),
             })
 
         # print("\n=== RETRIEVED CHUNKS ===")
@@ -282,6 +383,13 @@ def chat_with_advisor_bot(request):
         Only say "I cannot find information about this in the provided documents" if the context contains
         absolutely nothing related to the query.
 
+        Every source below is labelled with the fund it belongs to. Facts belong to
+        the fund whose document states them. Never report a value found in one
+        fund's document as though it belonged to a different fund.
+
+        If the question says "this fund" and the context covers more than one fund,
+        do not guess. Name the funds you can see and ask which one is meant.
+
         When referencing where information came from, cite the actual source document name shown in the
         context (e.g. "SIS Act -1.pdf") and, if a specific section or clause number is visible in the
         context, include that too (e.g. "Section 4(2) of SIS Act -1.pdf"). Never refer to a source by a
@@ -298,50 +406,84 @@ def chat_with_advisor_bot(request):
 
         answer = get_chat_response(system_prompt, user_query)
 
-        result = {"answer": answer, "citations": citations, "session_expired": session_expired}
-        _query_cache[cache_key] = {"answer": answer, "citations": citations}
-        write_audit_log(selected_user, user_query, answer)
-        return JsonResponse(result)
+        result = {"answer": answer, "citations": citations}
+        _query_cache[cache_key] = result
+        write_audit_log(acting_user, user_query, answer)
+        return JsonResponse({**result, "session_expired": session_expired})
 
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+    except Exception:
+        # Pinecone and filesystem errors carry index names and paths, so the
+        # exception text stays server-side. The reference lets a report be
+        # matched to the traceback in the logs.
+        reference = uuid.uuid4().hex[:12]
+        logger.exception("Chat request failed [ref=%s]", reference)
+        return JsonResponse({
+            "error": f"Something went wrong answering that question. Reference: {reference}",
+        }, status=500)
 
 
 print("USING PINECONE VECTOR STORE (BGE + CrossEncoder)")
 
 
+AUDIT_LOG_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "audit_logs")
+
+# Anything outside this set is replaced before a name reaches the filesystem.
+_UNSAFE_PATH_CHARS = re.compile(r"[^A-Za-z0-9_-]+")
+
+
 def write_audit_log(user, message, response):
     """
-    outputs an audit log of every user resquest + response to the base folder/audit_logs
-    """
-    now = datetime.datetime.now()
-    currentDate = now.strftime("%Y-%m-%d")
-    currentTime = now.strftime("%X")
-    
-    user_dir = os.path.join("audit_logs", user)
-    os.makedirs(user_dir, exist_ok=True)
-    fileName = os.path.join(user_dir, f"{user}-{currentDate}_log.txt")
+    Append one exchange to the acting advisor's audit log.
 
-    try:    
-        with open(fileName, "a", encoding="utf-8") as f:
+    The path is keyed by the advisor's primary key, resolved from the database -
+    never by the name in the request body. Joining that name straight into a path
+    meant a value like "../../.." wrote outside the project, on an endpoint with
+    no authentication. Directory creation is also inside the try now; it used to
+    sit outside it, so a bad name raised past this function entirely.
+    """
+    try:
+        advisor = Advisor.objects.filter(name=user).first()
+        if advisor is None:
+            logger.warning("Audit log skipped: no advisor named %r", user)
+            return
+
+        now = datetime.datetime.now()
+        slug = _UNSAFE_PATH_CHARS.sub("_", advisor.name) or "advisor"
+        stem = f"{advisor.pk}_{slug}"
+
+        user_dir = os.path.join(AUDIT_LOG_ROOT, stem)
+        file_name = os.path.join(user_dir, f'{stem}-{now.strftime("%Y-%m-%d")}_log.txt')
+
+        # The components above cannot escape, but assert it rather than assume:
+        # this is the property the whole function exists to guarantee.
+        root = os.path.realpath(AUDIT_LOG_ROOT)
+        if os.path.commonpath([root, os.path.realpath(file_name)]) != root:
+            logger.error("Audit log path escaped %s; refusing to write.", root)
+            return
+
+        os.makedirs(user_dir, exist_ok=True)
+        with open(file_name, "a", encoding="utf-8") as f:
             template = textwrap.dedent("""
             ----------------------------------------------------------
-            
-            At {time}, user asked:
-            {message2} 
-            
+
+            At {time}, {who} asked:
+            {message2}
+
             Chatbot responded with:
             {response2}
-            
+
             -----------------------------------------------------------
             """)
-            
-            string = template.format(time=currentTime, message2=message, response2=response)
-            f.write(string)
-    except Exception as e:
-        print(f"Audit Logging has failed, please diagnose, error: {e}")
-    
-    
+            f.write(template.format(
+                time=now.strftime("%X"),
+                who=advisor.name,
+                message2=message,
+                response2=response,
+            ))
+    except Exception:
+        logger.exception("Audit logging failed")
+
+
 #a copy of the rag logic just for testing purposes, kindly change this also when you are making any changes to the chat with advisor bot funciton, or we should seperate logic better
 #but I cba do that 
 def rag_logic(test_questions:str):
@@ -353,7 +495,9 @@ def rag_logic(test_questions:str):
     ).tolist()
 
     # 2. Vector search
-    raw_results = perform_vector_search(query_embedding, user_query, ["Summers Family Super Fund"], top_k=60)
+    raw_results = perform_vector_search(
+        query_embedding, user_query,
+        build_access_filter(["Summers Family Super Fund"], None), top_k=60)
 
     # 3. Deduplicate — keep highest-scoring copy of each unique chunk
     best_by_hash = {}
@@ -395,6 +539,13 @@ def rag_logic(test_questions:str):
             "fund": fund_name
         })
 
+    # print("\n=== RETRIEVED CHUNKS ===")
+    # for i, item in enumerate(reranked):
+    #     metadata = item["result"].get("metadata", {})
+    #     print(f"\nChunk {i+1}  score={item['rerank_score']:.4f}")
+    #     print(metadata.get("text", "")[:500])
+    #     print("=" * 50)
+
     # 6. Generate answer
     system_prompt = f"""
     You are an expert AI assistant for financial advisors at Triple A Super.
@@ -424,3 +575,4 @@ def rag_logic(test_questions:str):
 
     result = {"answer": answer, "citations": citations, "context": context_text}
     return JsonResponse(result)
+

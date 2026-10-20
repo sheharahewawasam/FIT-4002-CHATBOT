@@ -35,37 +35,47 @@ BM25_ENCODER_PATH = os.getenv("BM25_ENCODER_PATH", "bm25_encoder.json")
 # Pinecone is constructed in main(), never while importing chunking functions.
 
 def parse_document_date(date_str, fmt="%d %B %Y"):
+    """
+    Return (display, numeric) for a document date, or (None, None) if unknown.
+
+    Most rows below have no verified date. An unknown date must stay unknown:
+    a placeholder makes every document look written on the same day, and a
+    date-range filter built on that returns the wrong documents rather than
+    none.
+    """
+    if not date_str:
+        return None, None
     dt = datetime.strptime(date_str, fmt)
     return dt.strftime("%Y-%m-%d"), int(dt.strftime("%Y%m%d"))
 
 pdfs_to_process = [
-    {"filepath": "../pdfs/Trust_Deed_Sample_Superannuation_Fund.pdf",                                                                        "fund_name": "Sample Superannuation Fund",         "doc_type": "Trust Deed",                            "date": "21 January 2012"},
-    {"filepath": "../pdfs/deed.pdf",                                                                                                         "fund_name": "Summers Family Super Fund",          "doc_type": "Trust Deed",                            "date": "21 January 2012"},
-    {"filepath": "../pdfs/sample-smsf-trust-deed.pdf",                                                                                       "fund_name": "Ausis Super Fund",                   "doc_type": "Trust Deed",                            "date": "21 January 2012"},
-    {"filepath": "../pdfs/Project_26.pdf",                                                                                                   "fund_name": "Triple A Super",                     "doc_type": "Project Brief",                         "date": "21 January 2012"},
-    {"filepath": "../pdfs/Proposal Document.pdf",                                                                                             "fund_name": "Triple A Super",                     "doc_type": "Development Proposal",                  "date": "21 January 2012"},
-    {"filepath": "../pdfs/SIS Act -1.pdf",                                                                                                   "fund_name": "General",                            "doc_type": "legal",                                 "date": "21 January 2012"},
-    {"filepath": "../pdfs/SIS Act Part 2-1.pdf",                                                                                              "fund_name": "General",                            "doc_type": "legal",                                 "date": "21 January 2012"},
-    {"filepath": "../pdfs/Super-changes-timeline-1.pdf",                                                                                     "fund_name": "General",                            "doc_type": "Changelog",                             "date": "21 January 2012"},
-    {"filepath": "../pdfs/Investment Strategy.pdf",                                                                                          "fund_name": "A and C Super Fund",                 "doc_type": "Investment Strategy",                   "date": "21 January 2012"},
-    {"filepath": "../pdfs/A and C SF  - FY2024 Audit Report_unlocked.pdf",                                                                   "fund_name": "A and C Super Fund",                 "doc_type": "Signed Financials and Tax Returns",     "date": "21 January 2012"},
-    {"filepath": "../pdfs/A and C SF - FY2024 Management Letter_unlocked.pdf",                                                               "fund_name": "A and C Super Fund",                 "doc_type": "Signed Financials and Tax Returns",     "date": "21 January 2012"},
-    {"filepath": "../pdfs/A and C SF - Signed 2024 Financials_unlocked.pdf",                                                                 "fund_name": "A and C Super Fund",                 "doc_type": "Signed Financials and Tax Returns",     "date": "21 January 2012"},
-    {"filepath": "../pdfs/A and C Super Fund - Deed of Amendment & Consolidation (signed) 23.07.2017_unlocked.pdf",                          "fund_name": "A and C Super Fund",                 "doc_type": "Trust Deed",                            "date": "21 January 2012"},
-    {"filepath": "../pdfs/A and C Super Fund Trust Deed 14.11.2016_unlocked.pdf",                                                            "fund_name": "A and C Super Fund",                 "doc_type": "Trust Deed",                            "date": "21 January 2012"},
-    {"filepath": "../pdfs/3_0 Investment Strategy and Trustee Minutes 2015.pdf",                                                             "fund_name": "Andres Family Superannuation Fund",  "doc_type": "Investment Strategy",                   "date": "21 January 2012"},
-    {"filepath": "../pdfs/Andres Family Superannuation Fund Trust Deed 09.07.2015.pdf",                                                      "fund_name": "Andres Family Superannuation Fund",  "doc_type": "Trust Deed",                            "date": "21 January 2012"},
-    {"filepath": "../pdfs/Bellenger Family Superannuation Fund (VIC400BELLEN) - 2023 Signed AUDITED Financials & Annual Return.pdf",    "fund_name": "Bell Family Superannuation Fund",    "doc_type": "Signed Financials and Tax Returns",     "date": "21 January 2012"},
-    {"filepath": "../pdfs/1. SMSF Deed of Variation.pdf",                                                                                    "fund_name": "Bell Family Superannuation Fund",    "doc_type": "Trust Deed",                            "date": "21 January 2012"},
-    {"filepath": "../pdfs/Signed_2023_Annual_Return_NOT_AUDITED[1]_unlocked.pdf",                                                            "fund_name": "Bell Family Superannuation Fund",    "doc_type": "SMSF Annual Return",                    "date": "21 January 2012"},
-    {"filepath": "../pdfs/DARTO Super Fund (NSW400DART) - 2023 Signed AUDITED Financials & Annual Return.pdf",                               "fund_name": "Darto Super Fund",                   "doc_type": "Signed Financials and Tax Returns",     "date": "21 January 2012"},
-    {"filepath": "../pdfs/DARTO Super Fund (NSW400DART) - 2024 Signed AUDITED Financials & Annual Return.pdf",                               "fund_name": "Darto Super Fund",                   "doc_type": "Signed Financials and Tax Returns",     "date": "21 January 2012"},
-    {"filepath": "../pdfs/20111122 - Original Trust Deed.pdf",                                                                               "fund_name": "Darto Super Fund",                   "doc_type": "Trust Deed",                            "date": "21 January 2012"},
-    {"filepath": "../pdfs/20111122 - Trust Deed (Signed Pages Only).pdf",                                                                    "fund_name": "Darto Super Fund",                   "doc_type": "Trust Deed",                            "date": "21 January 2012"},
-    {"filepath": "../pdfs/Unsigned 2024 Annual Return.pdf",                                                                                  "fund_name": "Darto Super Fund",                   "doc_type": "SMSF Annual Return",                    "date": "21 January 2012"},
-    {"filepath": "../pdfs/Powell - SMSF Investment Strategy 2020.pdf",                                                                       "fund_name": "Powell Superannuation Fund",         "doc_type": "Investment Strategy",                   "date": "21 January 2012"},
-    {"filepath": "../pdfs/Powell SF - Amended Trust Deed 27.04.2020.pdf",                                                                    "fund_name": "Powell Superannuation Fund",         "doc_type": "Trust Deed",                            "date": "21 January 2012"},
-    {"filepath": "../pdfs/atoform.pdf",                                                                                                      "fund_name": "General",                            "doc_type": "ATO Form",                              "date": "21 January 2012",}
+    {"filepath": "../pdfs/Trust_Deed_Sample_Superannuation_Fund.pdf",                                                                        "fund_name": "Sample Superannuation Fund",         "doc_type": "Trust Deed",                            "date": None},
+    {"filepath": "../pdfs/deed.pdf",                                                                                                         "fund_name": "Summers Family Super Fund",          "doc_type": "Trust Deed",                            "date": None},
+    {"filepath": "../pdfs/sample-smsf-trust-deed.pdf",                                                                                       "fund_name": "Ausis Super Fund",                   "doc_type": "Trust Deed",                            "date": None},
+    {"filepath": "../pdfs/Project_26.pdf",                                                                                                   "fund_name": "Triple A Super",                     "doc_type": "Project Brief",                         "date": None},
+    {"filepath": "../pdfs/Proposal Document.pdf",                                                                                             "fund_name": "Triple A Super",                     "doc_type": "Development Proposal",                  "date": None},
+    {"filepath": "../pdfs/SIS Act -1.pdf",                                                                                                   "fund_name": "General",                            "doc_type": "legal",                                 "date": None},
+    {"filepath": "../pdfs/SIS Act Part 2-1.pdf",                                                                                              "fund_name": "General",                            "doc_type": "legal",                                 "date": None},
+    {"filepath": "../pdfs/Super-changes-timeline-1.pdf",                                                                                     "fund_name": "General",                            "doc_type": "Changelog",                             "date": None},
+    {"filepath": "../pdfs/Investment Strategy.pdf",                                                                                          "fund_name": "A and C Super Fund",                 "doc_type": "Investment Strategy",                   "date": None},
+    {"filepath": "../pdfs/A and C SF  - FY2024 Audit Report_unlocked.pdf",                                                                   "fund_name": "A and C Super Fund",                 "doc_type": "Signed Financials and Tax Returns",     "date": None},
+    {"filepath": "../pdfs/A and C SF - FY2024 Management Letter_unlocked.pdf",                                                               "fund_name": "A and C Super Fund",                 "doc_type": "Signed Financials and Tax Returns",     "date": None},
+    {"filepath": "../pdfs/A and C SF - Signed 2024 Financials_unlocked.pdf",                                                                 "fund_name": "A and C Super Fund",                 "doc_type": "Signed Financials and Tax Returns",     "date": None},
+    {"filepath": "../pdfs/A and C Super Fund - Deed of Amendment & Consolidation (signed) 23.07.2017_unlocked.pdf",                          "fund_name": "A and C Super Fund",                 "doc_type": "Trust Deed",                            "date": "23 July 2017"},
+    {"filepath": "../pdfs/A and C Super Fund Trust Deed 14.11.2016_unlocked.pdf",                                                            "fund_name": "A and C Super Fund",                 "doc_type": "Trust Deed",                            "date": "14 November 2016"},
+    {"filepath": "../pdfs/3_0 Investment Strategy and Trustee Minutes 2015.pdf",                                                             "fund_name": "Andres Family Superannuation Fund",  "doc_type": "Investment Strategy",                   "date": None},
+    {"filepath": "../pdfs/Andres Family Superannuation Fund Trust Deed 09.07.2015.pdf",                                                      "fund_name": "Andres Family Superannuation Fund",  "doc_type": "Trust Deed",                            "date": "9 July 2015"},
+    {"filepath": "../pdfs/Bellenger Family Superannuation Fund (VIC400BELLEN) - 2023 Signed AUDITED Financials & Annual Return.pdf",    "fund_name": "Bell Family Superannuation Fund",    "doc_type": "Signed Financials and Tax Returns",     "date": None},
+    {"filepath": "../pdfs/1. SMSF Deed of Variation.pdf",                                                                                    "fund_name": "Bell Family Superannuation Fund",    "doc_type": "Trust Deed",                            "date": None},
+    {"filepath": "../pdfs/Signed_2023_Annual_Return_NOT_AUDITED[1]_unlocked.pdf",                                                            "fund_name": "Bell Family Superannuation Fund",    "doc_type": "SMSF Annual Return",                    "date": None},
+    {"filepath": "../pdfs/DARTO Super Fund (NSW400DART) - 2023 Signed AUDITED Financials & Annual Return.pdf",                               "fund_name": "Darto Super Fund",                   "doc_type": "Signed Financials and Tax Returns",     "date": None},
+    {"filepath": "../pdfs/DARTO Super Fund (NSW400DART) - 2024 Signed AUDITED Financials & Annual Return.pdf",                               "fund_name": "Darto Super Fund",                   "doc_type": "Signed Financials and Tax Returns",     "date": None},
+    {"filepath": "../pdfs/20111122 - Original Trust Deed.pdf",                                                                               "fund_name": "Darto Super Fund",                   "doc_type": "Trust Deed",                            "date": "22 November 2011"},
+    {"filepath": "../pdfs/20111122 - Trust Deed (Signed Pages Only).pdf",                                                                    "fund_name": "Darto Super Fund",                   "doc_type": "Trust Deed",                            "date": "22 November 2011"},
+    {"filepath": "../pdfs/Unsigned 2024 Annual Return.pdf",                                                                                  "fund_name": "Darto Super Fund",                   "doc_type": "SMSF Annual Return",                    "date": None},
+    {"filepath": "../pdfs/Powell - SMSF Investment Strategy 2020.pdf",                                                                       "fund_name": "Powell Superannuation Fund",         "doc_type": "Investment Strategy",                   "date": None},
+    {"filepath": "../pdfs/Powell SF - Amended Trust Deed 27.04.2020.pdf",                                                                    "fund_name": "Powell Superannuation Fund",         "doc_type": "Trust Deed",                            "date": "27 April 2020"},
+    {"filepath": "../pdfs/atoform.pdf",                                                                                                      "fund_name": "General",                            "doc_type": "ATO Form",                              "date": None,}
 ]
 
 # Cleans extracted PDF text without destroying the document structure
@@ -253,9 +263,12 @@ def main():
             "source_url":   pdf_info["filepath"].split("/")[-1],
             "fund_name":    pdf_info["fund_name"],
             "doc_type":     pdf_info["doc_type"],
-            "date":         date_display,
-            "date_numeric": date_numeric,
         }
+        # Omitted when unknown. A vector with no date_numeric is excluded by a
+        # date-range filter, which is the honest answer for an undated document.
+        if date_display is not None:
+            base_metadata["date"] = date_display
+            base_metadata["date_numeric"] = date_numeric
         rejected_chunks = []
         layout_snapshot = None
         try:
@@ -316,9 +329,10 @@ def main():
             "source_url": entry["source_url"],
             "fund_name": entry["fund_name"],
             "doc_type": entry["doc_type"],
-            "date": entry["date"],
-            "date_numeric": entry["date_numeric"],
         })
+        if entry.get("date") is not None:
+            metadatas[-1]["date"] = entry["date"]
+            metadatas[-1]["date_numeric"] = entry["date_numeric"]
         if entry.get("chunking_method") in {"layout_aware", "markdown_structure"}:
             # Keep only scalar/list-of-string metadata in Pinecone. Full bbox
             # objects remain in snapshots; they are not embedding input.

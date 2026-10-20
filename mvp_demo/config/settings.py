@@ -10,22 +10,40 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load secrets.env before any setting is read.
+#
+# Without this the DJANGO_* values in that file were silently ignored by
+# manage.py: settings.py is evaluated long before rag_api.resources calls
+# load_dotenv(). They only took effect under systemd, which injects the file
+# via EnvironmentFile= - so local runs had DEBUG=True while the deployment had
+# DEBUG=False, from the same file. Real environment variables still win, which
+# is what override=False gives us.
+load_dotenv(BASE_DIR / "secrets.env", override=False)
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-^(*z#uf(fusi+sbq6b-icoa7g%ym9rbf6nf!v8cn523383h^pb'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-^(*z#uf(fusi+sbq6b-icoa7g%ym9rbf6nf!v8cn523383h^pb')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DJANGO_DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = []
+_allowed = os.getenv('DJANGO_ALLOWED_HOSTS', '')
+ALLOWED_HOSTS = [h.strip() for h in _allowed.split(',') if h.strip()]
+if not ALLOWED_HOSTS:
+    # A wildcard fallback meant a misconfigured deploy silently answered on any
+    # hostname. Local development still gets a usable default; anything else
+    # has to name its hosts through DJANGO_ALLOWED_HOSTS.
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]'] if DEBUG else []
 
 
 # Application definition
@@ -120,7 +138,13 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
-CORS_ALLOW_ALL_ORIGINS = True
+# The frontend is served by this same app and uses relative URLs, so it needs
+# no CORS grant at all. Allowing every origin let any site on the internet call
+# this API from a visitor's browser. Set DJANGO_CORS_ORIGINS (comma separated)
+# only if something is genuinely hosted elsewhere.
+_cors = os.getenv('DJANGO_CORS_ORIGINS', '')
+CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors.split(',') if o.strip()]
+CORS_ALLOW_ALL_ORIGINS = DEBUG and not CORS_ALLOWED_ORIGINS
 
 CORS_EXPOSE_HEADERS = ['Retry-After']
 
@@ -130,7 +154,58 @@ SESSION_COOKIE_AGE = 1800
 SESSION_SAVE_EVERY_REQUEST = True
 
 REST_FRAMEWORK = {
+    # Closed by default. An endpoint that should be reachable without signing in
+    # has to say so with @permission_classes([AllowAny]) - which is only the
+    # three in rag_api/auth.py. Adding a view no longer means remembering to
+    # protect it; forgetting now denies rather than exposes.
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
     'DEFAULT_THROTTLE_RATES': {
         'chatbot': '10/min',
+        # Sign-in attempts, per IP. Slow enough to make guessing the password
+        # impractical, loose enough to survive someone mistyping it.
+        'login': '10/min',
     }
 }
+
+# The session cookie is the credential once signed in, so keep it away from
+# JavaScript and from cross-site requests.
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+
+# Cookies marked Secure are not sent over plain HTTP, which would lock out the
+# HTTP-only deployment entirely. Turn this on with the TLS certificate, via
+# DJANGO_SECURE_COOKIES=true, and not before.
+_secure_cookies = os.getenv('DJANGO_SECURE_COOKIES', 'false').lower() in ('1', 'true', 'yes')
+SESSION_COOKIE_SECURE = _secure_cookies
+CSRF_COOKIE_SECURE = _secure_cookies
+
+# Behind nginx, Django receives a plain HTTP request even when the browser used
+# HTTPS, so request.is_secure() is False and Django believes the site is on
+# HTTP. nginx already sends X-Forwarded-Proto; this is what makes Django trust
+# it. Only safe because nothing but nginx can reach gunicorn - it binds
+# 127.0.0.1 and port 8000 is closed at the security group. If gunicorn were ever
+# exposed directly, a client could set the header itself and claim to be secure.
+if os.getenv('DJANGO_TRUST_PROXY_PROTO', 'false').lower() in ('1', 'true', 'yes'):
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Django compares the browser's Origin header against these, scheme included,
+# on every unsafe request. ALLOWED_HOSTS is not enough: a host listed there is
+# still rejected when the origin says https and Django thinks it is on http.
+# Getting this wrong makes sign-in fail over HTTPS with a CSRF error while
+# working perfectly over HTTP.
+_csrf_origins = os.getenv('DJANGO_CSRF_TRUSTED_ORIGINS', '')
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_origins.split(',') if o.strip()]
+
+# Uploaded documents are stored here; ingestion reads them from disk.
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# Uploads are streamed to disk rather than buffered in memory.
+FILE_UPLOAD_MAX_MEMORY_SIZE = 2 * 1024 * 1024
+DATA_UPLOAD_MAX_MEMORY_SIZE = 26 * 1024 * 1024

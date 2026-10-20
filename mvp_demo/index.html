@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Advisor RAG Chatbot MVP</title>
     <style>
+        /* The hidden attribute is only `display: none` in the browser's own
+           stylesheet, so any author rule setting display beats it - which is
+           why hiding .login-screen (display: flex) silently did nothing and it
+           stayed over the app after signing in. Restore it as the override the
+           attribute is meant to be. */
+        [hidden] { display: none !important; }
+
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; display: flex; justify-content: center; }
         .chat-container { width: 100%; max-width: 600px; background: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 80vh; }
         .header { background: #0056b3; color: white; padding: 15px; border-radius: 10px 10px 0 0; text-align: center; }
@@ -19,6 +26,61 @@
         button { padding: 10px 20px; background: #0056b3; color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.3s; }
         button:hover { background: #004494; }   
         .loading { align-self: flex-start; color: #888; font-style: italic; display: none; }
+        /* Thinking bubble: a real chat message, with a quiet animated ellipsis
+           so a 20s wait does not look frozen. Settles to plain text on reply. */
+        .thinking-dots span { animation: tas-blink 1.4s infinite both; }
+        .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes tas-blink { 0%, 80%, 100% { opacity: 0.25 } 40% { opacity: 1 } }
+        @media (prefers-reduced-motion: reduce) {
+            .thinking-dots span { animation: none; opacity: 0.6; }
+        }
+
+        /* --- Sign-in ------------------------------------------------------ */
+        .login-screen {
+            position: fixed; inset: 0; z-index: 100;
+            display: flex; align-items: center; justify-content: center;
+            background: #2c3e50; padding: 20px;
+        }
+        .login-card {
+            background: white; border-radius: 10px; padding: 28px;
+            width: 100%; max-width: 340px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+        }
+        .login-card h1 { margin: 0; font-size: 1.25em; color: #2c3e50; }
+        .login-sub { margin: 4px 0 20px; color: #777; font-size: 0.85em; }
+        .login-card label {
+            display: block; font-size: 0.8em; color: #555;
+            margin-bottom: 4px; margin-top: 12px;
+        }
+        .login-card input {
+            width: 100%; padding: 9px 10px; font-size: 0.95em;
+            border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box;
+        }
+        .login-card input:focus { outline: 2px solid #3498db; border-color: transparent; }
+        .login-card button {
+            width: 100%; margin-top: 20px; padding: 10px;
+            background: #3498db; color: white; border: none;
+            border-radius: 6px; font-size: 0.95em; cursor: pointer;
+        }
+        .login-card button:hover:not(:disabled) { background: #2980b9; }
+        .login-card button:disabled { background: #9bbfd8; cursor: default; }
+        .login-error {
+            color: #c0392b; font-size: 0.82em; margin-top: 12px; min-height: 1em;
+        }
+
+        .whoami {
+            display: flex; align-items: center; gap: 8px;
+            justify-content: center; font-size: 0.9em;
+        }
+        .whoami span { font-weight: 600; }
+        .whoami button {
+            background: rgba(255,255,255,0.15); color: inherit;
+            border: 1px solid rgba(255,255,255,0.35);
+            border-radius: 5px; padding: 3px 9px; font-size: 0.82em; cursor: pointer;
+        }
+        .whoami button:hover { background: rgba(255,255,255,0.28); }
+
         .selector-group select {
             width: 180px;
             padding: 8px;
@@ -49,29 +111,97 @@
         .checkbox-label input[type="checkbox"] {
             cursor: pointer;
         }
+            /* --- Documents panel ------------------------------------------- */
+        body { flex-wrap: wrap; align-items: flex-start; gap: 20px; }
+        /* #app wraps both panels so they can be hidden as one unit while signed
+           out. It therefore has to be the flex container body used to be, or
+           the documents panel drops below the chat. */
+        #app {
+            display: flex; flex-wrap: wrap; align-items: flex-start;
+            justify-content: center; gap: 20px; width: 100%;
+        }
+        #app[hidden] { display: none !important; }
+        .docs-panel {
+            width: 340px; background: white; border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex;
+            flex-direction: column; max-height: 80vh;
+        }
+        .docs-panel .header { border-radius: 10px 10px 0 0; }
+        .docs-body { padding: 15px; overflow-y: auto; }
+        .docs-body label { display: block; font-size: 0.8em; color: #555; margin: 10px 0 4px; }
+        .docs-body input[type="file"], .docs-body select, .docs-body input[type="text"] {
+            width: 100%; padding: 8px; border: 1px solid #ccc;
+            border-radius: 5px; box-sizing: border-box; font-size: 0.9em;
+        }
+        .docs-body button { width: 100%; margin-top: 12px; }
+        .docs-body button:disabled { background: #9bb8d6; cursor: not-allowed; }
+        .upload-msg { font-size: 0.8em; margin-top: 8px; min-height: 1em; }
+        .doc-list { list-style: none; padding: 0; margin: 14px 0 0; }
+        .doc-item {
+            border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px;
+            margin-bottom: 8px; font-size: 0.82em;
+        }
+        .doc-name { font-weight: 600; word-break: break-all; }
+        .doc-meta { color: #666; margin-top: 3px; }
+        .doc-actions { margin-top: 6px; }
+        .doc-actions button {
+            width: auto; padding: 3px 10px; font-size: 0.9em;
+            margin: 0; background: #c0392b;
+        }
+        .badge {
+            display: inline-block; padding: 1px 7px; border-radius: 10px;
+            font-size: 0.9em; color: white;
+        }
+        .badge-pending, .badge-processing { background: #f39c12; }
+        .badge-ready { background: #27ae60; }
+        .badge-failed { background: #c0392b; }
+        .divider { border-top: 1px solid #eee; margin: 14px 0 0; }
     </style>
 </head>
 <body>
 
+<!-- Covers the app until /api/auth/me/ says who is signed in. Hidden rather
+     than absent so nothing flashes on a reload with a live session. -->
+<div id="login-screen" class="login-screen" hidden>
+    <form class="login-card" id="login-form" autocomplete="on">
+        <h1>Triple A Super</h1>
+        <p class="login-sub">Advisor sign-in</p>
+
+        <label for="login-username">Username</label>
+        <input type="text" id="login-username" name="username"
+               autocomplete="username" autocapitalize="none" spellcheck="false" required>
+
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" name="password"
+               autocomplete="current-password" required>
+
+        <button type="submit" id="login-btn">Sign in</button>
+        <div class="login-error" id="login-error" role="alert"></div>
+    </form>
+</div>
+
+<div id="app" hidden>
 <div class="chat-container">
     <div class="header">
         <h2>Triple A Super Advisor AI</h2>
         <div class="toolbar">
             <div class="selector-group">
-                <label for="user">User</label>
-                <select id="user">
-                    <option value="">Select user...</option>
-                    <option value="John">John</option>
-                    <option value="Emily">Emily</option>
-                    <option value="Jake">Jake</option>
-                </select>
+                <label>Signed in as</label>
+                <div class="whoami">
+                    <span id="current-user">-</span>
+                    <button type="button" id="logout-btn" onclick="signOut()">Sign out</button>
+                </div>
             </div>
 
             <div class="selector-group">
-                <label>Date range (optional)</label>
+                <label>Document date range (optional)</label>
                 <div style="display:flex; gap:6px; justify-content:center;">
                     <input type="date" id="date-from" style="padding:6px; border-radius:6px; border:none; font-size:0.85em;">
                     <input type="date" id="date-to" style="padding:6px; border-radius:6px; border:none; font-size:0.85em;">
+                </div>
+                <div style="font-size:0.72em; opacity:0.75; margin-top:4px;">
+                    Leave blank to search all documents. Most documents have no
+                    recorded date yet and a range will exclude them.
                 </div>
             </div>
 
@@ -83,7 +213,6 @@
                     </span>
                 </div>
             </div>
-
         </div>
     </div>
     <div class="chat-box" id="chat-box">
@@ -96,72 +225,126 @@
     </div>
 </div>
 
-<script>
-    const API_URL = 'http://127.0.0.1:8000/api/chat/'; 
 
-    let hasActiveConversation = false;
+<div class="docs-panel">
+    <div class="header"><h2 style="font-size:1.1em;margin:0;">Documents</h2></div>
+    <div class="docs-body">
+        <div id="docs-locked" style="color:#666;font-size:0.9em;">
+            Select a user to view documents.
+        </div>
+
+        <div id="docs-active" style="display:none;">
+            <div id="upload-form" style="display:none;">
+                <label for="doc-file">PDF file (max 25 MB)</label>
+                <input type="file" id="doc-file" accept="application/pdf">
+
+                <label for="doc-fund">Fund</label>
+                <select id="doc-fund"><option value="">No fund (private to you)</option></select>
+
+                <label for="doc-kind">Document type</label>
+                <input type="text" id="doc-kind" placeholder="e.g. Trust Deed">
+
+                <button id="doc-upload-btn" onclick="uploadDocument()">Upload &amp; ingest</button>
+                <div class="upload-msg" id="upload-msg"></div>
+
+                <div class="divider"></div>
+            </div>
+
+            <div id="uploads-disabled" style="display:none;color:#666;font-size:0.9em;margin-bottom:10px;">
+                Uploads are disabled on this server. Documents are added by an
+                administrator.
+            </div>
+            <ul class="doc-list" id="doc-list"></ul>
+        </div>
+    </div>
+</div>
+
+</div><!-- /#app -->
+
+<script>
+    // Relative, so the page talks to whichever host served it. Absolute
+    // 127.0.0.1 URLs meant a page served from a remote host would call the
+    // viewer's own machine instead - failing, or worse, silently hitting a
+    // local dev server and showing its data as though it were the server's.
+    const API_URL = '/api/chat/'; 
+    const THINKING_TEXT = 'Let me think about the answer';
 
     function handleKeyPress(e) {
         if(e.key === 'Enter') sendQuery();
     }
 
+    // The assistant acknowledges the question before answering it, so the user
+    // gets an immediate reply rather than silence while retrieval and the LLM run.
+    function addThinkingMessage() {
+        const chatBox = document.getElementById('chat-box');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'message bot-msg';
+        msgDiv.textContent = THINKING_TEXT;
+        const dots = document.createElement('span');
+        dots.className = 'thinking-dots';
+        dots.innerHTML = '<span>.</span><span>.</span><span>.</span>';
+        msgDiv.appendChild(dots);
+        chatBox.insertBefore(msgDiv, document.getElementById('loading'));
+        chatBox.scrollTop = chatBox.scrollHeight;
+        return msgDiv;
+    }
+
+    // Stop the animation once the reply lands; the message itself stays in the
+    // transcript so the conversation reads as asked -> acknowledged -> answered.
+    function settleThinkingMessage(el) {
+        if (!el) return;
+        const dots = el.querySelector('.thinking-dots');
+        if (dots) dots.remove();
+    }
+
+    // A query takes minutes on the VM. Without a lock an impatient second Enter
+    // starts a parallel request and both answers land out of order.
     let isSending = false;
     let rateLimitCountdownActive = false;
+    let hasActiveConversation = false;
 
     async function sendQuery() {
         if (isSending) return;
-
         const inputField = document.getElementById('query-input');
         const query = inputField.value.trim();
+        if (!query) return;
 
-        if(!query) return;
+        if (!signedInAs) { showLogin('Please sign in.'); return; }
 
-        const selectedUser = document.getElementById('user').value; 
-
-        if (!selectedUser) {
-             addMessage("Please select a user first.", 'bot-msg'); 
-            return; 
-        }
+        const selectedFunds = Array.from(
+            document.querySelectorAll('input[name="doc-type"]:checked')
+        ).map(cb => cb.value);
 
         const dateFrom = document.getElementById('date-from').value;
         const dateTo = document.getElementById('date-to').value;
-
         if (dateFrom && dateTo && dateFrom > dateTo) {
             addMessage("The start date cannot be later than the end date.", 'bot-msg');
             return;
         }
 
-        // Get all selected funds
-        const selectedFunds = Array.from(
-            document.querySelectorAll('input[name="doc-type"]:checked')
-        ).map(cb => cb.value);
-
         addMessage(query, 'user-msg');
+        const thinking = addThinkingMessage();
         inputField.value = '';
 
         isSending = true;
         const askButton = document.querySelector('.input-area button');
         inputField.disabled = true;
         askButton.disabled = true;
-        
-        const loading = document.getElementById('loading');
-        loading.style.display = 'block';
 
         try {
-            const response = await fetch(API_URL, {
+            // No "user" field: the server takes the advisor from the session.
+            // Sending one would be ignored, and implying otherwise invites a
+            // future caller to think it means something.
+            const response = await api(API_URL, {
                 method: 'POST',
-                credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     query: query,
                     funds: selectedFunds,
-                    user: selectedUser,
-                    date_from: dateFrom,
-                    date_to: dateTo,
-                 })
+                    date_from: dateFrom || null,
+                    date_to: dateTo || null
+                })
             });
-
-            loading.style.display = 'none';
 
             if (response.status === 429) {
                 const retryAfter = parseInt(response.headers.get('Retry-After'), 10);
@@ -174,35 +357,34 @@
             }
 
             const data = await response.json();
-
-            if(!response.ok || data.error) {
+            if (!response.ok || data.error) {
                 addMessage("Error: " + (data.error || data.detail || 'Something went wrong'), 'bot-msg');
-                return;
+            } else {
+                settleThinkingMessage(thinking);
+                // Only worth saying if there was a conversation to lose.
+                if (data.session_expired && hasActiveConversation) {
+                    addMessage("Your session had expired due to inactivity. This is a new session.", 'bot-msg');
+                }
+                hasActiveConversation = true;
+                addBotMessageWithCitations(data.answer, data.citations);
             }
-
-            if (data.session_expired && hasActiveConversation) {
-                addMessage("Your session had expired due to inactivity. This is a new session.", 'bot-msg');
-            }
-
-            hasActiveConversation = true;
-            addBotMessageWithCitations(data.answer, data.citations);
         } catch (error) {
-            loading.style.display = 'none';
             addMessage("Failed to connect to the server.", 'bot-msg');
         } finally {
-            // Only re-enable here if a rate-limit countdown didn't take over --
-            // the countdown manages its own re-enabling once it finishes.
+            settleThinkingMessage(thinking);
+            // The rate-limit countdown re-enables the input itself once it ends.
             if (!rateLimitCountdownActive) {
                 isSending = false;
                 inputField.disabled = false;
-                askButton.disabled = false;
+                document.querySelector('.input-area button').disabled = false;
             }
         }
     }
 
     function startRateLimitCountdown(seconds) {
+        // Two 429s in flight would otherwise start two tickers, and the first to
+        // finish would re-enable the input while the second was still counting.
         if (rateLimitCountdownActive) return;
-
         rateLimitCountdownActive = true;
 
         const chatBox = document.getElementById('chat-box');
@@ -228,11 +410,11 @@
             if (remaining <= 0) {
                 clearInterval(interval);
                 msgDiv.textContent = "You can send messages again now.";
+                rateLimitCountdownActive = false;
+                isSending = false;
                 inputField.disabled = false;
                 askButton.disabled = false;
                 inputField.focus();
-                rateLimitCountdownActive = false;
-                isSending = false;
             } else {
                 render();
             }
@@ -248,6 +430,9 @@
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
+    // Render **bold** without handing the model's text to innerHTML. Building
+    // text nodes keeps the XSS fix intact: the answer is assembled from document
+    // text, which is untrusted.
     function renderBoldMarkdown(container, text) {
         const lines = String(text ?? '').split('\n');
         const boldPattern = /\*\*([^*\n]+)\*\*/g;
@@ -255,22 +440,16 @@
         lines.forEach((line, lineIndex) => {
             let lastIndex = 0;
             let match;
+            boldPattern.lastIndex = 0;
 
             while ((match = boldPattern.exec(line)) !== null) {
-                container.appendChild(
-                    document.createTextNode(line.slice(lastIndex, match.index))
-                );
-
+                container.appendChild(document.createTextNode(line.slice(lastIndex, match.index)));
                 const strong = document.createElement('strong');
                 strong.textContent = match[1];
                 container.appendChild(strong);
                 lastIndex = boldPattern.lastIndex;
             }
-
-            container.appendChild(
-                document.createTextNode(line.slice(lastIndex))
-            );
-
+            container.appendChild(document.createTextNode(line.slice(lastIndex)));
             if (lineIndex < lines.length - 1) {
                 container.appendChild(document.createElement('br'));
             }
@@ -281,132 +460,357 @@
         const chatBox = document.getElementById('chat-box');
         const msgDiv = document.createElement('div');
         msgDiv.className = 'message bot-msg';
-
-        const answerDiv = document.createElement('div');
-        answerDiv.className = 'answer-text';
-        renderBoldMarkdown(answerDiv, answer);
-        msgDiv.appendChild(answerDiv);
-
+        
+        // Citations only. The answer itself is appended below as DOM nodes by
+        // renderBoldMarkdown; it used to be prepended here as well, which rendered
+        // every answer twice inside the same bubble.
+        let htmlContent = '';
+        
         if (citations && citations.length > 0) {
             // Deduplicate citations based on source_url
             const uniqueCitations = Array.from(new Set(citations.map(c => c.source)))
                                          .map(src => citations.find(c => c.source === src));
-
-            const citationsDiv = document.createElement('div');
-            citationsDiv.className = 'citations';
-
-            const heading = document.createElement('strong');
-            heading.textContent = 'Sources:';
-            citationsDiv.appendChild(heading);
-
-            const list = document.createElement('ul');
+                                         
+            htmlContent += `<div class="citations"><strong>Sources:</strong><ul>`;
             uniqueCitations.forEach(cit => {
-                const sourceName = String(cit.source ?? '').split('/').pop();
-                const item = document.createElement('li');
-                const link = document.createElement('a');
-
-                link.href = `../${encodeURIComponent(sourceName)}`;
-                link.target = '_blank';
-                link.rel = 'noopener noreferrer';
-                link.textContent = sourceName;
-
-                item.appendChild(link);
-                item.appendChild(
-                    document.createTextNode(` (${String(cit.fund ?? 'Unknown')})`)
-                );
-                list.appendChild(item);
+                // source and fund come from document metadata, which for an upload is
+                // the filename the user chose, so escape before display.
+                const rawName = String(cit.source || '').split('/').pop();
+                const fileText = escapeHtmlDoc(rawName);
+                const fundText = escapeHtmlDoc(String(cit.fund || ''));
+                // The server issues a signed grant per citation; without one the
+                // document is not retrievable and the name is shown as plain text.
+                if (cit.grant) {
+                    const href = '/api/source/?d=' + encodeURIComponent(cit.grant);
+                    htmlContent += `<li><a href="${href}" target="_blank" rel="noopener" style="color:#0056b3;">${fileText}</a> (${fundText})</li>`;
+                } else {
+                    htmlContent += `<li>${fileText} (${fundText})</li>`;
+                }
             });
-            citationsDiv.appendChild(list);
-            msgDiv.appendChild(citationsDiv);
+            htmlContent += `</ul></div>`;
+        }
+        
+        // Answer first, as DOM nodes; then the citation block, which is already
+        // escaped and URL-encoded above.
+        const answerEl = document.createElement('div');
+        answerEl.className = 'answer-text';
+        renderBoldMarkdown(answerEl, answer);
+        msgDiv.appendChild(answerEl);
+        if (htmlContent) {
+            const extra = document.createElement('div');
+            extra.innerHTML = htmlContent;
+            msgDiv.appendChild(extra);
         }
 
         chatBox.insertBefore(msgDiv, document.getElementById('loading'));
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    const API_BASE = 'http://127.0.0.1:8000/users';
+    /* --- Session ---------------------------------------------------------
+       Identity lives in the session cookie, not in this page. signedInAs is
+       only for display and for the places that still label a request; the
+       server derives the advisor from the session and ignores anything we
+       send about who we are.
+    -------------------------------------------------------------------- */
+    let signedInAs = null;
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const userSelect = document.getElementById('user');
-        const checkboxGroup = document.querySelector('.checkbox-group');
+    function csrfToken() {
+        const hit = document.cookie.split('; ').find(c => c.startsWith('csrftoken='));
+        return hit ? decodeURIComponent(hit.split('=')[1]) : '';
+    }
 
-        // 1. Fetch and populate users on page load
-        fetch(API_BASE + '/')
-            .then(response => {
-                if (!response.ok) throw new Error('Failed to fetch users');
-                return response.json();
-            })
-            .then(data => {
-                // Keep the default "Select user..." option, clear any hardcoded ones if necessary
-                userSelect.innerHTML = '<option value="">Select user...</option>';
-                
-                data.users.forEach(username => {
-                    const option = document.createElement('option');
-                    option.value = username;
-                    option.textContent = username;
-                    userSelect.appendChild(option);
-                });
-            })
-            .catch(error => console.error('Error loading users:', error));
+    // Every call to this API goes through here: it carries the session cookie,
+    // adds the CSRF header Django requires on unsafe methods, and turns a
+    // session that has ended into the login screen rather than a stray error.
+    async function api(path, options) {
+        const opts = Object.assign({ credentials: 'same-origin' }, options || {});
+        const method = (opts.method || 'GET').toUpperCase();
+        opts.headers = Object.assign({}, opts.headers);
+        if (method !== 'GET' && method !== 'HEAD') {
+            opts.headers['X-CSRFToken'] = csrfToken();
+        }
+        const response = await fetch(path, opts);
+        if ((response.status === 401 || response.status === 403) && signedInAs) {
+            // Signed in a moment ago, refused now: the session lapsed.
+            showLogin('Your session has ended. Please sign in again.');
+        }
+        return response;
+    }
 
-    // 2. Listen for user selection changes to load their funds
-    userSelect.addEventListener('change', (event) => {
-        const selectedUser = event.target.value;
+    function showLogin(message) {
+        signedInAs = null;
+        document.getElementById('app').hidden = true;
+        const screen = document.getElementById('login-screen');
+        screen.hidden = false;
+        document.getElementById('login-error').textContent = message || '';
+        document.getElementById('login-password').value = '';
+        document.getElementById('login-username').focus();
+    }
 
-        // If they selected the blank placeholder, clear the checkboxes
-        if (!selectedUser) {
-            checkboxGroup.innerHTML = '<p style="color: #666; font-size: 0.9em;">Select a user to view avaliable funds</p>';
+    function showApp(user) {
+        signedInAs = user.advisor;
+        document.getElementById('login-screen').hidden = true;
+        document.getElementById('app').hidden = false;
+        document.getElementById('current-user').textContent = user.advisor;
+        renderFunds(user.funds || []);
+        onUserChangedForDocs();
+    }
+
+    // Funds come from the signed-in session. The checkboxes only narrow that
+    // set - the server intersects whatever is sent with the advisor's own
+    // grant, so ticking a box cannot reach a fund they were not given.
+    function renderFunds(funds) {
+        const group = document.querySelector('.checkbox-group');
+        group.innerHTML = '';
+        if (!funds.length) {
+            group.innerHTML = '<span style="color:#666;font-size:0.9em;">No funds are assigned to this account.</span>';
             return;
         }
+        funds.forEach(fund => {
+            const label = document.createElement('label');
+            label.className = 'checkbox-label';
+            const box = document.createElement('input');
+            box.type = 'checkbox';
+            box.name = 'doc-type';
+            box.value = fund;
+            box.checked = true;
+            label.appendChild(box);
+            label.appendChild(document.createTextNode(' ' + fund));
+            group.appendChild(label);
+        });
+    }
 
-        // Show a brief loading indicator inside the checkbox group
-        checkboxGroup.innerHTML = '<span>Loading funds...</span>';
+    async function signIn(event) {
+        event.preventDefault();
+        const btn = document.getElementById('login-btn');
+        const errorEl = document.getElementById('login-error');
+        btn.disabled = true;
+        errorEl.textContent = '';
 
-        // Force absolute path routing and ensure the trailing slash is strictly present
-        const cleanUrl = `${API_BASE}/${encodeURIComponent(selectedUser)}/`;
-
-        console.log("Fetching funds from:", cleanUrl); // 👈 Check your browser console to see this path!
-
-        fetch(cleanUrl)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Server responded with status: ${response.status}`);
+        try {
+            const response = await api('/api/auth/login/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: document.getElementById('login-username').value,
+                    password: document.getElementById('login-password').value
+                })
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                errorEl.textContent = data.error || 'Sign-in failed.';
+                if (response.status === 429) {
+                    errorEl.textContent = 'Too many attempts. Please wait a minute.';
                 }
-                return response.json();
-            })
+                return;
+            }
+            document.getElementById('login-password').value = '';
+            showApp(data.user);
+        } catch (err) {
+            errorEl.textContent = 'Could not reach the server.';
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    async function signOut() {
+        try {
+            await api('/api/auth/logout/', { method: 'POST' });
+        } catch (err) {
+            // Ending the local session matters more than the server confirming.
+        }
+        document.getElementById('chat-box').querySelectorAll('.message').forEach((m, i) => {
+            if (i > 0) m.remove();   // keep the greeting, drop the transcript
+        });
+        showLogin('');
+    }
+
+    // Decides on load whether this browser already has a session.
+    async function startSession() {
+        try {
+            const response = await api('/api/auth/me/');
+            const data = await response.json();
+            if (data.authenticated) {
+                showApp(data.user);
+            } else {
+                showLogin('');
+            }
+        } catch (err) {
+            showLogin('Could not reach the server.');
+        }
+    }
+
+
+    /* --- Documents: upload, status polling, deletion -------------------- */
+    const DOCS_API = '/api/documents/';
+    let docsPollTimer = null;
+
+    function currentUser() {
+        return signedInAs;
+    }
+
+    function escapeHtmlDoc(str) {
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    function setUploadMessage(text, colour) {
+        const el = document.getElementById('upload-msg');
+        el.textContent = text;
+        el.style.color = colour || '#666';
+    }
+
+    // The server decides whether ingestion is open; the page only reflects it.
+    let uploadsEnabled = false;
+    function applyUploadAvailability(enabled) {
+        uploadsEnabled = enabled;
+        document.getElementById('upload-form').style.display = enabled ? 'block' : 'none';
+        document.getElementById('uploads-disabled').style.display = enabled ? 'none' : 'block';
+        if (enabled) populateUploadFunds(currentUser());
+    }
+
+    // Keep the upload panel in step with whichever user is selected.
+    function onUserChangedForDocs() {
+        const user = currentUser();
+        document.getElementById('docs-locked').style.display = user ? 'none' : 'block';
+        document.getElementById('docs-active').style.display = user ? 'block' : 'none';
+        setUploadMessage('');
+        if (!user) {
+            if (docsPollTimer) { clearInterval(docsPollTimer); docsPollTimer = null; }
+            return;
+        }
+        refreshDocuments();
+    }
+
+    function populateUploadFunds(user) {
+        const select = document.getElementById('doc-fund');
+        fetch('/users/' + encodeURIComponent(user) + '/', { credentials: 'same-origin' })
+            .then(r => r.ok ? r.json() : Promise.reject(new Error(r.status)))
             .then(res => {
-                // Your API returns {"data": [...]}, let's fallback safely if data is missing
-                const funds = res.data || [];
-                
-                // Clear the container
-                checkboxGroup.innerHTML = '';
-
-                if (funds.length === 0) {
-                    checkboxGroup.innerHTML = '<span>No funds found for this user.</span>';
-                    return;
-                }
-
-                // Generate a checkbox for every fund returned by Django
-                funds.forEach(fund => {
-                    const label = document.createElement('label');
-                    label.className = 'checkbox-label';
-
-                    const checkbox = document.createElement('input');
-                    checkbox.type = 'checkbox';
-                    checkbox.name = 'doc-type';
-                    checkbox.value = fund;
-
-                    label.appendChild(checkbox);
-                    label.appendChild(document.createTextNode(` ${fund}`));
-                    
-                    checkboxGroup.appendChild(label);
+                select.innerHTML = '<option value="">No fund (private to you)</option>';
+                (res.data || []).forEach(fund => {
+                    const opt = document.createElement('option');
+                    opt.value = fund;
+                    opt.textContent = fund;
+                    select.appendChild(opt);
                 });
             })
-            .catch(error => {
-                console.error('Error loading funds:', error);
-                checkboxGroup.innerHTML = '<span style="color: red;">Error loading knowledge sources</span>';
-            });
-    });
+            .catch(err => console.error('Error loading funds for upload:', err));
+    }
+
+    async function uploadDocument() {
+        if (!uploadsEnabled) {
+            setUploadMessage('Uploads are disabled on this server.', '#c0392b');
+            return;
+        }
+        const user = currentUser();
+        if (!user) { setUploadMessage('Select a user first.', '#c0392b'); return; }
+
+        const fileInput = document.getElementById('doc-file');
+        const file = fileInput.files[0];
+        if (!file) { setUploadMessage('Choose a PDF to upload.', '#c0392b'); return; }
+
+        const form = new FormData();
+        form.append('file', file);
+        form.append('fund', document.getElementById('doc-fund').value);
+        form.append('doc_type', document.getElementById('doc-kind').value);
+
+        const btn = document.getElementById('doc-upload-btn');
+        btn.disabled = true;
+        setUploadMessage('Uploading...');
+
+        try {
+            // The server accepts the file and ingests in the background, so a
+            // 202 means queued, not searchable - the list below shows progress.
+            const response = await api(DOCS_API + 'upload/', { method: 'POST', body: form });
+            const data = await response.json();
+            if (!response.ok) {
+                setUploadMessage(data.error || 'Upload failed.', '#c0392b');
+            } else {
+                setUploadMessage('Queued for ingestion.', '#27ae60');
+                fileInput.value = '';
+                document.getElementById('doc-kind').value = '';
+                refreshDocuments();
+            }
+        } catch (err) {
+            setUploadMessage('Could not reach the server.', '#c0392b');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    async function refreshDocuments() {
+        const user = currentUser();
+        if (!user) return;
+        try {
+            const response = await api(DOCS_API);
+            if (!response.ok) return;
+            const data = await response.json();
+            applyUploadAvailability(data.uploads_enabled === true);
+            renderDocuments(data.documents || []);
+        } catch (err) {
+            console.error('Error loading documents:', err);
+        }
+    }
+
+    function renderDocuments(docs) {
+        const list = document.getElementById('doc-list');
+        if (!docs.length) {
+            list.innerHTML = '<li style="color:#666;font-size:0.95em;">No documents uploaded yet.</li>';
+        } else {
+            list.innerHTML = docs.map(function (doc) {
+                var fund = doc.fund ? escapeHtmlDoc(doc.fund) : 'private';
+                var detail;
+                if (doc.status === 'ready') {
+                    detail = doc.chunk_count + ' chunks';
+                } else if (doc.status === 'failed') {
+                    detail = escapeHtmlDoc(doc.error || 'failed');
+                } else {
+                    detail = 'working...';
+                }
+                return '<li class="doc-item">'
+                     + '<div class="doc-name">' + escapeHtmlDoc(doc.filename) + '</div>'
+                     + '<div class="doc-meta"><span class="badge badge-' + doc.status + '">'
+                     + doc.status + '</span> ' + fund + ' &middot; ' + detail + '</div>'
+                     + '<div class="doc-actions"><button onclick="deleteDocument('
+                     + doc.id + ')">Delete</button></div>'
+                     + '</li>';
+            }).join('');
+        }
+
+        // Only poll while something is actually in flight.
+        var busy = docs.some(function (d) {
+            return d.status === 'pending' || d.status === 'processing';
+        });
+        if (busy && !docsPollTimer) {
+            docsPollTimer = setInterval(refreshDocuments, 2500);
+        } else if (!busy && docsPollTimer) {
+            clearInterval(docsPollTimer);
+            docsPollTimer = null;
+        }
+    }
+
+    async function deleteDocument(id) {
+        const user = currentUser();
+        if (!user) return;
+        if (!confirm('Delete this document and remove it from the search index?')) return;
+        try {
+            const response = await api(DOCS_API + id + '/delete/', { method: 'DELETE' });
+            if (!response.ok) {
+                const data = await response.json();
+                setUploadMessage(data.error || 'Delete failed.', '#c0392b');
+                return;
+            }
+            setUploadMessage('Document deleted.', '#27ae60');
+            refreshDocuments();
+        } catch (err) {
+            setUploadMessage('Could not reach the server.', '#c0392b');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        document.getElementById('login-form').addEventListener('submit', signIn);
+        startSession();
     });
 </script>
 
