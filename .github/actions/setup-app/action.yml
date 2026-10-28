@@ -1,0 +1,21 @@
+name: Set up the Django app
+description: Python 3.12 (as on the VM) and mvp_demo/requirements.txt, with CPU-only torch.
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+        cache: pip
+        cache-dependency-path: mvp_demo/requirements.txt
+
+    # torch from the CPU index FIRST, as on the VM (see requirements.txt).
+    # Otherwise sentence-transformers pulls in the ~2.5GB CUDA build, which
+    # runners have no use for and which nearly fills their disk.
+    - name: Install dependencies
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install torch --index-url https://download.pytorch.org/whl/cpu
+        pip install -r mvp_demo/requirements.txt

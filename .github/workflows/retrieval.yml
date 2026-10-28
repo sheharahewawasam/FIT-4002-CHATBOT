@@ -1,0 +1,66 @@
+name: Retrieval recall
+
+# eval_retrieval.py against the live Pinecone index: do the facts that answer
+# ten real questions still reach the model? This is the check that catches a
+# chunking change making part of the corpus unreachable while every unit test
+# still passes. It needs the Pinecone secrets and downloads ~1.4GB of models
+# (cached after the first run), so it runs only when retrieval code changes,
+# or by hand from the Actions tab.
+#
+# Requires repository secrets PINECONE_API_KEY and PINECONE_INDEX_NAME.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - mvp_demo/chunking/**
+      - mvp_demo/ingest.py
+      - mvp_demo/bm25_encoder.json
+      - mvp_demo/eval_retrieval.py
+      - mvp_demo/rag_api/views.py
+      - mvp_demo/rag_api/resources.py
+      - mvp_demo/requirements.txt
+  workflow_dispatch:
+    inputs:
+      require:
+        description: Minimum cases out of 10 that must pass
+        default: "8"
+
+permissions:
+  contents: read
+
+jobs:
+  recall:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: mvp_demo
+    env:
+      PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+      PINECONE_INDEX_NAME: ${{ secrets.PINECONE_INDEX_NAME }}
+    steps:
+      - name: Check the Pinecone secrets are set
+        working-directory: .
+        run: |
+          if [ -z "$PINECONE_API_KEY" ] || [ -z "$PINECONE_INDEX_NAME" ]; then
+            echo "::error::Add PINECONE_API_KEY and PINECONE_INDEX_NAME under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-app
+
+      - name: Cache the BGE models
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-bge-base-en-v1.5-reranker-base
+
+      # 8/10 is the score as of 14 Sep 2026. The two known misses are not in
+      # the top-60 candidates at all (a chunking problem). Raise this when
+      # they are fixed, so the gain is locked in.
+      - name: Recall@5 on the ten ground-truth questions
+        env:
+          REQUIRE: ${{ inputs.require || '8' }}
+        run: python eval_retrieval.py --verbose --require "$REQUIRE"

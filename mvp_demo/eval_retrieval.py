@@ -89,6 +89,10 @@ def retrieve(question, funds):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--verbose", action="store_true")
+    ap.add_argument("--require", type=int, default=len(CASES), metavar="N",
+                    help="pass if at least N cases reach the model (default: all). "
+                         "CI sets this to the current score, so it catches a "
+                         "regression without failing on the known misses.")
     args = ap.parse_args()
 
     print()
@@ -127,8 +131,12 @@ def main():
             print(f"    {fund}: {question}")
             print(f"      expected {expected!r} - {why}")
 
-    # Non-zero exit so this can gate a pipeline later.
-    return 0 if in_context == total else 1
+    # Non-zero exit so this can gate a pipeline (.github/workflows/retrieval.yml).
+    if in_context < args.require:
+        print()
+        print(f"  FAILED: {in_context}/{total} is below the required {args.require}")
+        return 1
+    return 0
 
 
 if __name__ == "__main__":

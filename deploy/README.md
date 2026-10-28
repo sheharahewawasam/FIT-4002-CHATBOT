@@ -204,3 +204,65 @@ POST succeeding, is what confirms 8c is right.
 HSTS is deliberately not enabled. Browsers cache it for months, so it is
 painful to unwind if the hostname changes - worth adding once the name is
 final.
+
+## 9. CI/CD (GitHub Actions)
+
+Three workflows in `.github/workflows/`:
+
+| Workflow | Runs on | What it checks |
+|---|---|---|
+| `tests.yml` | every push, every PR to `main` | `manage.py check`, no missing migrations, the unit tests in `rag_api/tests.py` |
+| `retrieval.yml` | PRs to `main` that touch chunking or retrieval; or by hand | `eval_retrieval.py` against live Pinecone: fails below 8/10 |
+| `deploy.yml` | every push to `main`; or by hand | the unit tests, then deploys to this VM |
+
+The unit tests run with `RAG_OFFLINE=1`, which stops `rag_api/resources.py`
+loading Pinecone and the models. No test uses them, and without the switch CI
+would need a live key and ~1.4GB of downloads just to import the views.
+
+`workflow_dispatch` ("Run workflow" in the Actions tab) only appears once the
+workflow file is on `main`.
+
+### 9a. Retrieval recall
+
+Add repository secrets `PINECONE_API_KEY` and `PINECONE_INDEX_NAME` under
+Settings > Secrets and variables > Actions.
+
+### 9b. Deployment
+
+Off until switched on. `deploy/remote-deploy.sh` is piped to the VM over SSH. It
+refuses if tracked files on the VM have been edited by hand. Otherwise it checks
+out the exact commit that was tested, runs `pip install -r` and `migrate`,
+restarts `chatbot`, and waits up to 5 minutes for `/api/auth/me/` to answer. If
+the service does not come back it restores the previous code; packages and
+migrations are not rolled back.
+
+1. **A key for GitHub only.** Do not upload `RAG_Server.pem`. A separate key can
+   be revoked without locking anybody out:
+
+       ssh-keygen -t ed25519 -N "" -C github-actions-deploy -f chatbot-deploy
+       ssh -i <key>.pem ec2-user@<host> 'cat >> ~/.ssh/authorized_keys' < chatbot-deploy.pub
+
+2. **The host key**, so the runner can verify it is talking to this VM:
+
+       ssh-keyscan -t ed25519 triple-a-chatbot.duckdns.org
+
+3. **Settings > Environments > New environment `production`.** Add yourself
+   under Required reviewers to approve each deploy by hand. Then add these
+   environment secrets:
+
+   | Secret | Value |
+   |---|---|
+   | `VM_HOST` | `triple-a-chatbot.duckdns.org` (the DuckDNS name follows IP changes) |
+   | `VM_SSH_KEY` | the whole of `chatbot-deploy`, the private half |
+   | `VM_KNOWN_HOSTS` | the `ssh-keyscan` output line |
+
+4. **Settings > Secrets and variables > Actions > Variables:**
+   `DEPLOY_ENABLED` = `true`.
+
+5. **Port 22 must be reachable from GitHub's runners.** Their addresses change
+   with every run. If the security group only allows SSH from your own IP, the
+   deploy step times out at "Deploy". Either open 22 (the server accepts keys
+   only, no passwords) or use a self-hosted runner.
+
+Changes to `deploy/chatbot.service` or the nginx config are not applied
+automatically; install those by hand as in sections 6 and 8.

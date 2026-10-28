@@ -1,0 +1,65 @@
+name: Deploy
+
+# Every push to main is tested and, once deployment is switched on, deployed to
+# the EC2 VM. It can also be run by hand from the Actions tab, for any branch.
+#
+# Off until a repository variable DEPLOY_ENABLED=true exists: until then the
+# tests still run on main and the deploy job is skipped, not failed.
+#
+# Setup (see deploy/README.md, "Continuous deployment"):
+#   environment  production   - Settings > Environments; add yourself as a
+#                               required reviewer to approve each deploy
+#   secrets      VM_HOST, VM_SSH_KEY, VM_KNOWN_HOSTS   (on that environment)
+#   variable     DEPLOY_ENABLED=true
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deploy at a time, and never cancel one halfway through a restart.
+concurrency:
+  group: deploy-vm
+  cancel-in-progress: false
+
+jobs:
+  test:
+    uses: ./.github/workflows/tests.yml
+
+  deploy:
+    needs: test
+    if: vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: https://triple-a-chatbot.duckdns.org
+    steps:
+      - uses: actions/checkout@v4
+
+      # The host key is pinned rather than accepted on first sight, so a
+      # spoofed host cannot collect the deploy key's session.
+      - name: Set up SSH
+        env:
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+          VM_KNOWN_HOSTS: ${{ secrets.VM_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VM_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$VM_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      # The script runs on the VM, from the commit being deployed.
+      - name: Deploy ${{ github.ref_name }} @ ${{ github.sha }}
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o ConnectTimeout=20 \
+            "ec2-user@$VM_HOST" 'bash -s' -- "$GITHUB_REF_NAME" "$GITHUB_SHA" \
+            < deploy/remote-deploy.sh
+
+      - name: Remove the key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

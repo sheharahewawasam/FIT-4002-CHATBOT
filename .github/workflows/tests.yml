@@ -1,0 +1,46 @@
+name: Tests
+
+# The unit tests in rag_api/tests.py: access control, sign-in, document
+# ownership, throttling, citation grants. Fast and offline - no Pinecone key,
+# no models, no Ollama - so they run on every push.
+on:
+  push:
+    # main is tested by deploy.yml, which calls this workflow before deploying.
+    # Listing it here as well would run the suite twice on every merge.
+    branches-ignore: [main]
+  pull_request:
+    branches: [main]
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: mvp_demo
+    env:
+      # See rag_api/resources.py: skips the Pinecone connection and the models.
+      RAG_OFFLINE: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-app
+
+      - name: Django system checks
+        run: python manage.py check
+
+      # Catches a model change committed without its migration - the cause of
+      # "no such table" on a teammate's fresh database.
+      - name: Every model change has a migration
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Unit tests
+        run: python manage.py test rag_api -v 2
